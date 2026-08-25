@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { notificationApi } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import { useUnreadCount } from "@/lib/useUnreadCount";
 
 const links = [
   { href: "/projects", label: "Projects" },
@@ -18,18 +17,7 @@ const links = [
 export function Nav() {
   const { me, loading } = useMe();
   const pathname = usePathname();
-  const [unread, setUnread] = useState(0);
-
-  useEffect(() => {
-    if (!me) return;
-    let active = true;
-    notificationApi.unreadCount().then((result) => {
-      if (active) setUnread(result.count);
-    });
-    return () => {
-      active = false;
-    };
-  }, [me, pathname]);
+  const unread = useUnreadCount(me, pathname);
 
   if (pathname?.startsWith("/admin")) return null;
 

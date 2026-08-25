@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Nav } from "@/components/Nav";
+import { MobileNav } from "@/components/MobileNav";
+import { MeProvider } from "@/lib/useMe";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -27,8 +29,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Nav />
-        {children}
+        <MeProvider>
+          <Nav />
+          {children}
+          <MobileNav />
+        </MeProvider>
       </body>
     </html>
   );

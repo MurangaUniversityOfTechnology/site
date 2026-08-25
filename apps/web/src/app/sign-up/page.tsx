@@ -4,9 +4,11 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
+import { useMe } from "@/lib/useMe";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { refresh } = useMe();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +20,7 @@ export default function SignUpPage() {
     setSubmitting(true);
     try {
       await authApi.signup(email, password);
+      await refresh();
       router.push("/onboarding");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");

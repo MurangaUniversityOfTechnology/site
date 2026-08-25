@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { authApi, type Me } from "@/lib/api";
 
 async function fetchMe(): Promise<Me | null> {
@@ -11,7 +11,15 @@ async function fetchMe(): Promise<Me | null> {
   }
 }
 
-export function useMe() {
+type MeContextValue = {
+  me: Me | null;
+  loading: boolean;
+  refresh: () => Promise<void>;
+};
+
+const MeContext = createContext<MeContextValue | null>(null);
+
+export function MeProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,5 +42,11 @@ export function useMe() {
     setLoading(false);
   }, []);
 
-  return { me, loading, refresh };
+  return <MeContext.Provider value={{ me, loading, refresh }}>{children}</MeContext.Provider>;
+}
+
+export function useMe() {
+  const ctx = useContext(MeContext);
+  if (!ctx) throw new Error("useMe must be used within MeProvider");
+  return ctx;
 }
