@@ -20,6 +20,8 @@ class Content(Base):
     __tablename__ = "content"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # No ondelete here on purpose — a published article shouldn't vanish because
+    # its author later deletes their account. Blocks the delete until handled explicitly.
     author_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)

@@ -36,5 +36,7 @@ class User(Base):
     )
     github_org_invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    profile: Mapped["Profile"] = relationship(back_populates="user", uselist=False)
-    membership: Mapped["Membership"] = relationship(back_populates="user", uselist=False)
+    # passive_deletes=True: let the DB's ON DELETE CASCADE handle these rather
+    # than SQLAlchemy trying to null out a non-nullable PK column in Python first.
+    profile: Mapped["Profile"] = relationship(back_populates="user", uselist=False, passive_deletes=True)
+    membership: Mapped["Membership"] = relationship(back_populates="user", uselist=False, passive_deletes=True)

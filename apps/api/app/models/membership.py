@@ -29,7 +29,9 @@ class Membership(Base):
 
     __tablename__ = "memberships"
 
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     status: Mapped[MembershipStatus] = mapped_column(Enum(MembershipStatus), default=MembershipStatus.none, nullable=False)
     period_start: Mapped[date | None] = mapped_column(Date, nullable=True)
     period_end: Mapped[date | None] = mapped_column(Date, nullable=True)

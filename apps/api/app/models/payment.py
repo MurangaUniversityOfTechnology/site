@@ -28,6 +28,9 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # No ondelete here on purpose — a financial record should block a user delete
+    # rather than silently vanish with the account. Deleting a user with payment
+    # history needs an explicit decision (anonymize, archive, etc), not a cascade.
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     phone: Mapped[str] = mapped_column(String, nullable=False)
