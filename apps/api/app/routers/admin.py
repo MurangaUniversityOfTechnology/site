@@ -6,12 +6,25 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
+from app.models.content import Content, ContentStatus
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
-from app.schemas.admin import AdminOverview, AuditEntry, MembershipApplication, PaymentRow, PaymentsOverview, PaymentTotal
+from app.schemas.admin import (
+    AddMemberRequest,
+    AddMemberResponse,
+    AdminOverview,
+    AdminRow,
+    AuditEntry,
+    MembershipApplication,
+    PaymentRow,
+    PaymentsOverview,
+    PaymentTotal,
+)
+from app.schemas.content import AdminContentRow
 from app.schemas.event import AdminRegistrationRow
+from app.services import audit, content as content_service
 from app.services import event as event_service
 from app.services import membership as membership_service
 
@@ -188,3 +201,124 @@ def attend_registration(registration_id: str, admin: User = Depends(require_admi
         event_service.mark_attended(db, admin, reg)
     except event_service.EventError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+# ── content moderation ──────────────────────────────────────────────
+
+
+def _content_row(c: Content) -> AdminContentRow:
+    profile = c.author.profile
+    author = (profile.display_name if profile and profile.display_name else c.author.email)
+    return AdminContentRow(id=c.id, title=c.title, body=c.body, author=author, when=c.created_at)
+
+
+@router.get("/content", response_model=list[AdminContentRow])
+def content_queue(db: Session = Depends(get_db)):
+    return [_content_row(c) for c in content_service.pending_queue(db)]
+
+
+def _get_content(db: Session, content_id: str) -> Content:
+    c = db.get(Content, content_id)
+    if not c:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Article not found")
+    return c
+
+
+@router.post("/content/{content_id}/publish", status_code=status.HTTP_204_NO_CONTENT)
+def publish_content(content_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = _get_content(db, content_id)
+    try:
+        content_service.publish(db, admin, c)
+    except content_service.ContentError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/content/{content_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
+def reject_content(content_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = _get_content(db, content_id)
+    try:
+        content_service.reject(db, admin, c)
+    except content_service.ContentError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/content/{content_id}/request-changes", status_code=status.HTTP_204_NO_CONTENT)
+def request_content_changes(content_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    c = _get_content(db, content_id)
+    try:
+        content_service.request_changes(db, admin, c)
+    except content_service.ContentError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+# ── roles ────────────────────────────────────────────────────────────
+
+
+@router.get("/admins", response_model=list[AdminRow])
+def list_admins(db: Session = Depends(get_db)):
+    admins = db.query(User).filter(User.is_admin.is_(True)).all()
+    return [
+        AdminRow(
+            user_id=u.id,
+            name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
+            email=u.email,
+            is_admin=True,
+        )
+        for u in admins
+    ]
+
+
+@router.get("/users/search", response_model=AdminRow | None)
+def search_user(email: str, db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.email == email.lower()).first()
+    if not u:
+        return None
+    return AdminRow(
+        user_id=u.id,
+        name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
+        email=u.email,
+        is_admin=u.is_admin,
+    )
+
+
+@router.post("/users/{user_id}/make-admin", status_code=status.HTTP_204_NO_CONTENT)
+def make_admin(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    target.is_admin = True
+    audit.log(db, admin, "settings", f"Granted admin access to {target.email}")
+    db.commit()
+
+
+@router.post("/users/{user_id}/remove-admin", status_code=status.HTTP_204_NO_CONTENT)
+def remove_admin(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if target.id == admin.id and db.query(User).filter(User.is_admin.is_(True)).count() <= 1:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Can't remove the last admin")
+    target.is_admin = False
+    audit.log(db, admin, "settings", f"Removed admin access from {target.email}")
+    db.commit()
+
+
+# ── add member without payment ──────────────────────────────────────
+
+
+@router.post("/members/add", response_model=AddMemberResponse, status_code=status.HTTP_201_CREATED)
+def add_member(payload: AddMemberRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        user, temp_password = membership_service.admin_add_member(
+            db,
+            admin,
+            payload.email,
+            payload.display_name,
+            payload.registration_number,
+            payload.github_handle,
+            payload.reason,
+        )
+    except membership_service.MembershipError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+    return AddMemberResponse(user_id=user.id, email=user.email, temp_password=temp_password)

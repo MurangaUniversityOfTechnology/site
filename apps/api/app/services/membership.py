@@ -117,3 +117,54 @@ def latest_payment(db: Session, user: User) -> Payment | None:
         .order_by(Payment.created_at.desc())
         .first()
     )
+
+
+def sync_expiry(db: Session, membership: Membership) -> None:
+    """Lazily flips active -> expired once period_end has passed. No cron
+    needed — called on the read paths (auth/me, membership/status) that
+    already touch membership on every page load."""
+    if membership.status == MembershipStatus.active and membership.period_end and membership.period_end < date.today():
+        membership.status = MembershipStatus.expired
+        db.commit()
+
+
+def admin_add_member(
+    db: Session,
+    admin: User,
+    email: str,
+    display_name: str,
+    registration_number: str | None,
+    github_handle: str | None,
+    reason: str,
+) -> tuple[User, str | None]:
+    """Returns (user, temp_password) — temp_password is only set (and only
+    ever shown once, in the API response) when a brand-new account was
+    created; the admin is responsible for sharing it with the member."""
+    import secrets
+
+    from app.services.auth import create_user, get_user_by_email  # local import avoids a circular import
+
+    user = get_user_by_email(db, email)
+    if user and user.membership.status == MembershipStatus.active:
+        raise MembershipError(f"{email} is already an active member")
+
+    temp_password: str | None = None
+    if not user:
+        temp_password = secrets.token_urlsafe(9)
+        user = create_user(db, email, password=temp_password)
+
+    user.profile.display_name = display_name
+    if registration_number:
+        user.profile.registration_number = registration_number
+    if github_handle:
+        user.profile.github_url = f"github.com/{github_handle}"
+
+    user.membership.status = MembershipStatus.active
+    user.membership.period_start = date.today()
+    user.membership.period_end = date.today() + timedelta(days=365)
+
+    audit.log(db, admin, "import", f"Added {email} as active member without payment · reason: {reason}")
+    notification.notify(db, user, "membership", "You're a member ✓", "A club admin added you directly — welcome in.")
+    db.commit()
+    db.refresh(user)
+    return user, temp_password

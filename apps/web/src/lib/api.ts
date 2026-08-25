@@ -229,3 +229,45 @@ export const memberApi = {
   directory: () => apiFetch<MemberSummary[]>("/members"),
   get: (userId: string) => apiFetch<MemberProfile>(`/members/${userId}`),
 };
+
+export type ContentItem = {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  status: string;
+  created_at: string;
+};
+
+export type ContentSummary = { id: string; title: string; excerpt: string; author: string; created_at: string };
+
+export const contentApi = {
+  submit: (payload: { title: string; body: string; tags: string[] }) =>
+    apiFetch<ContentItem>("/content", { method: "POST", body: JSON.stringify(payload) }),
+  published: () => apiFetch<ContentSummary[]>("/content/published"),
+  getPublished: (id: string) => apiFetch<ContentItem>(`/content/published/${id}`),
+};
+
+export type AdminContentRow = { id: string; title: string; body: string; author: string; when: string };
+
+export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean };
+
+export type AddMemberResponse = { user_id: string; email: string; temp_password: string | null };
+
+export const adminExtraApi = {
+  contentQueue: () => apiFetch<AdminContentRow[]>("/admin/content"),
+  publishContent: (id: string) => apiFetch<void>(`/admin/content/${id}/publish`, { method: "POST" }),
+  rejectContent: (id: string) => apiFetch<void>(`/admin/content/${id}/reject`, { method: "POST" }),
+  requestContentChanges: (id: string) => apiFetch<void>(`/admin/content/${id}/request-changes`, { method: "POST" }),
+  listAdmins: () => apiFetch<AdminRow[]>("/admin/admins"),
+  searchUser: (email: string) => apiFetch<AdminRow | null>(`/admin/users/search?email=${encodeURIComponent(email)}`),
+  makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
+  removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
+  addMember: (payload: {
+    email: string;
+    display_name: string;
+    registration_number: string | null;
+    github_handle: string | null;
+    reason: string;
+  }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
+};

@@ -13,6 +13,7 @@ from app.core.security import SESSION_COOKIE_NAME, SESSION_TTL, create_session_t
 from app.models.user import User
 from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
 from app.services import auth as auth_service
+from app.services import membership as membership_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -61,7 +62,8 @@ def logout(response: Response):
 
 
 @router.get("/me", response_model=MeResponse)
-def me(user: User = Depends(get_current_user)):
+def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    membership_service.sync_expiry(db, user.membership)
     return _to_me_response(user)
 
 

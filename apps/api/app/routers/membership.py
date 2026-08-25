@@ -38,6 +38,7 @@ def activate_membership(
 
 @router.get("/membership/status", response_model=MembershipStatusResponse)
 def membership_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    membership_service.sync_expiry(db, user.membership)
     payment = membership_service.latest_payment(db, user)
     return MembershipStatusResponse(
         membership_status=user.membership.status.value,

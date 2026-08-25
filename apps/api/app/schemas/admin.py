@@ -47,3 +47,24 @@ class AuditEntry(BaseModel):
     who: str
     what: str
     kind: str
+
+
+class AdminRow(BaseModel):
+    user_id: uuid.UUID
+    name: str
+    email: str
+    is_admin: bool
+
+
+class AddMemberRequest(BaseModel):
+    email: str
+    display_name: str
+    registration_number: str | None = None
+    github_handle: str | None = None
+    reason: str
+
+
+class AddMemberResponse(BaseModel):
+    user_id: uuid.UUID
+    email: str
+    temp_password: str | None

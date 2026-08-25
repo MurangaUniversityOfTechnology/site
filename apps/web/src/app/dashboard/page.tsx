@@ -169,7 +169,8 @@ export default function DashboardPage() {
               <ExploreRow href="/events" label="Events" count={events.length} />
               <ExploreRow href="/challenges" label="Challenges" count={challenges.length} />
               <ExploreRow href="/learn" label="Learning Paths" count={null} />
-              <ExploreRow href="/community" label="Community" count={null} last />
+              <ExploreRow href="/community" label="Community" count={null} />
+              <ExploreRow href="/membership/renew" label="Membership" count={null} last />
             </div>
           </div>
 
