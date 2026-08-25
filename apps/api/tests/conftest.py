@@ -34,6 +34,13 @@ def pytest_configure(config):
     # HTTP call, not short-circuit before it.
     os.environ.setdefault("GITHUB_ORG", "mut-tech-test-org")
     os.environ.setdefault("GITHUB_SYNC_TOKEN", "test-gh-token")
+    # initiate_stk_push() raises before making any HTTP call at all if this
+    # is unset — required even though the call itself gets mocked.
+    os.environ.setdefault("MPESA_CALLBACK_BASE_URL", "http://testserver")
+    os.environ.setdefault("MPESA_SHORTCODE", "174379")
+    os.environ.setdefault("MPESA_PASSKEY", "test-passkey")
+    os.environ.setdefault("MPESA_CONSUMER_KEY", "test-consumer-key")
+    os.environ.setdefault("MPESA_CONSUMER_SECRET", "test-consumer-secret")
 
     from alembic import command
     from alembic.config import Config
@@ -78,6 +85,18 @@ def db_session(db_engine):
         session.close()
         trans.rollback()
         connection.close()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limits():
+    # slowapi's limiter storage is a process-wide singleton keyed by IP, and
+    # every TestClient request appears to come from the same IP — without
+    # this, any test using login_as() eats into every other test's login
+    # rate budget for the rest of the session, in file/test order.
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+    yield
 
 
 @pytest.fixture

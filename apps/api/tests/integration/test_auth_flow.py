@@ -1,17 +1,6 @@
 import pytest
 
-from app.core.rate_limit import limiter
-
 pytestmark = pytest.mark.integration
-
-
-@pytest.fixture(autouse=True)
-def _reset_rate_limits():
-    # Every TestClient request appears to come from the same IP, so without
-    # this, earlier tests in this file would eat into the login/signup rate
-    # budget of later ones.
-    limiter.reset()
-    yield
 
 
 def test_signup_creates_account(client, db_session):
