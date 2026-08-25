@@ -18,7 +18,7 @@ def normalize_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", phone)
     if digits.startswith("0"):
         digits = "254" + digits[1:]
-    elif digits.startswith("7") or digits.startswith("1"):
+    elif digits.startswith(("7", "1")):
         digits = "254" + digits
     if not re.fullmatch(r"254(7|1)\d{8}", digits):
         raise MpesaError(f"'{phone}' is not a valid Safaricom number")
@@ -45,7 +45,13 @@ def initiate_stk_push(*, phone: str, amount: int, account_reference: str, transa
         raise MpesaError("MPESA_CALLBACK_BASE_URL is not configured")
 
     normalized_phone = normalize_phone(phone)
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    # Naive local time on purpose, not UTC — Daraja's STK push expects the
+    # server's own local timestamp here (it's hashed into Password below and
+    # echoed back in the request), and every real Daraja integration example
+    # uses naive local time for exactly this reason. Switching to UTC would
+    # shift this by Kenya's +3 offset and risk failing Safaricom's own
+    # timestamp validation on a path already verified against their sandbox.
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
     password = base64.b64encode(
         f"{settings.mpesa_shortcode}{settings.mpesa_passkey}{timestamp}".encode()
     ).decode()

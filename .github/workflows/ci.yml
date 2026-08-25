@@ -19,12 +19,7 @@ jobs:
           cache: "pip"
           cache-dependency-path: apps/api/pyproject.toml
       - run: pip install -e ".[dev]"
-      # Scoped to tests/, not the whole app/ — ruff has never actually been
-      # enforced on this codebase (132 pre-existing violations in app/ as of
-      # this workflow's introduction), and retroactively fixing all of them
-      # is a separate task, not something to fold into adding CI. New test
-      # code stays held to the standard; app/ enforcement is a follow-up.
-      - run: ruff check tests/
+      - run: ruff check .
       - run: pytest --cov=app --cov-report=term-missing
         # Docker is preinstalled on GitHub-hosted ubuntu runners — no extra
         # setup needed for testcontainers to reach the daemon.

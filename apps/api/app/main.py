@@ -6,7 +6,18 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
-from app.routers import admin, auth, challenges, content, events, members, membership, notifications, profile, projects
+from app.routers import (
+    admin,
+    auth,
+    challenges,
+    content,
+    events,
+    members,
+    membership,
+    notifications,
+    profile,
+    projects,
+)
 
 settings = get_settings()
 

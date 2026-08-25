@@ -92,8 +92,11 @@ def approve(db: Session, admin: User, applicant: User) -> None:
         raise MembershipError(f"Cannot approve from status '{membership.status.value}'")
 
     membership.status = MembershipStatus.active
-    membership.period_start = date.today()
-    membership.period_end = date.today() + timedelta(days=365)
+    # Naive local date, not a tz-aware datetime — period_start/period_end are
+    # calendar-day Date columns (a membership year, not a precise instant),
+    # so date.today() is correct here, not a missing-timezone bug.
+    membership.period_start = date.today()  # noqa: DTZ011
+    membership.period_end = date.today() + timedelta(days=365)  # noqa: DTZ011
     audit.log(db, admin, "membership", f"Approved membership for {applicant.email}")
     notification.notify(db, applicant, "membership", "Membership approved ✓", "Your Tech Club membership is now active.")
     db.commit()
@@ -124,7 +127,11 @@ def sync_expiry(db: Session, membership: Membership) -> None:
     """Lazily flips active -> expired once period_end has passed. No cron
     needed — called on the read paths (auth/me, membership/status) that
     already touch membership on every page load."""
-    if membership.status == MembershipStatus.active and membership.period_end and membership.period_end < date.today():
+    if (
+        membership.status == MembershipStatus.active
+        and membership.period_end
+        and membership.period_end < date.today()  # noqa: DTZ011 — naive Date comparison, see approve()
+    ):
         membership.status = MembershipStatus.expired
         db.commit()
 
@@ -143,7 +150,10 @@ def admin_add_member(
     created; the admin is responsible for sharing it with the member."""
     import secrets
 
-    from app.services.auth import create_user, get_user_by_email  # local import avoids a circular import
+    from app.services.auth import (  # local import avoids a circular import
+        create_user,
+        get_user_by_email,
+    )
 
     user = get_user_by_email(db, email)
     if user and user.membership.status == MembershipStatus.active:
@@ -161,8 +171,8 @@ def admin_add_member(
         user.profile.github_url = f"github.com/{github_handle}"
 
     user.membership.status = MembershipStatus.active
-    user.membership.period_start = date.today()
-    user.membership.period_end = date.today() + timedelta(days=365)
+    user.membership.period_start = date.today()  # noqa: DTZ011 — naive Date, see approve()
+    user.membership.period_end = date.today() + timedelta(days=365)  # noqa: DTZ011
 
     audit.log(db, admin, "import", f"Added {email} as active member without payment · reason: {reason}")
     notification.notify(db, user, "membership", "You're a member ✓", "A club admin added you directly — welcome in.")

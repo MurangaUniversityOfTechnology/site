@@ -40,3 +40,18 @@ markers = [
     "unit: pure-function tests, no DB/container",
     "integration: exercises the API + Postgres testcontainer",
 ]
+
+[tool.ruff]
+# Alembic-generated revision files carry the migration template's own
+# boilerplate style (Union[...] instead of X | Y, etc) — re-fixing them by
+# hand would just get re-flagged the next time `alembic revision
+# --autogenerate` runs, since that's the tool's own output style, not ours.
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint.flake8-bugbear]
+# B008 (no function calls in default arguments) is a real footgun for
+# mutable-default bugs in general, but FastAPI's dependency injection is
+# built entirely around calling Depends()/Cookie() as a parameter default —
+# that's not a bug, it's the framework's documented pattern. Every FastAPI
+# project using ruff configures this same allowlist.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Cookie"]

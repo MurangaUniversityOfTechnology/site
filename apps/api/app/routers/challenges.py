@@ -4,7 +4,11 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
-from app.schemas.challenge import RecentSubmission, SubmissionResponse, SubmitBuildRequest
+from app.schemas.challenge import (
+    RecentSubmission,
+    SubmissionResponse,
+    SubmitBuildRequest,
+)
 from app.services import challenge as challenge_service
 
 router = APIRouter(prefix="/challenges", tags=["challenges"])

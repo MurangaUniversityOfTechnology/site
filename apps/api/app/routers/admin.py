@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
-from app.models.content import Content, ContentStatus
+from app.models.content import Content
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
@@ -27,7 +27,8 @@ from app.schemas.content import AdminContentRow
 from app.schemas.event import AdminRegistrationRow
 from app.schemas.github import RosterRow
 from app.schemas.project import AdminJoinRequestRow
-from app.services import audit, content as content_service
+from app.services import audit
+from app.services import content as content_service
 from app.services import event as event_service
 from app.services import github as github_service
 from app.services import membership as membership_service
@@ -45,7 +46,7 @@ STATUS_FILTERS = {
 
 @router.get("/overview", response_model=AdminOverview)
 def overview(db: Session = Depends(get_db)):
-    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    week_ago = datetime.now(UTC) - timedelta(days=7)
     return AdminOverview(
         total_members=db.query(Membership).filter(Membership.status == MembershipStatus.active).count(),
         pending_approval=db.query(Membership).filter(Membership.status == MembershipStatus.approval_pending).count(),

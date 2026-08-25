@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy.orm import Session
@@ -73,7 +73,7 @@ def sync_project(db: Session, project: Project) -> None:
         }
         for i in issues
     ]
-    project.synced_at = datetime.now(timezone.utc)
+    project.synced_at = datetime.now(UTC)
     db.commit()
 
 
@@ -107,7 +107,7 @@ def maybe_invite_to_org(db: Session, user: User) -> None:
         return
 
     user.github_org_invite_status = GithubOrgInviteStatus.invited
-    user.github_org_invited_at = datetime.now(timezone.utc)
+    user.github_org_invited_at = datetime.now(UTC)
     db.commit()
     notification.notify(
         db,
@@ -149,7 +149,7 @@ def refresh_invite_status(db: Session, user: User) -> None:
         if (
             user.github_org_invite_status == GithubOrgInviteStatus.invited
             and user.github_org_invited_at
-            and (datetime.now(timezone.utc) - user.github_org_invited_at).days >= INVITE_EXPIRY_DAYS
+            and (datetime.now(UTC) - user.github_org_invited_at).days >= INVITE_EXPIRY_DAYS
         ):
             user.github_org_invite_status = GithubOrgInviteStatus.expired
             db.commit()

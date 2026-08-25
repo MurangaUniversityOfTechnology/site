@@ -10,7 +10,12 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.core.rate_limit import limiter
-from app.core.security import SESSION_COOKIE_NAME, SESSION_TTL, create_session_token, verify_password
+from app.core.security import (
+    SESSION_COOKIE_NAME,
+    SESSION_TTL,
+    create_session_token,
+    verify_password,
+)
 from app.models.user import User
 from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
 from app.schemas.github import GithubStatus

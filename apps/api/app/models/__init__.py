@@ -6,33 +6,33 @@ from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
 from app.models.payment import Payment, PaymentStatus
-from app.models.profile import ExperienceLevel, ProfileVisibility, Profile
+from app.models.profile import ExperienceLevel, Profile, ProfileVisibility
 from app.models.project import Project
 from app.models.project_join_request import JoinRequestStatus, ProjectJoinRequest
 from app.models.project_member import ProjectMember
 from app.models.user import GithubOrgInviteStatus, User
 
 __all__ = [
-    "User",
-    "GithubOrgInviteStatus",
-    "Profile",
-    "ExperienceLevel",
-    "ProfileVisibility",
-    "Membership",
-    "MembershipStatus",
-    "Payment",
-    "PaymentStatus",
     "AuditLog",
+    "ChallengeSubmission",
+    "Content",
+    "ContentStatus",
     "Event",
     "EventAudience",
     "EventRegistration",
-    "RegistrationStatus",
-    "ChallengeSubmission",
+    "ExperienceLevel",
+    "GithubOrgInviteStatus",
+    "JoinRequestStatus",
+    "Membership",
+    "MembershipStatus",
     "Notification",
-    "Content",
-    "ContentStatus",
+    "Payment",
+    "PaymentStatus",
+    "Profile",
+    "ProfileVisibility",
     "Project",
     "ProjectJoinRequest",
-    "JoinRequestStatus",
     "ProjectMember",
+    "RegistrationStatus",
+    "User",
 ]
