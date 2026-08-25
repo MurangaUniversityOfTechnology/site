@@ -9,6 +9,11 @@ The MUT Tech Community website — see `design/flow.md` and the interactive canv
 - `apps/api` — FastAPI + PostgreSQL (SQLAlchemy, Alembic)
 - `infra/` — Docker Compose for local dev and VPS deploy
 
+Production deploys should override the default Postgres credentials — create `infra/.env`
+(gitignored) with `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` before running
+`docker compose up`. Without it, `docker-compose.yml` falls back to `mut`/`mut`/`mut`, which
+is fine for local dev but must not be used on a real deploy.
+
 ## Local development
 
 ### Option A — Docker Compose (closest to production)

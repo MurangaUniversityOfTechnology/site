@@ -3,15 +3,18 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: mut
-      POSTGRES_PASSWORD: mut
-      POSTGRES_DB: mut
+      POSTGRES_USER: ${POSTGRES_USER:-mut}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mut}
+      POSTGRES_DB: ${POSTGRES_DB:-mut}
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Bound to loopback only — the native-dev workflow in the README still
+      # needs localhost:5432 from the host, but this must never reach the
+      # public interface (this compose file also backs the VPS deploy).
+      - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mut"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mut}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -26,7 +29,7 @@ services:
       # overrides whatever DATABASE_URL is set to in .env (which is meant for
       # running the API natively against the db container's published port) —
       # inside the compose network the db must be reached by service name.
-      DATABASE_URL: postgresql+psycopg://mut:mut@db:5432/mut
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mut}:${POSTGRES_PASSWORD:-mut}@db:5432/${POSTGRES_DB:-mut}
     depends_on:
       db:
         condition: service_healthy
