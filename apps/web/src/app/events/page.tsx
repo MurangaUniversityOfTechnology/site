@@ -9,6 +9,21 @@ export default function EventsPage() {
       </div>
       <h1 className="mt-3.5 text-[clamp(30px,5vw,54px)] leading-none tracking-[-0.04em]">WHAT&apos;S ON</h1>
 
+      {events.length === 0 && (
+        <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">quiet week</div>
+          <p className="mt-3 text-[15.5px] text-muted">
+            No events this week. Check out what the community is currently building.
+          </p>
+          <Link
+            href="/projects"
+            className="mt-5 inline-block rounded-lg border border-accent-dim px-5 py-2.5 text-sm text-accent hover:bg-accent/5"
+          >
+            Explore Projects
+          </Link>
+        </div>
+      )}
+
       <div className="mt-8 flex flex-col gap-3">
         {events.map((e) => (
           <Link

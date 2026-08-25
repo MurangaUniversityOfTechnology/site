@@ -41,10 +41,14 @@ export function Nav() {
       <div className="ml-auto flex flex-none items-center gap-3.5">
         {loading ? null : me ? (
           <>
-            <Link href="/notifications" className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/5">
-              <span className="relative block h-3.5 w-3.5 rounded-t-[3px] border-[1.4px] border-muted" />
+            <Link
+              href="/notifications"
+              aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+              className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/5"
+            >
+              <span className="relative block h-3.5 w-3.5 rounded-t-[3px] border-[1.4px] border-muted" aria-hidden="true" />
               {unread > 0 && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warn" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warn" aria-hidden="true" />
               )}
             </Link>
             <Link
