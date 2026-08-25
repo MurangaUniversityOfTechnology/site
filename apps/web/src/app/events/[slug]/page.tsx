@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EventRegisterPanel } from "@/components/EventRegisterPanel";
 import { events } from "@/lib/data";
 
 export function generateStaticParams() {
@@ -47,9 +48,7 @@ export default async function EventDetailPage(props: PageProps<"/events/[slug]">
         )}
 
         <div className="relative mt-7 flex flex-wrap items-center gap-3">
-          <button className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90">
-            {event.cta}
-          </button>
+          <EventRegisterPanel slug={event.slug} audience={event.audience} cta={event.cta} />
           <span className="font-mono text-[11px] text-faint">{event.meta}</span>
         </div>
       </div>

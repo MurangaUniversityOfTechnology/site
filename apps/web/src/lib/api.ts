@@ -131,6 +131,28 @@ export type PaymentRow = { receipt: string | null; member: string; amount: numbe
 export type PaymentsOverview = { totals: PaymentTotal[]; rows: PaymentRow[] };
 export type AuditEntry = { at: string; who: string; what: string; kind: string };
 
+export type RegistrationStatus = "pending" | "approved" | "rejected" | "waitlisted" | "attended" | "cancelled";
+
+export type Registration = {
+  id: string;
+  status: RegistrationStatus;
+  created_at: string;
+};
+
+export type AdminRegistrationRow = {
+  id: string;
+  name: string;
+  detail: string;
+  member: boolean;
+  status: RegistrationStatus;
+};
+
+export const eventApi = {
+  register: (slug: string, guest?: { guest_name: string; guest_email: string }) =>
+    apiFetch<Registration>(`/events/${slug}/register`, { method: "POST", body: JSON.stringify(guest ?? {}) }),
+  myRegistration: (slug: string) => apiFetch<Registration | null>(`/events/${slug}/registration`),
+};
+
 export const adminApi = {
   overview: () => apiFetch<AdminOverview>("/admin/overview"),
   memberships: (statusFilter: string) =>
@@ -139,4 +161,9 @@ export const adminApi = {
   reject: (userId: string) => apiFetch<void>(`/admin/memberships/${userId}/reject`, { method: "POST" }),
   payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
   audit: () => apiFetch<AuditEntry[]>("/admin/audit"),
+  eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),
+  approveRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/approve`, { method: "POST" }),
+  rejectRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/reject`, { method: "POST" }),
+  waitlistRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/waitlist`, { method: "POST" }),
+  attendRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/attend`, { method: "POST" }),
 };

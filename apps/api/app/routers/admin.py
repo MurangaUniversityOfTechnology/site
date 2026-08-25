@@ -6,10 +6,13 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
+from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
 from app.schemas.admin import AdminOverview, AuditEntry, MembershipApplication, PaymentRow, PaymentsOverview, PaymentTotal
+from app.schemas.event import AdminRegistrationRow
+from app.services import event as event_service
 from app.services import membership as membership_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -120,3 +123,68 @@ def payments_overview(db: Session = Depends(get_db)):
 def audit_log(db: Session = Depends(get_db)):
     entries = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
     return [AuditEntry(at=e.created_at, who=e.actor_name, what=e.action, kind=e.kind) for e in entries]
+
+
+@router.get("/events/{slug}/registrations", response_model=list[AdminRegistrationRow])
+def list_registrations(slug: str, db: Session = Depends(get_db)):
+    try:
+        registrations = event_service.list_for_event(db, slug)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+    rows = []
+    for r in registrations:
+        if r.user:
+            profile = r.user.profile
+            name = " ".join(part for part in [profile.first_name, profile.last_name] if part) if profile else r.user.email
+            detail = f"registered {r.created_at:%d %b %H:%M}"
+            member = True
+        else:
+            name = r.guest_name or "Guest"
+            detail = r.guest_email or ""
+            member = False
+        rows.append(AdminRegistrationRow(id=r.id, name=name or r.user.email, detail=detail, member=member, status=r.status.value))
+    return rows
+
+
+def _get_registration(db: Session, registration_id: str) -> EventRegistration:
+    reg = db.get(EventRegistration, registration_id)
+    if not reg:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Registration not found")
+    return reg
+
+
+@router.post("/registrations/{registration_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
+def approve_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reg = _get_registration(db, registration_id)
+    try:
+        event_service.approve(db, admin, reg)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/registrations/{registration_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
+def reject_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reg = _get_registration(db, registration_id)
+    try:
+        event_service.reject(db, admin, reg)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/registrations/{registration_id}/waitlist", status_code=status.HTTP_204_NO_CONTENT)
+def waitlist_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reg = _get_registration(db, registration_id)
+    try:
+        event_service.waitlist(db, admin, reg)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/registrations/{registration_id}/attend", status_code=status.HTTP_204_NO_CONTENT)
+def attend_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    reg = _get_registration(db, registration_id)
+    try:
+        event_service.mark_attended(db, admin, reg)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc

@@ -8,6 +8,7 @@ import { useMe } from "@/lib/useMe";
 const adminNav = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/memberships", label: "Members" },
+  { href: "/admin/events", label: "Events" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/audit", label: "Audit log" },
 ];
