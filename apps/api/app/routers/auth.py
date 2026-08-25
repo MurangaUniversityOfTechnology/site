@@ -1,0 +1,146 @@
+import secrets
+from urllib.parse import urlencode
+
+import httpx
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+
+from app.core.config import get_settings
+from app.core.db import get_db
+from app.core.deps import get_current_user
+from app.core.security import SESSION_COOKIE_NAME, SESSION_TTL, create_session_token, verify_password
+from app.models.user import User
+from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
+from app.services import auth as auth_service
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+settings = get_settings()
+
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+OAUTH_STATE_COOKIE = "oauth_state"
+
+
+def _set_session_cookie(response: Response, user_id: str) -> None:
+    token = create_session_token(str(user_id))
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=settings.environment != "development",
+        samesite="lax",
+        max_age=int(SESSION_TTL.total_seconds()),
+    )
+
+
+@router.post("/signup", response_model=MeResponse, status_code=status.HTTP_201_CREATED)
+def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
+    if auth_service.get_user_by_email(db, payload.email):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
+
+    user = auth_service.create_user(db, payload.email, payload.password)
+    _set_session_cookie(response, str(user.id))
+    return _to_me_response(user)
+
+
+@router.post("/login", response_model=MeResponse)
+def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = auth_service.get_user_by_email(db, payload.email)
+    if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
+
+    _set_session_cookie(response, str(user.id))
+    return _to_me_response(user)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response):
+    response.delete_cookie(SESSION_COOKIE_NAME)
+
+
+@router.get("/me", response_model=MeResponse)
+def me(user: User = Depends(get_current_user)):
+    return _to_me_response(user)
+
+
+@router.get("/google/start")
+def google_start(response: Response):
+    if not settings.google_client_id:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured yet")
+
+    state = secrets.token_urlsafe(24)
+    response = RedirectResponse(
+        f"{GOOGLE_AUTH_URL}?"
+        + urlencode(
+            {
+                "client_id": settings.google_client_id,
+                "redirect_uri": settings.google_redirect_uri,
+                "response_type": "code",
+                "scope": "openid email profile",
+                "state": state,
+                "access_type": "online",
+                "prompt": "select_account",
+            }
+        )
+    )
+    response.set_cookie(OAUTH_STATE_COOKIE, state, httponly=True, samesite="lax", max_age=600)
+    return response
+
+
+@router.get("/google/callback")
+def google_callback(
+    code: str,
+    state: str,
+    oauth_state: str | None = Cookie(default=None, alias=OAUTH_STATE_COOKIE),
+    db: Session = Depends(get_db),
+):
+    if not oauth_state or oauth_state != state:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid OAuth state")
+
+    with httpx.Client(timeout=10) as client:
+        token_res = client.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": code,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": settings.google_redirect_uri,
+                "grant_type": "authorization_code",
+            },
+        )
+        token_res.raise_for_status()
+        access_token = token_res.json()["access_token"]
+
+        userinfo_res = client.get(GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"})
+        userinfo_res.raise_for_status()
+        info = userinfo_res.json()
+
+    google_sub = info["sub"]
+    email = info["email"]
+
+    user = auth_service.get_user_by_google_sub(db, google_sub)
+    if not user:
+        user = auth_service.get_user_by_email(db, email)
+        if user:
+            user.google_sub = google_sub
+            user.email_verified = True
+            db.commit()
+        else:
+            user = auth_service.create_user(db, email, password=None, google_sub=google_sub)
+
+    redirect = RedirectResponse(f"{settings.web_origin}/onboarding")
+    _set_session_cookie(redirect, str(user.id))
+    redirect.delete_cookie(OAUTH_STATE_COOKIE)
+    return redirect
+
+
+def _to_me_response(user: User) -> MeResponse:
+    return MeResponse(
+        id=user.id,
+        email=user.email,
+        email_verified=user.email_verified,
+        is_admin=user.is_admin,
+        membership_status=user.membership.status.value if user.membership else "none",
+    )

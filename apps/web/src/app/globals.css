@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+/*
+ * "Digital Workshop" design tokens, pulled from design/MUT Tech Community.dc.html
+ * and design/emails/attendance-confirmed.html so the built app matches the
+ * approved canvas prototype exactly. Single dark theme — no light mode.
+ */
+:root {
+  --background: #07090a;
+  --surface: #0b0f10;
+  --surface-raised: #0e1314;
+  --border: #1b2224;
+  --border-strong: #232b2d;
+  --foreground: #e8eeea;
+  --muted: #a8b3ad;
+  --faint: #6f7c76;
+  --accent: #3dfa8a;
+  --accent-dim: #2f6b4c;
+  --warn: #ffb861;
+  --danger: #ff7a6b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-dim: var(--accent-dim);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

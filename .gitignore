@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- monorepo fix-ups: the Python "lib/" ignore above incidentally matches
+# apps/web/src/lib (a real source directory, not a Python venv lib dir).
+!apps/web/src/lib/
+!apps/web/src/lib/**
