@@ -446,6 +446,17 @@ export const learningPath = {
   otherPaths: ["Systems Programming", "AI / ML", "Cybersecurity", "Frontend", "Cloud & DevOps"],
 };
 
+export const membershipFeeKes = 500;
+
+export const membershipPerks = [
+  "Member events & workshops",
+  "Join club projects",
+  "Weekly build challenges",
+  "Member resources",
+  "Community participation",
+  "Public builder profile",
+];
+
 export const stats = [
   { value: "37", label: "builders" },
   { value: "12", label: "active projects" },
