@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ApiError, adminExtraApi, type AddMemberResponse } from "@/lib/api";
+import { ApiError, adminApi, type AddMemberResponse } from "@/lib/api";
 
 const REASONS = ["Sponsor / partner", "Committee member", "Speaker", "Migrated from legacy list", "Other"];
 
@@ -21,7 +21,7 @@ export default function AddMemberPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await adminExtraApi.addMember({
+      const res = await adminApi.addMember({
         email: email.trim(),
         display_name: displayName.trim(),
         registration_number: registrationNumber.trim() || null,

@@ -178,6 +178,28 @@ export const adminApi = {
   rejectRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/reject`, { method: "POST" }),
   waitlistRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/waitlist`, { method: "POST" }),
   attendRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/attend`, { method: "POST" }),
+  contentQueue: () => apiFetch<AdminContentRow[]>("/admin/content"),
+  publishContent: (id: string) => apiFetch<void>(`/admin/content/${id}/publish`, { method: "POST" }),
+  rejectContent: (id: string) => apiFetch<void>(`/admin/content/${id}/reject`, { method: "POST" }),
+  requestContentChanges: (id: string) => apiFetch<void>(`/admin/content/${id}/request-changes`, { method: "POST" }),
+  listAdmins: () => apiFetch<AdminRow[]>("/admin/admins"),
+  searchUser: (email: string) => apiFetch<AdminRow | null>(`/admin/users/search?email=${encodeURIComponent(email)}`),
+  makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
+  removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
+  addMember: (payload: {
+    email: string;
+    display_name: string;
+    registration_number: string | null;
+    github_handle: string | null;
+    reason: string;
+  }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
+  joinRequests: () => apiFetch<AdminJoinRequestRow[]>("/admin/projects/join-requests"),
+  approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
+  rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),
+  syncProjects: () => apiFetch<void>("/admin/projects/sync", { method: "POST" }),
+  roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
+  refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
+  resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),
 };
 
 export type Submission = {
@@ -294,24 +316,6 @@ export type AdminRow = { user_id: string; name: string; email: string; is_admin:
 
 export type AddMemberResponse = { user_id: string; email: string; temp_password: string | null };
 
-export const adminExtraApi = {
-  contentQueue: () => apiFetch<AdminContentRow[]>("/admin/content"),
-  publishContent: (id: string) => apiFetch<void>(`/admin/content/${id}/publish`, { method: "POST" }),
-  rejectContent: (id: string) => apiFetch<void>(`/admin/content/${id}/reject`, { method: "POST" }),
-  requestContentChanges: (id: string) => apiFetch<void>(`/admin/content/${id}/request-changes`, { method: "POST" }),
-  listAdmins: () => apiFetch<AdminRow[]>("/admin/admins"),
-  searchUser: (email: string) => apiFetch<AdminRow | null>(`/admin/users/search?email=${encodeURIComponent(email)}`),
-  makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
-  removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
-  addMember: (payload: {
-    email: string;
-    display_name: string;
-    registration_number: string | null;
-    github_handle: string | null;
-    reason: string;
-  }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
-};
-
 export type AdminJoinRequestRow = {
   id: string;
   project_slug: string;
@@ -331,12 +335,3 @@ export type RosterRow = {
   invite_status: string;
 };
 
-export const adminProjectApi = {
-  joinRequests: () => apiFetch<AdminJoinRequestRow[]>("/admin/projects/join-requests"),
-  approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
-  rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),
-  syncProjects: () => apiFetch<void>("/admin/projects/sync", { method: "POST" }),
-  roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
-  refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
-  resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),
-};

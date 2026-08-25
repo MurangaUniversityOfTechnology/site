@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminProjectApi, type RosterRow } from "@/lib/api";
+import { adminApi, type RosterRow } from "@/lib/api";
 
 const STATE: Record<string, { label: string; fg: string; bd: string }> = {
   none: { label: "no github linked", fg: "text-faint", bd: "border-border-strong" },
@@ -16,7 +16,7 @@ export default function AdminGithubPage() {
 
   useEffect(() => {
     let active = true;
-    adminProjectApi.roster().then((result) => {
+    adminApi.roster().then((result) => {
       if (active) setRows(result);
     });
     return () => {
@@ -27,7 +27,7 @@ export default function AdminGithubPage() {
   async function refresh(userId: string) {
     setBusy(userId);
     try {
-      const row = await adminProjectApi.refreshRosterRow(userId);
+      const row = await adminApi.refreshRosterRow(userId);
       setRows((r) => r?.map((x) => (x.user_id === userId ? row : x)) ?? null);
     } finally {
       setBusy(null);
@@ -37,7 +37,7 @@ export default function AdminGithubPage() {
   async function resend(userId: string) {
     setBusy(userId);
     try {
-      await adminProjectApi.resendInvite(userId);
+      await adminApi.resendInvite(userId);
       await refresh(userId);
     } finally {
       setBusy(null);

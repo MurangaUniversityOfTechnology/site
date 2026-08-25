@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminExtraApi, type AdminContentRow } from "@/lib/api";
+import { adminApi, type AdminContentRow } from "@/lib/api";
 
 export default function AdminContentPage() {
   const [rows, setRows] = useState<AdminContentRow[] | null>(null);
@@ -9,7 +9,7 @@ export default function AdminContentPage() {
 
   useEffect(() => {
     let active = true;
-    adminExtraApi.contentQueue().then((result) => {
+    adminApi.contentQueue().then((result) => {
       if (active) setRows(result);
     });
     return () => {
@@ -21,9 +21,9 @@ export default function AdminContentPage() {
     setBusy(id);
     try {
       await {
-        publish: adminExtraApi.publishContent,
-        reject: adminExtraApi.rejectContent,
-        request: adminExtraApi.requestContentChanges,
+        publish: adminApi.publishContent,
+        reject: adminApi.rejectContent,
+        request: adminApi.requestContentChanges,
       }[action](id);
       setRows((r) => r?.filter((x) => x.id !== id) ?? null);
     } finally {

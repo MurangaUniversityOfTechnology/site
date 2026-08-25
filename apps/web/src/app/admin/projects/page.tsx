@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminProjectApi, type AdminJoinRequestRow } from "@/lib/api";
+import { adminApi, type AdminJoinRequestRow } from "@/lib/api";
 
 export default function AdminProjectsPage() {
   const [rows, setRows] = useState<AdminJoinRequestRow[] | null>(null);
@@ -10,7 +10,7 @@ export default function AdminProjectsPage() {
 
   useEffect(() => {
     let active = true;
-    adminProjectApi.joinRequests().then((result) => {
+    adminApi.joinRequests().then((result) => {
       if (active) setRows(result);
     });
     return () => {
@@ -21,7 +21,7 @@ export default function AdminProjectsPage() {
   async function act(id: string, action: "approve" | "reject") {
     setBusy(id);
     try {
-      await (action === "approve" ? adminProjectApi.approveJoinRequest : adminProjectApi.rejectJoinRequest)(id);
+      await (action === "approve" ? adminApi.approveJoinRequest : adminApi.rejectJoinRequest)(id);
       setRows((r) => r?.filter((x) => x.id !== id) ?? null);
     } finally {
       setBusy(null);
@@ -31,7 +31,7 @@ export default function AdminProjectsPage() {
   async function sync() {
     setSyncing(true);
     try {
-      await adminProjectApi.syncProjects();
+      await adminApi.syncProjects();
     } finally {
       setSyncing(false);
     }

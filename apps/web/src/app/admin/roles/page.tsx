@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, adminExtraApi, type AdminRow } from "@/lib/api";
+import { ApiError, adminApi, type AdminRow } from "@/lib/api";
 
 export default function AdminRolesPage() {
   const [admins, setAdmins] = useState<AdminRow[] | null>(null);
@@ -11,7 +11,7 @@ export default function AdminRolesPage() {
   const [busy, setBusy] = useState(false);
 
   const loadAdmins = useCallback(() => {
-    adminExtraApi.listAdmins().then(setAdmins);
+    adminApi.listAdmins().then(setAdmins);
   }, []);
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export default function AdminRolesPage() {
   async function search() {
     setError(null);
     setFound(undefined);
-    const result = await adminExtraApi.searchUser(email.trim());
+    const result = await adminApi.searchUser(email.trim());
     setFound(result);
   }
 
@@ -30,8 +30,8 @@ export default function AdminRolesPage() {
     setBusy(true);
     setError(null);
     try {
-      if (found.is_admin) await adminExtraApi.removeAdmin(found.user_id);
-      else await adminExtraApi.makeAdmin(found.user_id);
+      if (found.is_admin) await adminApi.removeAdmin(found.user_id);
+      else await adminApi.makeAdmin(found.user_id);
       setFound({ ...found, is_admin: !found.is_admin });
       loadAdmins();
     } catch (err) {
