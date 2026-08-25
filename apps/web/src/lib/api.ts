@@ -105,3 +105,38 @@ export const membershipApi = {
     apiFetch<Payment>("/membership/activate", { method: "POST", body: JSON.stringify({ phone }) }),
   status: () => apiFetch<MembershipStatusResponse>("/membership/status"),
 };
+
+export type AdminOverview = {
+  total_members: number;
+  pending_approval: number;
+  new_this_week: number;
+  unmatched_payments: number;
+};
+
+export type MembershipApplication = {
+  user_id: string;
+  name: string;
+  email: string;
+  course: string | null;
+  year_of_study: number | null;
+  registration_number: string | null;
+  payment_amount: number | null;
+  payment_receipt: string | null;
+  payment_status: string | null;
+  membership_status: string;
+};
+
+export type PaymentTotal = { label: string; amount_kes: number; count: number };
+export type PaymentRow = { receipt: string | null; member: string; amount: number; status: string };
+export type PaymentsOverview = { totals: PaymentTotal[]; rows: PaymentRow[] };
+export type AuditEntry = { at: string; who: string; what: string; kind: string };
+
+export const adminApi = {
+  overview: () => apiFetch<AdminOverview>("/admin/overview"),
+  memberships: (statusFilter: string) =>
+    apiFetch<MembershipApplication[]>(`/admin/memberships?status_filter=${statusFilter}`),
+  approve: (userId: string) => apiFetch<void>(`/admin/memberships/${userId}/approve`, { method: "POST" }),
+  reject: (userId: string) => apiFetch<void>(`/admin/memberships/${userId}/reject`, { method: "POST" }),
+  payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
+  audit: () => apiFetch<AuditEntry[]>("/admin/audit"),
+};

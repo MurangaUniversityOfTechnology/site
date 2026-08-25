@@ -1,10 +1,12 @@
+from datetime import date, timedelta
+
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
-from app.services import mpesa
+from app.services import audit, mpesa
 
 settings = get_settings()
 
@@ -81,6 +83,28 @@ def apply_stk_callback(db: Session, payload: dict) -> None:
         if membership and membership.status == MembershipStatus.payment_pending:
             membership.status = MembershipStatus.none
 
+    db.commit()
+
+
+def approve(db: Session, admin: User, applicant: User) -> None:
+    membership = applicant.membership
+    if membership.status != MembershipStatus.approval_pending:
+        raise MembershipError(f"Cannot approve from status '{membership.status.value}'")
+
+    membership.status = MembershipStatus.active
+    membership.period_start = date.today()
+    membership.period_end = date.today() + timedelta(days=365)
+    audit.log(db, admin, "membership", f"Approved membership for {applicant.email}")
+    db.commit()
+
+
+def reject(db: Session, admin: User, applicant: User) -> None:
+    membership = applicant.membership
+    if membership.status != MembershipStatus.approval_pending:
+        raise MembershipError(f"Cannot reject from status '{membership.status.value}'")
+
+    membership.status = MembershipStatus.rejected
+    audit.log(db, admin, "membership", f"Rejected membership for {applicant.email}")
     db.commit()
 
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 
 const links = [
@@ -13,6 +14,9 @@ const links = [
 
 export function Nav() {
   const { me, loading } = useMe();
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center gap-5 border-b border-[#161c1e] bg-background/95 px-4 backdrop-blur-sm sm:px-6">

@@ -1,3 +1,4 @@
+from app.models.audit_log import AuditLog
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.profile import ExperienceLevel, ProfileVisibility, Profile
@@ -12,4 +13,5 @@ __all__ = [
     "MembershipStatus",
     "Payment",
     "PaymentStatus",
+    "AuditLog",
 ]
