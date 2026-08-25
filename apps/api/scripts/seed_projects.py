@@ -28,7 +28,6 @@ DISPLAY_OVERRIDES = {
 REPOS = [
     "Final-Extended-Reality-Project-Trainings",
     "past_lens",
-    "butterfly_eye",
     "OriginFest2025",
     "AI_and_Robotics_Sessions",
     "Animals_That_Destrory_Farm_AI_Project",

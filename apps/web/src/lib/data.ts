@@ -271,7 +271,7 @@ export const communityFeed = [
   },
   {
     initials: "JK",
-    text: "Joy joined Butterfly Eye as a backend contributor.",
+    text: "Joy joined Origin Fest 2025 as a backend contributor.",
     kind: "joined project",
     when: "yesterday",
     color: "green",
@@ -352,7 +352,7 @@ export const membershipPerks = [
 
 export const stats = [
   { value: "37", label: "builders" },
-  { value: "7", label: "active projects" },
+  { value: "6", label: "active projects" },
   { value: "8", label: "upcoming events" },
   { value: "24", label: "challenges done" },
 ];
