@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 import httpx
@@ -9,6 +10,7 @@ from app.models.user import GithubOrgInviteStatus, User
 from app.services import notification
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 API_BASE = "https://api.github.com"
 INVITE_EXPIRY_DAYS = 7
@@ -24,6 +26,16 @@ def _headers() -> dict:
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+
+
+def _log_failure(action: str, exc: httpx.HTTPError) -> None:
+    # These calls fail silently by design (rate limits shouldn't error the
+    # request), but silent shouldn't mean invisible — this is exactly the gap
+    # that hid a 403 permission error for a while during development.
+    if isinstance(exc, httpx.HTTPStatusError):
+        logger.warning("%s: GitHub API returned %s — %s", action, exc.response.status_code, exc.response.text[:300])
+    else:
+        logger.warning("%s: GitHub API request failed — %s", action, exc)
 
 
 def sync_project(db: Session, project: Project) -> None:
@@ -42,7 +54,8 @@ def sync_project(db: Session, project: Project) -> None:
             )
             issues_res.raise_for_status()
             issues = [i for i in issues_res.json() if "pull_request" not in i]
-    except httpx.HTTPError:
+    except httpx.HTTPError as exc:
+        _log_failure(f"sync_project({project.slug})", exc)
         return
 
     project.description = repo.get("description")
@@ -89,7 +102,8 @@ def maybe_invite_to_org(db: Session, user: User) -> None:
             timeout=15,
         )
         res.raise_for_status()
-    except httpx.HTTPError:
+    except httpx.HTTPError as exc:
+        _log_failure(f"maybe_invite_to_org({user.email})", exc)
         return
 
     user.github_org_invite_status = GithubOrgInviteStatus.invited
@@ -119,7 +133,8 @@ def refresh_invite_status(db: Session, user: User) -> None:
             headers=_headers(),
             timeout=15,
         )
-    except httpx.HTTPError:
+    except httpx.HTTPError as exc:
+        _log_failure(f"refresh_invite_status({user.email})", exc)
         return
 
     if res.status_code == 200:
