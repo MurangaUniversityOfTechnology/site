@@ -1,7 +1,7 @@
 import enum
 import uuid
 
-from sqlalchemy import ARRAY, Enum, ForeignKey, String, Text
+from sqlalchemy import ARRAY, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,7 +25,14 @@ class Profile(Base):
     __tablename__ = "profiles"
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    first_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Confirms MUT enrollment for admins during membership review. Never returned
+    # from any public-facing endpoint — flow.md §7 is explicit this stays admin-only.
+    registration_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    course: Mapped[str | None] = mapped_column(String, nullable=True)
+    year_of_study: Mapped[int | None] = mapped_column(Integer, nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String, nullable=True)
     github_url: Mapped[str | None] = mapped_column(String, nullable=True)

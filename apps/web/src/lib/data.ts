@@ -2,6 +2,49 @@
 // Public pages read from here until Phase 5-7 back projects/events/challenges
 // with real DB-backed models.
 
+export const interestOptions = [
+  "Backend",
+  "Frontend",
+  "Mobile",
+  "AI / ML",
+  "Cybersecurity",
+  "Cloud",
+  "Systems",
+  "Embedded",
+  "Data",
+  "DevOps",
+  "Open Source",
+  "Robotics",
+];
+
+export const goalOptions = [
+  "Build projects",
+  "Meet other developers",
+  "Learn new technologies",
+  "Participate in hackathons",
+  "Improve my portfolio",
+  "Contribute to open source",
+];
+
+export const experienceLevels = [
+  { value: "starting", label: "Just getting started", tag: "level 01" },
+  { value: "some_projects", label: "I've built a few projects", tag: "level 02" },
+  { value: "independent", label: "Comfortable building independently", tag: "level 03" },
+  { value: "advanced", label: "Advanced / experienced", tag: "level 04" },
+] as const;
+
+export const yearsOfStudy = ["1st", "2nd", "3rd", "4th"];
+
+export const mutCourses = [
+  "BSc Software Engineering",
+  "BSc Computer Science",
+  "BSc Information Technology",
+  "BSc Computer Technology",
+  "BSc Electrical & Electronic Engineering",
+  "BSc Mechatronic Engineering",
+  "Diploma in ICT",
+];
+
 export type Project = {
   slug: string;
   name: string;

@@ -44,3 +44,42 @@ export const authApi = {
   me: () => apiFetch<Me>("/auth/me"),
   googleStartUrl: () => `${API_URL}/auth/google/start`,
 };
+
+export type ExperienceLevel = "starting" | "some_projects" | "independent" | "advanced";
+
+export type Profile = {
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  registration_number: string | null;
+  course: string | null;
+  year_of_study: number | null;
+  interests: string[];
+  experience_level: ExperienceLevel | null;
+  goals: string[];
+  bio: string | null;
+  photo_url: string | null;
+  github_url: string | null;
+  linkedin_url: string | null;
+};
+
+export type OnboardingPayload = {
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  registration_number: string | null;
+  course: string | null;
+  year_of_study: number | null;
+  interests: string[];
+  experience_level: ExperienceLevel | null;
+  goals: string[];
+  bio: string | null;
+  github_url: string | null;
+  linkedin_url: string | null;
+};
+
+export const profileApi = {
+  me: () => apiFetch<Profile>("/profile/me"),
+  update: (payload: OnboardingPayload) =>
+    apiFetch<Profile>("/profile/me", { method: "PATCH", body: JSON.stringify(payload) }),
+};
