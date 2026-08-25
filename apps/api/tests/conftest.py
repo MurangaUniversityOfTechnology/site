@@ -24,7 +24,11 @@ def pytest_configure(config):
     os.environ["DATABASE_URL"] = _pg_container.get_connection_url()
     os.environ.setdefault("SECRET_KEY", "test-secret-key-do-not-use-in-prod")
     os.environ.setdefault("WEB_ORIGIN", "http://testserver")
-    os.environ.setdefault("ENVIRONMENT", "test")
+    # Not "test" — _set_session_cookie() sets Secure=True for anything other
+    # than "development", and TestClient's transport is plain HTTP (matches
+    # real local dev, not a TLS-terminated deploy), so a Secure cookie
+    # correctly never gets sent back and every authenticated request 401s.
+    os.environ.setdefault("ENVIRONMENT", "development")
     # maybe_invite_to_org no-ops unless both of these are non-empty — the
     # idempotency/wiring tests need the guard to pass through to the (mocked)
     # HTTP call, not short-circuit before it.
