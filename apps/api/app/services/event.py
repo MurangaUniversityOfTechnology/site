@@ -4,7 +4,7 @@ from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import MembershipStatus
 from app.models.user import User
-from app.services import audit
+from app.services import audit, notification
 
 
 class EventError(Exception):
@@ -96,12 +96,22 @@ def list_for_event(db: Session, slug: str) -> list[EventRegistration]:
     )
 
 
+NOTIFY_TITLE = {
+    RegistrationStatus.approved: "Registration confirmed ✓",
+    RegistrationStatus.rejected: "Registration not approved",
+    RegistrationStatus.waitlisted: "You're on the waitlist",
+    RegistrationStatus.attended: "Attendance confirmed",
+}
+
+
 def _transition(db: Session, admin: User, registration: EventRegistration, to: RegistrationStatus, allowed_from: set[RegistrationStatus]) -> None:
     if registration.status not in allowed_from:
         raise EventError(f"Cannot move registration from '{registration.status.value}' to '{to.value}'")
     registration.status = to
     who = registration.user.email if registration.user else registration.guest_email
     audit.log(db, admin, "event", f"{to.value.capitalize()} registration for {who} · {registration.event.title}")
+    if registration.user:
+        notification.notify(db, registration.user, "event", NOTIFY_TITLE[to], registration.event.title)
     db.commit()
 
 

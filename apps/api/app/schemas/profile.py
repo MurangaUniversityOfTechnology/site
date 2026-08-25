@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from app.models.profile import ExperienceLevel
+from app.models.profile import ExperienceLevel, ProfileVisibility
 
 
 class OnboardingRequest(BaseModel):
@@ -16,11 +16,12 @@ class OnboardingRequest(BaseModel):
     bio: str | None = Field(default=None, max_length=2000)
     github_url: str | None = None
     linkedin_url: str | None = None
+    visibility: ProfileVisibility = ProfileVisibility.public
 
 
 class ProfileResponse(BaseModel):
     """Self-view only (GET/PATCH /profile/me) — includes registration_number.
-    A future public profile endpoint (Phase 8) must NOT reuse this schema."""
+    The public member directory/profile endpoints use schemas/member.py instead."""
 
     first_name: str | None
     last_name: str | None
@@ -35,5 +36,6 @@ class ProfileResponse(BaseModel):
     photo_url: str | None
     github_url: str | None
     linkedin_url: str | None
+    visibility: ProfileVisibility
 
     model_config = {"from_attributes": True}

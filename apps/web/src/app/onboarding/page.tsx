@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { profileApi, type ExperienceLevel } from "@/lib/api";
+import { profileApi, type ExperienceLevel, type ProfileVisibility } from "@/lib/api";
 import { experienceLevels, goalOptions, interestOptions, mutCourses, yearsOfStudy } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 
@@ -21,6 +21,7 @@ type FormState = {
   bio: string;
   github: string;
   linkedin: string;
+  visibility: ProfileVisibility;
 };
 
 const initialForm: FormState = {
@@ -36,7 +37,14 @@ const initialForm: FormState = {
   bio: "",
   github: "",
   linkedin: "",
+  visibility: "public",
 };
+
+const visibilityOptions: { value: ProfileVisibility; label: string; note: string }[] = [
+  { value: "public", label: "Public", note: "Anyone can see your profile." },
+  { value: "members", label: "Club members", note: "Only signed-in active members can see it." },
+  { value: "private", label: "Private", note: "Nobody can view your profile page." },
+];
 
 function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
@@ -76,6 +84,7 @@ export default function OnboardingPage() {
         bio: form.bio.trim() || null,
         github_url: form.github.trim() || null,
         linkedin_url: form.linkedin.trim() || null,
+        visibility: form.visibility,
       });
       router.push("/welcome");
     } catch {
@@ -345,6 +354,39 @@ export default function OnboardingPage() {
                     className="input font-mono text-[13.5px]"
                   />
                 </Field>
+              </div>
+
+              <div className="mt-6">
+                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+                  profile visibility
+                </div>
+                <div className="flex flex-col gap-2">
+                  {visibilityOptions.map((opt) => {
+                    const on = form.visibility === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, visibility: opt.value })}
+                        className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left ${
+                          on ? "border-accent-dim bg-accent/5" : "border-border-strong"
+                        }`}
+                      >
+                        <span
+                          className={`grid h-4 w-4 flex-none place-items-center rounded-full border-[1.5px] ${
+                            on ? "border-accent" : "border-border-strong"
+                          }`}
+                        >
+                          {on && <span className="h-2 w-2 rounded-full bg-accent" />}
+                        </span>
+                        <span>
+                          <span className="text-[15px]">{opt.label}</span>
+                          <span className="ml-2.5 text-[13px] text-faint">{opt.note}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

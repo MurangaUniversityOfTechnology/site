@@ -47,6 +47,8 @@ export const authApi = {
 
 export type ExperienceLevel = "starting" | "some_projects" | "independent" | "advanced";
 
+export type ProfileVisibility = "public" | "members" | "private";
+
 export type Profile = {
   first_name: string | null;
   last_name: string | null;
@@ -61,6 +63,7 @@ export type Profile = {
   photo_url: string | null;
   github_url: string | null;
   linkedin_url: string | null;
+  visibility: ProfileVisibility;
 };
 
 export type OnboardingPayload = {
@@ -76,6 +79,7 @@ export type OnboardingPayload = {
   bio: string | null;
   github_url: string | null;
   linkedin_url: string | null;
+  visibility: ProfileVisibility;
 };
 
 export const profileApi = {
@@ -184,4 +188,44 @@ export const challengeApi = {
     apiFetch<Submission>(`/challenges/${slug}/submit`, { method: "POST", body: JSON.stringify(payload) }),
   mySubmission: (slug: string) => apiFetch<Submission | null>(`/challenges/${slug}/my-submission`),
   recentSubmissions: (slug: string) => apiFetch<RecentSubmission[]>(`/challenges/${slug}/submissions`),
+};
+
+export type Notification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  read: boolean;
+  created_at: string;
+};
+
+export const notificationApi = {
+  list: () => apiFetch<Notification[]>("/notifications"),
+  unreadCount: () => apiFetch<{ count: number }>("/notifications/unread-count"),
+  markRead: (id: string) => apiFetch<void>(`/notifications/${id}/read`, { method: "POST" }),
+  markAllRead: () => apiFetch<void>("/notifications/read-all", { method: "POST" }),
+};
+
+export type MemberSummary = {
+  user_id: string;
+  display_name: string;
+  interests: string[];
+  experience_level: ExperienceLevel | null;
+};
+
+export type MemberProfile = {
+  user_id: string;
+  display_name: string;
+  bio: string | null;
+  interests: string[];
+  experience_level: ExperienceLevel | null;
+  goals: string[];
+  github_url: string | null;
+  linkedin_url: string | null;
+  photo_url: string | null;
+};
+
+export const memberApi = {
+  directory: () => apiFetch<MemberSummary[]>("/members"),
+  get: (userId: string) => apiFetch<MemberProfile>(`/members/${userId}`),
 };
