@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.user import User
-from app.services import audit, mpesa, notification
+from app.services import audit, github, mpesa, notification
 
 settings = get_settings()
 
@@ -97,6 +97,7 @@ def approve(db: Session, admin: User, applicant: User) -> None:
     audit.log(db, admin, "membership", f"Approved membership for {applicant.email}")
     notification.notify(db, applicant, "membership", "Membership approved ✓", "Your Tech Club membership is now active.")
     db.commit()
+    github.maybe_invite_to_org(db, applicant)
 
 
 def reject(db: Session, admin: User, applicant: User) -> None:

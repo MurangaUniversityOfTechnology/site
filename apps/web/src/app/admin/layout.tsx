@@ -10,6 +10,8 @@ const adminNav = [
   { href: "/admin/memberships", label: "Members" },
   { href: "/admin/events", label: "Events" },
   { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/projects", label: "Projects" },
+  { href: "/admin/github", label: "GitHub" },
   { href: "/admin/content", label: "Content" },
   { href: "/admin/roles", label: "Roles" },
   { href: "/admin/members/add", label: "Add member" },

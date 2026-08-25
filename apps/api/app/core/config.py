@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     # GitHub
     github_client_id: str = ""
     github_client_secret: str = ""
+    github_redirect_uri: str = ""
     github_sync_token: str = ""
     github_org: str = ""
 

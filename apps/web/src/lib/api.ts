@@ -45,6 +45,14 @@ export const authApi = {
   googleStartUrl: () => `${API_URL}/auth/google/start`,
 };
 
+export type GithubStatus = { linked: boolean; login: string | null; invite_status: string };
+
+export const githubApi = {
+  status: () => apiFetch<GithubStatus>("/auth/github/status"),
+  revoke: () => apiFetch<void>("/auth/github/revoke", { method: "POST" }),
+  startUrl: () => `${API_URL}/auth/github/start`,
+};
+
 export type ExperienceLevel = "starting" | "some_projects" | "independent" | "advanced";
 
 export type ProfileVisibility = "public" | "members" | "private";
@@ -248,6 +256,38 @@ export const contentApi = {
   getPublished: (id: string) => apiFetch<ContentItem>(`/content/published/${id}`),
 };
 
+export type ProjectIssue = { id: number; title: string; url: string; labels: string[]; created_at: string };
+
+export type ProjectSummary = {
+  slug: string;
+  name: string;
+  description: string | null;
+  language: string | null;
+  topics: string[];
+  stars: number;
+  open_issues_count: number;
+};
+
+export type ProjectDetail = ProjectSummary & {
+  github_url: string;
+  synced_at: string | null;
+  issues: ProjectIssue[];
+  members: string[];
+  member_count: number;
+  is_member: boolean;
+  my_request_status: string | null;
+};
+
+export const projectApi = {
+  list: () => apiFetch<ProjectSummary[]>("/projects"),
+  get: (slug: string) => apiFetch<ProjectDetail>(`/projects/${slug}`),
+  join: (slug: string, payload: { contribution_areas: string[]; message: string | null }) =>
+    apiFetch<{ id: string; status: string; created_at: string }>(`/projects/${slug}/join`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+};
+
 export type AdminContentRow = { id: string; title: string; body: string; author: string; when: string };
 
 export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean };
@@ -270,4 +310,33 @@ export const adminExtraApi = {
     github_handle: string | null;
     reason: string;
   }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
+};
+
+export type AdminJoinRequestRow = {
+  id: string;
+  project_slug: string;
+  project_name: string;
+  user_email: string;
+  user_name: string;
+  contribution_areas: string[];
+  message: string | null;
+  created_at: string;
+};
+
+export type RosterRow = {
+  user_id: string;
+  name: string;
+  email: string;
+  github_login: string | null;
+  invite_status: string;
+};
+
+export const adminProjectApi = {
+  joinRequests: () => apiFetch<AdminJoinRequestRow[]>("/admin/projects/join-requests"),
+  approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
+  rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),
+  syncProjects: () => apiFetch<void>("/admin/projects/sync", { method: "POST" }),
+  roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
+  refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
+  resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),
 };

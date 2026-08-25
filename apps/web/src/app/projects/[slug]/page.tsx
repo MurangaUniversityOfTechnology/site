@@ -1,19 +1,53 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { projects } from "@/lib/data";
+import { useParams } from "next/navigation";
+import { JoinProjectPanel } from "@/components/JoinProjectPanel";
+import { projectApi, type ProjectDetail } from "@/lib/api";
 
-const dotColor = { green: "bg-accent", amber: "bg-warn", muted: "bg-faint" } as const;
-
-export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.slug }));
+function timeAgo(iso: string): string {
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
-export default async function ProjectDetailPage(props: PageProps<"/projects/[slug]">) {
-  const { slug } = await props.params;
-  const project = projects.find((p) => p.slug === slug);
-  if (!project) notFound();
+export default function ProjectDetailPage() {
+  const params = useParams<{ slug: string }>();
+  const [project, setProject] = useState<ProjectDetail | null | undefined>(undefined);
 
-  const d = project.detail;
+  useEffect(() => {
+    let active = true;
+    projectApi
+      .get(params.slug)
+      .then((result) => {
+        if (active) setProject(result);
+      })
+      .catch(() => {
+        if (active) setProject(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [params.slug]);
+
+  if (project === undefined) return null;
+
+  if (!project) {
+    return (
+      <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 text-center">
+        <div>
+          <h1 className="text-2xl tracking-[-0.02em]">Project not found</h1>
+          <Link href="/projects" className="mt-3 inline-block text-accent hover:underline">
+            Back to projects
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -24,111 +58,105 @@ export default async function ProjectDetailPage(props: PageProps<"/projects/[slu
         <h1 className="mt-5.5 text-[clamp(36px,7vw,78px)] uppercase leading-[0.94] tracking-[-0.04em]">
           {project.name}
         </h1>
-        <p className="mt-5 max-w-[480px] text-[17px] leading-[1.55] text-[#9aa6a0]">{project.blurb}</p>
+        <p className="mt-5 max-w-[480px] text-[17px] leading-[1.55] text-[#9aa6a0]">
+          {project.description || "No description on GitHub yet."}
+        </p>
 
         <div className="mt-8 flex flex-wrap gap-7 font-mono">
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-accent">
-            <span className="h-1.5 w-1.5 animate-[pulse_1.8s_infinite] rounded-full bg-accent" />
-            {project.state}
+          <div className="text-[11px] text-[#7f8d87]">
+            {project.member_count} <span className="text-faint">contributors</span>
           </div>
-          {d && (
+          <div className="text-[11px] text-[#7f8d87]">
+            {project.open_issues_count} <span className="text-faint">open issues</span>
+          </div>
+          {project.language && (
+            <div className="text-[11px] text-[#7f8d87]">
+              <span className="text-foreground">{project.language}</span> <span className="text-faint">primary language</span>
+            </div>
+          )}
+          <div className="text-[11px] text-[#7f8d87]">
+            ★ {project.stars} <span className="text-faint">stars</span>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <JoinProjectPanel slug={project.slug} isMember={project.is_member} requestStatus={project.my_request_status} />
+          <a
+            href={project.github_url}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-border-strong px-6 py-3 text-[15px] hover:border-accent-dim"
+          >
+            View on GitHub
+          </a>
+        </div>
+      </div>
+
+      <div className="grid gap-px bg-[#161c1e] md:grid-cols-2">
+        <div className="bg-background p-6 sm:p-10">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">contributors</div>
+          {project.members.length === 0 ? (
+            <p className="mt-4 text-[14.5px] text-muted">Nobody&apos;s joined yet — be the first.</p>
+          ) : (
+            <div className="mt-4 flex flex-col">
+              {project.members.map((name) => (
+                <div key={name} className="border-b border-[#14191b] py-3 text-[15px] last:border-0">
+                  {name}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {project.topics.length > 0 && (
             <>
-              <div className="text-[11px] text-[#7f8d87]">
-                {d.contributors} <span className="text-faint">contributors</span>
-              </div>
-              <div className="text-[11px] text-[#7f8d87]">
-                {d.openIssues} <span className="text-faint">open issues</span>
-              </div>
-              <div className="text-[11px] text-[#7f8d87]">
-                {d.commitsThisMonth} <span className="text-faint">commits this month</span>
+              <div className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">topics</div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {project.topics.map((t) => (
+                  <span key={t} className="rounded border border-border-strong px-2.5 py-1.5 font-mono text-[11.5px] text-muted">
+                    {t}
+                  </span>
+                ))}
               </div>
             </>
           )}
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <button className="rounded-lg bg-accent px-6 py-3 text-[15px] font-semibold text-[#04140b] hover:opacity-90">
-            Join Project
-          </button>
-          {d && (
-            <a
-              href={`https://github.com/${d.repo}`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-lg border border-border-strong px-6 py-3 text-[15px] hover:border-accent-dim"
-            >
-              View on GitHub
-            </a>
+        <div className="bg-surface p-6 sm:p-10">
+          <div className="flex items-baseline gap-3">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">good first issues</div>
+            {project.synced_at ? (
+              <span className="font-mono text-[10.5px] text-accent">synced {timeAgo(project.synced_at)}</span>
+            ) : (
+              <span className="font-mono text-[10.5px] text-warn">not synced yet</span>
+            )}
+          </div>
+
+          {project.issues.length === 0 ? (
+            <p className="mt-4 text-[14.5px] text-muted">No open &ldquo;good first issue&rdquo;s right now — check back soon.</p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-2.5">
+              {project.issues.map((issue) => (
+                <a
+                  key={issue.id}
+                  href={issue.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg border border-border bg-background p-4 hover:border-accent-dim"
+                >
+                  <div className="text-[14.5px] text-foreground">{issue.title}</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {issue.labels.map((l) => (
+                      <span key={l} className="rounded border border-accent-dim px-2 py-0.5 font-mono text-[10px] text-accent">
+                        {l}
+                      </span>
+                    ))}
+                  </div>
+                </a>
+              ))}
+            </div>
           )}
         </div>
       </div>
-
-      {d ? (
-        <div className="grid gap-px bg-[#161c1e] md:grid-cols-2">
-          <div className="bg-background p-6 sm:p-10">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">about</div>
-            {d.about.map((p, i) => (
-              <p key={i} className="mt-4 text-[16.5px] leading-[1.65] text-[#c8d2cc] text-pretty">
-                {p}
-              </p>
-            ))}
-
-            <div className="mt-10 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">roadmap</div>
-            <div className="mt-4 flex flex-col">
-              {d.roadmap.map((r) => (
-                <div key={r.title} className="flex gap-4 border-b border-[#14191b] py-3.5">
-                  <span className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${dotColor[r.color]}`} />
-                  <div>
-                    <div className="text-[15.5px] font-medium">{r.title}</div>
-                    <div className="mt-1 font-mono text-[10.5px] uppercase tracking-[0.1em] text-faint">{r.state}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-surface p-6 sm:p-10">
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">tech stack</div>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {project.stack.map((t) => (
-                <span key={t} className="rounded border border-border-strong px-2.5 py-1.5 font-mono text-[11.5px] text-muted">
-                  {t}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-9 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">open roles</div>
-            <div className="mt-3.5 rounded-lg border border-dashed border-accent-dim bg-accent/[0.03] p-4">
-              <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-accent">3 spots available</div>
-              <div className="mt-2 text-[15px] text-[#c8d2cc]">{d.openRoles}</div>
-            </div>
-
-            <div className="mt-9 flex items-baseline gap-3">
-              <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">from github</div>
-              <span className="font-mono text-[10.5px] text-accent">synced 2 min ago</span>
-            </div>
-            <div className="mt-3.5 break-all rounded-lg border border-border bg-background px-4 py-3.5 font-mono text-[11.5px] text-muted">
-              {d.repo}
-            </div>
-            <div className="mt-3.5 flex flex-col gap-3 font-mono text-[11.5px] leading-[1.5] text-[#7f8d87]">
-              {d.ghActivity.map((g, i) => (
-                <div key={i}>
-                  <span className={g.color === "green" ? "text-accent" : g.color === "amber" ? "text-warn" : "text-faint"}>
-                    ●
-                  </span>{" "}
-                  {g.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="px-5 py-12 sm:px-10">
-          <p className="max-w-lg text-[15.5px] leading-[1.6] text-muted">
-            Full project details are still being written up. Reach out in the club to get involved.
-          </p>
-        </div>
-      )}
     </main>
   );
 }

@@ -10,6 +10,7 @@ from app.models.content import Content, ContentStatus
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
+from app.models.project_join_request import ProjectJoinRequest
 from app.models.user import User
 from app.schemas.admin import (
     AddMemberRequest,
@@ -24,9 +25,13 @@ from app.schemas.admin import (
 )
 from app.schemas.content import AdminContentRow
 from app.schemas.event import AdminRegistrationRow
+from app.schemas.github import RosterRow
+from app.schemas.project import AdminJoinRequestRow
 from app.services import audit, content as content_service
 from app.services import event as event_service
+from app.services import github as github_service
 from app.services import membership as membership_service
+from app.services import project as project_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -322,3 +327,107 @@ def add_member(payload: AddMemberRequest, admin: User = Depends(require_admin), 
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
     return AddMemberResponse(user_id=user.id, email=user.email, temp_password=temp_password)
+
+
+# ── project join requests ───────────────────────────────────────────
+
+
+@router.get("/projects/join-requests", response_model=list[AdminJoinRequestRow])
+def project_join_requests(db: Session = Depends(get_db)):
+    return [
+        AdminJoinRequestRow(
+            id=r.id,
+            project_slug=r.project.slug,
+            project_name=r.project.name,
+            user_email=r.user.email,
+            user_name=(r.user.profile.display_name if r.user.profile and r.user.profile.display_name else r.user.email),
+            contribution_areas=r.contribution_areas,
+            message=r.message,
+            created_at=r.created_at,
+        )
+        for r in project_service.pending_queue(db)
+    ]
+
+
+def _get_join_request(db: Session, request_id: str) -> ProjectJoinRequest:
+    r = db.get(ProjectJoinRequest, request_id)
+    if not r:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Join request not found")
+    return r
+
+
+@router.post("/projects/join-requests/{request_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
+def approve_join_request(request_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    r = _get_join_request(db, request_id)
+    try:
+        project_service.approve_join(db, admin, r)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/projects/join-requests/{request_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
+def reject_join_request(request_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    r = _get_join_request(db, request_id)
+    try:
+        project_service.reject_join(db, admin, r)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/projects/sync", status_code=status.HTTP_204_NO_CONTENT)
+def sync_projects(admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    audit.log(db, admin, "project", "Triggered a GitHub project sync")
+    db.commit()
+    github_service.sync_all_projects(db)
+
+
+# ── github roster ────────────────────────────────────────────────────
+
+
+@router.get("/github/roster", response_model=list[RosterRow])
+def github_roster(db: Session = Depends(get_db)):
+    users = (
+        db.query(User)
+        .join(Membership)
+        .filter(Membership.status == MembershipStatus.active)
+        .order_by(User.email.asc())
+        .all()
+    )
+    return [
+        RosterRow(
+            user_id=u.id,
+            name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
+            email=u.email,
+            github_login=u.github_login,
+            invite_status=u.github_org_invite_status.value,
+        )
+        for u in users
+    ]
+
+
+@router.post("/github/roster/{user_id}/refresh", response_model=RosterRow)
+def refresh_roster_row(user_id: str, db: Session = Depends(get_db)):
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    github_service.refresh_invite_status(db, u)
+    return RosterRow(
+        user_id=u.id,
+        name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
+        email=u.email,
+        github_login=u.github_login,
+        invite_status=u.github_org_invite_status.value,
+    )
+
+
+@router.post("/github/roster/{user_id}/resend-invite", status_code=status.HTTP_204_NO_CONTENT)
+def resend_invite(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    u = db.get(User, user_id)
+    if not u:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    try:
+        github_service.resend_invite(db, u)
+    except github_service.GithubError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    audit.log(db, admin, "project", f"Re-sent GitHub org invite to {u.email}")
+    db.commit()

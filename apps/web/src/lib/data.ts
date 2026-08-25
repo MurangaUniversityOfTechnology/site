@@ -45,113 +45,6 @@ export const mutCourses = [
   "Diploma in ICT",
 ];
 
-export type Project = {
-  slug: string;
-  name: string;
-  blurb: string;
-  stack: string[];
-  state: string;
-  stateColor: "green" | "amber" | "muted";
-  people: string;
-  activity: string;
-  detail?: {
-    contributors: number;
-    openIssues: number;
-    commitsThisMonth: number;
-    about: string[];
-    roadmap: { title: string; state: string; color: "green" | "amber" | "muted" }[];
-    openRoles: string;
-    repo: string;
-    ghActivity: { text: string; color: "green" | "amber" | "muted" }[];
-  };
-};
-
-export const projects: Project[] = [
-  {
-    slug: "campusconnect",
-    name: "CampusConnect",
-    blurb: "Everything happening on campus in one searchable feed. 900 weekly users.",
-    stack: ["Python", "FastAPI", "Postgres"],
-    state: "looking for contributors",
-    stateColor: "green",
-    people: "12 contributors",
-    activity: "active today",
-    detail: {
-      contributors: 12,
-      openIssues: 14,
-      commitsThisMonth: 72,
-      about: [
-        "Students miss most of what happens on campus because information lives in WhatsApp groups and notice boards. CampusConnect pulls every club, lab session and lecture change into one feed you can actually search.",
-        "Built and maintained entirely by club members. Deployed on a single VPS, no funding, 900 weekly users.",
-      ],
-      roadmap: [
-        { title: "Event feed + search", state: "shipped · v1.0", color: "green" },
-        { title: "Club calendar sync", state: "shipped · v1.4", color: "green" },
-        { title: "Push notifications", state: "in progress · 2 contributors", color: "amber" },
-        { title: "Android client", state: "looking for contributors", color: "muted" },
-      ],
-      openRoles: "Frontend · Mobile · Documentation",
-      repo: "MurangaUniversityOfTechnology/campusconnect",
-      ghActivity: [
-        { text: "Amina merged #88 rate limiting", color: "green" },
-        { text: "Brian opened #91 dark mode", color: "green" },
-        { text: "Njeri requested review on #90", color: "amber" },
-        { text: "milestone v1.5 · 6 of 9 issues closed", color: "muted" },
-      ],
-    },
-  },
-  {
-    slug: "matboard",
-    name: "MatBoard",
-    blurb: "Matatu routes and fares for the Murang'a stage, built from paper timetables.",
-    stack: ["Go", "Android"],
-    state: "2 spots open",
-    stateColor: "green",
-    people: "5 contributors",
-    activity: "4 hours ago",
-  },
-  {
-    slug: "shamba-sense",
-    name: "Shamba Sense",
-    blurb: "Soil moisture sensors that text a farmer when the beans need water.",
-    stack: ["C", "ESP32", "MQTT"],
-    state: "1 spot · embedded",
-    stateColor: "green",
-    people: "3 contributors",
-    activity: "yesterday",
-  },
-  {
-    slug: "club-website",
-    name: "Club Website",
-    blurb: "This platform. Yes, you can contribute to the thing you are reading.",
-    stack: ["React", "Vite"],
-    state: "building",
-    stateColor: "amber",
-    people: "2 contributors",
-    activity: "6 days ago",
-  },
-  {
-    slug: "exam-scraper",
-    name: "Exam Scraper",
-    blurb: "Watched the portal for timetable changes. Retired when the portal got an API.",
-    stack: ["Python"],
-    state: "shipped · archived",
-    stateColor: "muted",
-    people: "4 contributors",
-    activity: "archived may 2026",
-  },
-  {
-    slug: "fee-splitter",
-    name: "Fee Splitter",
-    blurb: "Splits hostel bills between roommates over M-Pesa. Ten users, all of them roommates.",
-    stack: ["Node", "Daraja"],
-    state: "shipped",
-    stateColor: "green",
-    people: "2 contributors",
-    activity: "shipped 2 weeks ago",
-  },
-];
-
 export type EventItem = {
   slug: string;
   dow: string;
@@ -357,14 +250,14 @@ export const challenges: Challenge[] = [
 export const communityFeed = [
   {
     initials: "AW",
-    text: "Amina shipped CampusConnect v2 — notifications are live for 900 users.",
+    text: "Amina shipped an update to Community Management Tools.",
     kind: "shipped",
     when: "1h ago",
     color: "green",
   },
   {
     initials: "BO",
-    text: "Brian opened a new project: MatBoard, a matatu route board for the Murang'a stage.",
+    text: "Brian opened a new project: Past Lens, a digital museum.",
     kind: "new project",
     when: "4h ago",
     color: "green",
@@ -378,7 +271,7 @@ export const communityFeed = [
   },
   {
     initials: "JK",
-    text: "Joy joined CampusConnect as a backend contributor.",
+    text: "Joy joined Butterfly Eye as a backend contributor.",
     kind: "joined project",
     when: "yesterday",
     color: "green",
@@ -392,7 +285,7 @@ export const communityFeed = [
   },
   {
     initials: "FC",
-    text: "Faith is looking for one embedded person for Shamba Sense.",
+    text: "Faith is looking for one Python person for AI and Robotics Sessions.",
     kind: "looking",
     when: "3d ago",
     color: "green",
@@ -400,9 +293,9 @@ export const communityFeed = [
 ] as const;
 
 export const lookingForContributors = [
-  { name: "CampusConnect", note: "3 spots · frontend, mobile, docs" },
-  { name: "MatBoard", note: "2 spots · android, design" },
-  { name: "Shamba Sense", note: "1 spot · embedded" },
+  { name: "Community Management Tools", note: "3 spots · frontend, docs" },
+  { name: "Origin Fest 2025", note: "2 spots · design, content" },
+  { name: "AI and Robotics Sessions", note: "1 spot · python" },
 ];
 
 export const learningPath = {
@@ -459,15 +352,15 @@ export const membershipPerks = [
 
 export const stats = [
   { value: "37", label: "builders" },
-  { value: "12", label: "active projects" },
+  { value: "7", label: "active projects" },
   { value: "8", label: "upcoming events" },
   { value: "24", label: "challenges done" },
 ];
 
 export const liveTicker = [
-  { text: "Amina started CampusConnect", color: "green" },
+  { text: "Amina started Community Management Tools", color: "green" },
   { text: "Brian completed Challenge #14", color: "green" },
   { text: "Rust Workshop opens tomorrow", color: "amber" },
   { text: "3 new members joined", color: "green" },
-  { text: "Njeri shipped MatBoard v2", color: "green" },
+  { text: "Njeri shipped Past Lens v2", color: "green" },
 ] as const;

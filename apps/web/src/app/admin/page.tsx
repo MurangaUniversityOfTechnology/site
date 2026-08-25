@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { adminApi, type AdminOverview } from "@/lib/api";
-import { challenges, events, projects } from "@/lib/data";
+import { adminApi, projectApi, type AdminOverview } from "@/lib/api";
+import { challenges, events } from "@/lib/data";
 
 export default function AdminOverviewPage() {
   const [data, setData] = useState<AdminOverview | null>(null);
+  const [projectCount, setProjectCount] = useState(0);
 
   useEffect(() => {
     adminApi.overview().then(setData);
+    projectApi.list().then((result) => setProjectCount(result.length));
   }, []);
 
   const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long" });
@@ -24,7 +26,7 @@ export default function AdminOverviewPage() {
           <Stat value={data.total_members} label="total members" />
           <Stat value={data.new_this_week} label="new this week" color="text-accent" />
           <Stat value={events.length} label="upcoming events" />
-          <Stat value={projects.length} label="active projects" />
+          <Stat value={projectCount} label="active projects" />
         </div>
       )}
 
@@ -52,7 +54,7 @@ export default function AdminOverviewPage() {
         <div className="rounded-[11px] border border-border bg-surface p-5.5">
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">this build</div>
           <div className="mt-4 flex flex-col gap-3.5 font-mono text-[12.5px] text-[#c8d2cc]">
-            <Row label="projects (seed)" value={String(projects.length)} />
+            <Row label="projects (github)" value={String(projectCount)} />
             <Row label="events (seed)" value={String(events.length)} />
             <Row label="challenges (seed)" value={String(challenges.length)} />
           </div>

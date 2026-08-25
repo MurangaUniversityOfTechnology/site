@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authApi } from "@/lib/api";
-import { challenges, events, membershipFeeKes, membershipPerks, projects } from "@/lib/data";
+import { authApi, projectApi } from "@/lib/api";
+import { challenges, events, membershipFeeKes, membershipPerks } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -32,10 +32,21 @@ const STATUS_COLOR: Record<string, string> = {
 export default function DashboardPage() {
   const router = useRouter();
   const { me, loading, refresh } = useMe();
+  const [projectCount, setProjectCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !me) router.push("/sign-in");
   }, [loading, me, router]);
+
+  useEffect(() => {
+    let active = true;
+    projectApi.list().then((result) => {
+      if (active) setProjectCount(result.length);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (loading || !me) return null;
 
@@ -165,11 +176,12 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-border bg-surface p-5.5">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">explore</div>
             <div className="mt-3.5 flex flex-col">
-              <ExploreRow href="/projects" label="Projects" count={projects.length} />
+              <ExploreRow href="/projects" label="Projects" count={projectCount} />
               <ExploreRow href="/events" label="Events" count={events.length} />
               <ExploreRow href="/challenges" label="Challenges" count={challenges.length} />
               <ExploreRow href="/learn" label="Learning Paths" count={null} />
               <ExploreRow href="/community" label="Community" count={null} />
+              <ExploreRow href="/github" label="GitHub" count={null} />
               <ExploreRow href="/membership/renew" label="Membership" count={null} last />
             </div>
           </div>

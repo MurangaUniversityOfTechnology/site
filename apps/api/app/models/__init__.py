@@ -7,10 +7,14 @@ from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
 from app.models.payment import Payment, PaymentStatus
 from app.models.profile import ExperienceLevel, ProfileVisibility, Profile
-from app.models.user import User
+from app.models.project import Project
+from app.models.project_join_request import JoinRequestStatus, ProjectJoinRequest
+from app.models.project_member import ProjectMember
+from app.models.user import GithubOrgInviteStatus, User
 
 __all__ = [
     "User",
+    "GithubOrgInviteStatus",
     "Profile",
     "ExperienceLevel",
     "ProfileVisibility",
@@ -27,4 +31,8 @@ __all__ = [
     "Notification",
     "Content",
     "ContentStatus",
+    "Project",
+    "ProjectJoinRequest",
+    "JoinRequestStatus",
+    "ProjectMember",
 ]

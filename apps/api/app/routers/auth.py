@@ -12,7 +12,9 @@ from app.core.deps import get_current_user
 from app.core.security import SESSION_COOKIE_NAME, SESSION_TTL, create_session_token, verify_password
 from app.models.user import User
 from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
+from app.schemas.github import GithubStatus
 from app.services import auth as auth_service
+from app.services import github as github_service
 from app.services import membership as membership_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -21,6 +23,9 @@ settings = get_settings()
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_USER_URL = "https://api.github.com/user"
 OAUTH_STATE_COOKIE = "oauth_state"
 
 
@@ -136,6 +141,88 @@ def google_callback(
     _set_session_cookie(redirect, str(user.id))
     redirect.delete_cookie(OAUTH_STATE_COOKIE)
     return redirect
+
+
+@router.get("/github/start")
+def github_start(user: User = Depends(get_current_user)):
+    """Account-linking, not sign-in — requires an existing session, unlike
+    the Google flow which creates one."""
+    if not settings.github_client_id:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "GitHub connect is not configured yet")
+
+    state = secrets.token_urlsafe(24)
+    response = RedirectResponse(
+        f"{GITHUB_AUTH_URL}?"
+        + urlencode(
+            {
+                "client_id": settings.github_client_id,
+                "redirect_uri": settings.github_redirect_uri,
+                "scope": "read:user",
+                "state": state,
+            }
+        )
+    )
+    response.set_cookie(OAUTH_STATE_COOKIE, state, httponly=True, samesite="lax", max_age=600)
+    return response
+
+
+@router.get("/github/callback")
+def github_callback(
+    code: str,
+    state: str,
+    user: User = Depends(get_current_user),
+    oauth_state: str | None = Cookie(default=None, alias=OAUTH_STATE_COOKIE),
+    db: Session = Depends(get_db),
+):
+    if not oauth_state or oauth_state != state:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid OAuth state")
+
+    with httpx.Client(timeout=10) as client:
+        token_res = client.post(
+            GITHUB_TOKEN_URL,
+            data={
+                "client_id": settings.github_client_id,
+                "client_secret": settings.github_client_secret,
+                "code": code,
+                "redirect_uri": settings.github_redirect_uri,
+            },
+            headers={"Accept": "application/json"},
+        )
+        token_res.raise_for_status()
+        token_body = token_res.json()
+        if "access_token" not in token_body:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, token_body.get("error_description", "GitHub link failed"))
+
+        user_res = client.get(
+            GITHUB_USER_URL, headers={"Authorization": f"Bearer {token_body['access_token']}"}
+        )
+        user_res.raise_for_status()
+        info = user_res.json()
+
+    user.github_id = info["id"]
+    user.github_login = info["login"]
+    db.commit()
+    github_service.maybe_invite_to_org(db, user)
+
+    redirect = RedirectResponse(f"{settings.web_origin}/github")
+    redirect.delete_cookie(OAUTH_STATE_COOKIE)
+    return redirect
+
+
+@router.get("/github/status", response_model=GithubStatus)
+def github_status(user: User = Depends(get_current_user)):
+    return GithubStatus(
+        linked=user.github_id is not None,
+        login=user.github_login,
+        invite_status=user.github_org_invite_status.value,
+    )
+
+
+@router.post("/github/revoke", status_code=status.HTTP_204_NO_CONTENT)
+def github_revoke(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user.github_id = None
+    user.github_login = None
+    db.commit()
 
 
 def _to_me_response(user: User) -> MeResponse:
