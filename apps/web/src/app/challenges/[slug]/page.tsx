@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { RecentSubmissions } from "@/components/RecentSubmissions";
 import { challenges } from "@/lib/data";
 
 export function generateStaticParams() {
@@ -46,9 +48,12 @@ export default async function ChallengeDetailPage(props: PageProps<"/challenges/
         )}
 
         <div className="relative mt-7 flex flex-wrap gap-3">
-          <button className="rounded-lg bg-accent px-7 py-3.5 text-[15.5px] font-semibold text-[#04140b] hover:opacity-90">
+          <Link
+            href={`/challenges/${challenge.slug}/submit`}
+            className="rounded-lg bg-accent px-7 py-3.5 text-[15.5px] font-semibold text-[#04140b] hover:opacity-90"
+          >
             Start Challenge
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -71,23 +76,7 @@ export default async function ChallengeDetailPage(props: PageProps<"/challenges/
           </div>
           <div className="bg-surface p-6 sm:p-10">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">recent submissions</div>
-            <div className="mt-4.5 flex flex-col">
-              {d.submissions.map((s) => (
-                <div key={s.name} className="flex items-center gap-3 border-b border-[#14191b] py-3.5 last:border-0">
-                  <div className="grid h-7.5 w-7.5 flex-none place-items-center rounded-full border border-border-strong bg-[#111617] font-mono text-[10.5px] text-muted">
-                    {s.name
-                      .split(" ")
-                      .map((w) => w[0])
-                      .join("")}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[15px]">{s.name}</div>
-                    <div className="mt-1 font-mono text-[10.5px] text-faint">{s.stack}</div>
-                  </div>
-                  <span className="font-mono text-[10.5px] text-accent">{s.when}</span>
-                </div>
-              ))}
-            </div>
+            <RecentSubmissions slug={challenge.slug} fallback={d.submissions} />
           </div>
         </div>
       ) : (
