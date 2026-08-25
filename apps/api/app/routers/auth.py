@@ -2,13 +2,14 @@ import secrets
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import get_current_user
+from app.core.rate_limit import limiter
 from app.core.security import SESSION_COOKIE_NAME, SESSION_TTL, create_session_token, verify_password
 from app.models.user import User
 from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
@@ -42,7 +43,8 @@ def _set_session_cookie(response: Response, user_id: str) -> None:
 
 
 @router.post("/signup", response_model=MeResponse, status_code=status.HTTP_201_CREATED)
-def signup(payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("5/hour")
+def signup(request: Request, payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
     if auth_service.get_user_by_email(db, payload.email):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
 
@@ -52,7 +54,8 @@ def signup(payload: SignupRequest, response: Response, db: Session = Depends(get
 
 
 @router.post("/login", response_model=MeResponse)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.get_user_by_email(db, payload.email)
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
