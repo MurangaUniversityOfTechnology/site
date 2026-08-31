@@ -8,6 +8,7 @@ class OnboardingRequest(BaseModel):
     last_name: str = Field(min_length=1, max_length=100)
     display_name: str = Field(min_length=1, max_length=100)
     registration_number: str | None = None
+    phone: str | None = Field(default=None, max_length=20)
     course: str | None = None
     year_of_study: int | None = Field(default=None, ge=1, le=8)
     interests: list[str] = Field(default_factory=list)
@@ -27,6 +28,7 @@ class ProfileResponse(BaseModel):
     last_name: str | None
     display_name: str | None
     registration_number: str | None
+    phone: str | None
     course: str | None
     year_of_study: int | None
     interests: list[str]

@@ -32,7 +32,7 @@ describe("MobileNav", () => {
 
   test("Home tab is active on /", () => {
     setup("/");
-    expect(screen.getByRole("link", { name: /home/i }).className).toContain("text-accent");
+    expect(screen.getByRole("link", { name: /home/i }).className).toContain("text-navy");
     expect(screen.getByRole("link", { name: /^events$/i }).className).toContain("text-faint");
   });
 

@@ -31,7 +31,7 @@ export default function ArticlePage() {
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 text-center">
         <div>
           <h1 className="text-2xl tracking-[-0.02em]">Article not found</h1>
-          <Link href="/community" className="mt-3 inline-block text-accent hover:underline">
+          <Link href="/community" className="mt-3 inline-block text-navy hover:underline">
             Back to community
           </Link>
         </div>
@@ -54,7 +54,7 @@ export default function ArticlePage() {
           ))}
         </div>
       )}
-      <div className="mt-8 whitespace-pre-wrap text-[16.5px] leading-[1.75] text-[#c8d2cc]">{article.body}</div>
+      <div className="mt-8 whitespace-pre-wrap text-[16.5px] leading-[1.75] text-[#33302b]">{article.body}</div>
     </main>
   );
 }

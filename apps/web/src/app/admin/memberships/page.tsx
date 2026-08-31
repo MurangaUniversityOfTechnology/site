@@ -1,23 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { adminApi, type MembershipApplication } from "@/lib/api";
 
 const FILTERS = [
-  { value: "pending", label: "Pending" },
   { value: "active", label: "Active" },
-  { value: "rejected", label: "Rejected" },
   { value: "all", label: "All" },
 ];
 
 export default function MembershipsPage() {
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState("active");
   const [apps, setApps] = useState<MembershipApplication[] | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    adminApi.memberships(filter).then(setApps);
-  }, [filter]);
 
   useEffect(() => {
     let active = true;
@@ -28,16 +21,6 @@ export default function MembershipsPage() {
       active = false;
     };
   }, [filter]);
-
-  async function act(userId: string, action: "approve" | "reject") {
-    setBusy(userId);
-    try {
-      await (action === "approve" ? adminApi.approve(userId) : adminApi.reject(userId));
-      load();
-    } finally {
-      setBusy(null);
-    }
-  }
 
   return (
     <div>
@@ -50,7 +33,7 @@ export default function MembershipsPage() {
             key={f.value}
             onClick={() => setFilter(f.value)}
             className={`rounded-full border px-3.5 py-2 font-mono text-[11px] uppercase tracking-[0.08em] ${
-              filter === f.value ? "border-[#3a3226] bg-warn/[0.07] text-warn" : "border-border-strong text-muted"
+              filter === f.value ? "border-[#f0dfb8] bg-warn/[0.07] text-warn" : "border-border-strong text-muted"
             }`}
           >
             {f.label}
@@ -59,16 +42,16 @@ export default function MembershipsPage() {
       </div>
 
       <div className="mt-5.5 overflow-hidden rounded-[11px] border border-border bg-surface">
-        <div className="grid grid-cols-[1.8fr_1fr_0.9fr] gap-3.5 border-b border-[#161c1e] bg-[#090c0d] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
-          <span>applicant</span>
+        <div className="grid grid-cols-[1.8fr_1fr_0.9fr] gap-3.5 border-b border-[#ddd6c4] bg-[#f5f0e3] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
+          <span>member</span>
           <span>payment</span>
           <span>status</span>
         </div>
 
-        {apps?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">No applications here.</div>}
+        {apps?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">No members here.</div>}
 
         {apps?.map((a) => (
-          <div key={a.user_id} className="border-b border-[#14191b] px-4.5 py-4 last:border-0">
+          <div key={a.user_id} className="border-b border-[#e8e1d2] px-4.5 py-4 last:border-0">
             <div className="grid grid-cols-[1.8fr_1fr_0.9fr] items-center gap-3.5">
               <div className="min-w-0">
                 <div className="truncate text-[15px] font-medium">{a.name}</div>
@@ -79,7 +62,7 @@ export default function MembershipsPage() {
               </div>
               <div
                 className={`font-mono text-[11.5px] ${
-                  a.payment_status === "completed" ? "text-accent" : "text-warn"
+                  a.payment_status === "completed" ? "text-navy" : "text-warn"
                 }`}
               >
                 {a.payment_status ?? "none"}
@@ -91,24 +74,6 @@ export default function MembershipsPage() {
                 </span>
               </div>
             </div>
-            {a.membership_status === "approval_pending" && (
-              <div className="mt-3.5 flex gap-2">
-                <button
-                  onClick={() => act(a.user_id, "approve")}
-                  disabled={busy === a.user_id}
-                  className="rounded-md border border-accent-dim px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-accent disabled:opacity-50"
-                >
-                  approve
-                </button>
-                <button
-                  onClick={() => act(a.user_id, "reject")}
-                  disabled={busy === a.user_id}
-                  className="rounded-md border border-border-strong px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted disabled:opacity-50"
-                >
-                  reject
-                </button>
-              </div>
-            )}
           </div>
         ))}
       </div>

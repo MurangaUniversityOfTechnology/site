@@ -9,7 +9,7 @@ const AREAS = ["Backend", "Frontend", "Design", "DevOps", "Documentation", "Test
 
 const STATUS_COPY: Record<string, { label: string; color: string }> = {
   pending: { label: "Request sent · pending review", color: "text-warn" },
-  approved: { label: "You're a contributor ✓", color: "text-accent" },
+  approved: { label: "You're a contributor ✓", color: "text-navy" },
   rejected: { label: "Request not approved", color: "text-danger" },
 };
 
@@ -33,7 +33,7 @@ export function JoinProjectPanel({
   if (loading) return null;
 
   if (isMember) {
-    return <span className="font-mono text-[13px] font-semibold text-accent">Contributor ✓</span>;
+    return <span className="font-mono text-[13px] font-semibold text-navy">Contributor ✓</span>;
   }
 
   if (status) {
@@ -45,7 +45,7 @@ export function JoinProjectPanel({
     return (
       <Link
         href="/sign-in"
-        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
       >
         Sign in to join
       </Link>
@@ -56,7 +56,7 @@ export function JoinProjectPanel({
     return (
       <Link
         href="/membership/activate"
-        className="rounded-lg border border-accent-dim px-6.5 py-3.5 text-[15px] font-semibold text-accent hover:bg-accent/5"
+        className="rounded-lg border border-accent-dim px-6.5 py-3.5 text-[15px] font-semibold text-navy hover:bg-accent/5"
       >
         Activate membership to join
       </Link>
@@ -84,7 +84,7 @@ export function JoinProjectPanel({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
       >
         Join Project
       </button>
@@ -101,7 +101,7 @@ export function JoinProjectPanel({
             type="button"
             onClick={() => toggleArea(a)}
             className={`rounded-full border px-3 py-1.5 text-[13px] ${
-              areas.includes(a) ? "border-accent-dim bg-accent/[0.08] text-accent" : "border-border-strong text-muted"
+              areas.includes(a) ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
             }`}
           >
             {a}
@@ -119,7 +119,7 @@ export function JoinProjectPanel({
       <button
         onClick={submit}
         disabled={submitting}
-        className="rounded-md bg-accent py-2.5 text-sm font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+        className="rounded-md bg-accent py-2.5 text-sm font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
       >
         {submitting ? "Sending…" : "Send Request"}
       </button>

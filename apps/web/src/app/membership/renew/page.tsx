@@ -19,7 +19,7 @@ export default function RenewPage() {
   const isExpired = status === "expired" || status === "suspended";
   const isActive = status === "active";
 
-  const accent = isExpired ? "text-danger" : "text-accent";
+  const accent = isExpired ? "text-danger" : "text-navy";
   const dot = isExpired ? "bg-danger" : "bg-accent";
   const tag = isExpired ? "membership expired" : isActive ? "membership active" : "membership";
   const title = isExpired ? "Your membership lapsed" : isActive ? "You're all set" : "No active membership";
@@ -37,7 +37,7 @@ export default function RenewPage() {
           {tag}
         </div>
         <h1 className="mt-4.5 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">{title}</h1>
-        <p className="mt-3.5 text-base leading-[1.6] text-[#9aa6a0]">{body}</p>
+        <p className="mt-3.5 text-base leading-[1.6] text-[#7a7060]">{body}</p>
 
         <div className="mt-7 rounded-xl border border-border bg-surface p-5">
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">what you keep either way</div>
@@ -50,7 +50,7 @@ export default function RenewPage() {
         {isExpired && (
           <button
             onClick={() => router.push("/membership/pay")}
-            className="mt-6.5 rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+            className="mt-6.5 rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
           >
             Renew for KSh {membershipFeeKes}
           </button>

@@ -15,7 +15,7 @@ export default function ChallengesPage() {
           <p className="mt-3 text-[15.5px] text-muted">Your first challenge is coming.</p>
           <Link
             href="/learn"
-            className="mt-5 inline-block rounded-lg border border-accent-dim px-5 py-2.5 text-sm text-accent hover:bg-accent/5"
+            className="mt-5 inline-block rounded-lg border border-accent-dim px-5 py-2.5 text-sm text-navy hover:bg-accent/5"
           >
             Explore Learning Paths
           </Link>
@@ -25,10 +25,10 @@ export default function ChallengesPage() {
       {current && (
         <Link
           href={`/challenges/${current.slug}`}
-          className="relative mt-7 block overflow-hidden rounded-2xl border border-accent-dim bg-[linear-gradient(150deg,rgba(61,250,138,.06),transparent_58%)] p-6 hover:brightness-110 sm:p-8"
+          className="relative mt-7 block overflow-hidden rounded-2xl border border-accent-dim bg-[linear-gradient(150deg,rgba(201,168,76,.06),transparent_58%)] p-6 hover:brightness-110 sm:p-8"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(61,250,138,.04)_0_1px,transparent_1px_24px)]" />
-          <div className="relative flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-accent">
+          <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(90deg,rgba(201,168,76,.04)_0_1px,transparent_1px_24px)]" />
+          <div className="relative flex items-center gap-2 font-mono text-[10.5px] uppercase tracking-[0.14em] text-navy">
             <span className="h-1.5 w-1.5 animate-[pulse_1.8s_infinite] rounded-full bg-accent" />
             {current.meta}
           </div>
@@ -49,13 +49,13 @@ export default function ChallengesPage() {
           <div className="mt-9 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">past challenges</div>
           <div className="mt-3.5 overflow-hidden rounded-xl border border-border bg-surface">
             {past.map((c) => (
-              <div key={c.slug} className="flex flex-wrap items-center gap-4 border-b border-[#14191b] px-5 py-4.5 last:border-0">
+              <div key={c.slug} className="flex flex-wrap items-center gap-4 border-b border-[#e8e1d2] px-5 py-4.5 last:border-0">
                 <span className="min-w-8.5 flex-none font-mono text-[11px] text-faint">#{c.num}</span>
                 <div className="min-w-42 flex-1">
                   <div className="text-base font-medium">{c.title}</div>
                   <div className="mt-1 font-mono text-[10.5px] text-faint">{c.meta}</div>
                 </div>
-                <span className="whitespace-nowrap font-mono text-[10.5px] uppercase tracking-[0.08em] text-accent">{c.state}</span>
+                <span className="whitespace-nowrap font-mono text-[10.5px] uppercase tracking-[0.08em] text-navy">{c.state}</span>
                 <span className="whitespace-nowrap font-mono text-[10.5px] text-muted">{c.subs}</span>
               </div>
             ))}

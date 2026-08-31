@@ -49,7 +49,7 @@ export default function MemberProfilePage() {
   return (
     <main className="mx-auto max-w-160 px-5 py-14 sm:px-8">
       <div className="rounded-2xl border border-border bg-surface p-7 text-center sm:p-9">
-        <div className="mx-auto grid h-19 w-19 place-items-center rounded-full border border-[#2b3a33] bg-[linear-gradient(150deg,#1b2b22,#0f1614)] font-mono text-2xl text-accent">
+        <div className="mx-auto grid h-19 w-19 place-items-center rounded-full border border-[#e8d9ad] bg-[linear-gradient(150deg,#fbf3df,#f5e6bf)] font-mono text-2xl text-navy">
           {profile.display_name[0]?.toUpperCase()}
         </div>
         <div className="mt-4 text-xl font-semibold">{profile.display_name}</div>
@@ -96,7 +96,7 @@ export default function MemberProfilePage() {
       {profile.bio && (
         <div className="mt-6 rounded-xl border border-border bg-surface p-6">
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">about</div>
-          <p className="mt-3 text-[15.5px] leading-[1.6] text-[#c8d2cc]">{profile.bio}</p>
+          <p className="mt-3 text-[15.5px] leading-[1.6] text-[#33302b]">{profile.bio}</p>
         </div>
       )}
 

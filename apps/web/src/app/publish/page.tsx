@@ -45,14 +45,14 @@ export default function PublishPage() {
     return (
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14 text-center">
         <div className="w-full max-w-105 animate-[rise_0.4s_ease_both]">
-          <div className="mx-auto grid h-15 w-15 place-items-center rounded-full border border-[#3a3226] bg-warn/10 font-mono text-xl text-warn">
+          <div className="mx-auto grid h-15 w-15 place-items-center rounded-full border border-[#f0dfb8] bg-warn/10 font-mono text-xl text-warn">
             ◷
           </div>
           <div className="mt-5.5 font-mono text-[10.5px] uppercase tracking-[0.18em] text-warn">pending review</div>
           <h1 className="mt-3.5 text-[clamp(24px,3.4vw,32px)] leading-[1.15] tracking-[-0.03em]">
             Submitted for review
           </h1>
-          <p className="mt-4 text-[15.5px] leading-[1.6] text-[#9aa6a0]">
+          <p className="mt-4 text-[15.5px] leading-[1.6] text-[#7a7060]">
             An admin reads every article before it goes public — mostly to catch broken code samples. You&apos;ll be
             notified either way.
           </p>
@@ -70,9 +70,9 @@ export default function PublishPage() {
   return (
     <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14">
       <div className="w-full max-w-140">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent">write something</div>
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-navy">write something</div>
         <h1 className="mt-4 text-[clamp(26px,3.8vw,36px)] leading-[1.1] tracking-[-0.035em]">Publish to the club</h1>
-        <p className="mt-3 text-[15.5px] leading-[1.55] text-[#9aa6a0]">
+        <p className="mt-3 text-[15.5px] leading-[1.55] text-[#7a7060]">
           Write it up while it&apos;s fresh. The best articles here are &ldquo;what broke and how I fixed it&rdquo;.
         </p>
 
@@ -105,7 +105,7 @@ export default function PublishPage() {
                 type="button"
                 onClick={() => toggleTag(tag)}
                 className={`rounded-full border px-3.5 py-2 text-sm ${
-                  on ? "border-accent-dim bg-accent/10 text-accent" : "border-border-strong text-muted"
+                  on ? "border-accent-dim bg-accent/10 text-navy" : "border-border-strong text-muted"
                 }`}
               >
                 {tag}
@@ -120,7 +120,7 @@ export default function PublishPage() {
           <button
             onClick={submit}
             disabled={submitting || !title.trim() || !body.trim()}
-            className="rounded-lg bg-accent px-6 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+            className="rounded-lg bg-accent px-6 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
           >
             {submitting ? "Submitting…" : "Submit for review"}
           </button>

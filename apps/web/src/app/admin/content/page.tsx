@@ -54,7 +54,7 @@ export default function AdminContentPage() {
               <button
                 onClick={() => act(r.id, "publish")}
                 disabled={busy === r.id}
-                className="rounded-md border border-accent-dim px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-accent disabled:opacity-50"
+                className="rounded-md border border-accent-dim px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-navy disabled:opacity-50"
               >
                 publish
               </button>
@@ -68,7 +68,7 @@ export default function AdminContentPage() {
               <button
                 onClick={() => act(r.id, "reject")}
                 disabled={busy === r.id}
-                className="rounded-md border border-[#5a3330] px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
+                className="rounded-md border border-[#f6d9d6] px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
               >
                 reject
               </button>

@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { learningPath } from "@/lib/data";
 
-const dot = { done: "bg-accent", active: "bg-warn", locked: "bg-[#0b0f10]" } as const;
+const dot = { done: "bg-accent", active: "bg-warn", locked: "bg-[#1a2744]" } as const;
 const ring = { done: "border-accent", active: "border-warn", locked: "border-border-strong" } as const;
 const titleColor = { done: "text-foreground", active: "text-foreground", locked: "text-muted" } as const;
-const tagColor = { done: "text-accent", active: "text-warn", locked: "text-faint" } as const;
+const tagColor = { done: "text-navy", active: "text-warn", locked: "text-faint" } as const;
 
 export default function LearnPage() {
   const done = learningPath.steps.filter((s) => s.state === "done").length;
@@ -16,7 +16,7 @@ export default function LearnPage() {
       <h1 className="mt-3.5 text-[clamp(30px,5vw,52px)] leading-none uppercase tracking-[-0.04em]">
         {learningPath.title}
       </h1>
-      <p className="mt-4.5 max-w-[460px] text-[16.5px] leading-[1.55] text-[#9aa6a0]">{learningPath.description}</p>
+      <p className="mt-4.5 max-w-[460px] text-[16.5px] leading-[1.55] text-[#7a7060]">{learningPath.description}</p>
 
       <div className="mt-9 grid items-start gap-8 md:grid-cols-[1.6fr_1fr]">
         <div>
@@ -28,7 +28,7 @@ export default function LearnPage() {
                     s.state === "active" ? "animate-[pulse_1.8s_infinite]" : ""
                   }`}
                 />
-                {i < learningPath.steps.length - 1 && <span className="min-h-4.5 w-px flex-1 bg-[#1f2729]" />}
+                {i < learningPath.steps.length - 1 && <span className="min-h-4.5 w-px flex-1 bg-[#e5ded0]" />}
               </div>
               <div className="flex-1 pb-5">
                 <div className="flex flex-wrap items-baseline gap-2.5">
@@ -40,15 +40,15 @@ export default function LearnPage() {
             </div>
           ))}
 
-          <div className="ml-9.5 rounded-[11px] border border-accent-dim bg-[linear-gradient(150deg,rgba(61,250,138,.06),transparent_60%)] p-5.5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-accent">final project</div>
+          <div className="ml-9.5 rounded-[11px] border border-accent-dim bg-[linear-gradient(150deg,rgba(201,168,76,.06),transparent_60%)] p-5.5">
+            <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-navy">final project</div>
             <div className="mt-2.5 text-xl font-semibold">Build a production API</div>
-            <p className="mt-2.5 text-[15px] leading-[1.55] text-[#9aa6a0]">
+            <p className="mt-2.5 text-[15px] leading-[1.55] text-[#7a7060]">
               Ship it, then bring it to a club review session. Two members read your code.
             </p>
             <Link
               href="/projects"
-              className="mt-4.5 inline-block rounded-lg bg-accent px-5.5 py-3 text-[14.5px] font-semibold text-[#04140b] hover:opacity-90"
+              className="mt-4.5 inline-block rounded-lg bg-accent px-5.5 py-3 text-[14.5px] font-semibold text-[#1a2744] hover:opacity-90"
             >
               Find a project to join
             </Link>
@@ -62,9 +62,9 @@ export default function LearnPage() {
               <span className="text-[15px]">
                 {done} of {learningPath.steps.length} steps
               </span>
-              <span className="font-mono text-xs text-accent">{pct}%</span>
+              <span className="font-mono text-xs text-navy">{pct}%</span>
             </div>
-            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#161c1e]">
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#ddd6c4]">
               <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
             </div>
           </div>
@@ -74,7 +74,7 @@ export default function LearnPage() {
               {learningPath.otherPaths.map((p, i) => (
                 <div
                   key={p}
-                  className={`py-2.5 text-[15px] ${i < learningPath.otherPaths.length - 1 ? "border-b border-[#14191b]" : ""}`}
+                  className={`py-2.5 text-[15px] ${i < learningPath.otherPaths.length - 1 ? "border-b border-[#e8e1d2]" : ""}`}
                 >
                   {p}
                 </div>

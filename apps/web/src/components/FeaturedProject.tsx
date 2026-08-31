@@ -27,7 +27,7 @@ export function FeaturedProject() {
       <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border md:grid-cols-[1.15fr_1fr]">
         <div className="flex flex-col bg-surface p-6 sm:p-10">
           <h2 className="m-0 text-[clamp(30px,4.4vw,48px)] leading-none tracking-[-0.03em]">{featured.name}</h2>
-          <p className="mt-4 max-w-[420px] text-base leading-[1.55] text-[#9aa6a0] text-pretty">
+          <p className="mt-4 max-w-[420px] text-base leading-[1.55] text-[#7a7060] text-pretty">
             {featured.description || "No description on GitHub yet."}
           </p>
           <div className="my-6 flex flex-wrap gap-1.5">
@@ -47,9 +47,9 @@ export function FeaturedProject() {
             </Link>
           </div>
         </div>
-        <div className="relative grid min-h-[220px] place-items-center bg-surface bg-[repeating-linear-gradient(135deg,rgba(255,255,255,.035)_0_2px,transparent_2px_9px)]">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(61,250,138,.07),transparent_60%)]" />
-          <div className="px-5 text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-[#5d6a64]">
+        <div className="relative grid min-h-[220px] place-items-center bg-surface bg-[repeating-linear-gradient(135deg,rgba(26,39,68,.035)_0_2px,transparent_2px_9px)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(201,168,76,.07),transparent_60%)]" />
+          <div className="px-5 text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-[#9c8d70]">
             {featured.language || "project"}
             <br />
             <span className="normal-case tracking-[0.06em] text-faint">a repo in the club org, maintained by students</span>

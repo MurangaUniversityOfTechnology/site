@@ -42,3 +42,29 @@ def decode_session_token(token: str) -> str | None:
         return payload.get("sub")
     except jwt.PyJWTError:
         return None
+
+
+EMAIL_VERIFICATION_TTL = timedelta(hours=48)
+
+
+def create_email_verification_token(user_id: str) -> str:
+    # A distinct "purpose" claim, not just a shorter TTL, so a leaked/expired
+    # verification link can never be replayed as (or confused with) a session
+    # token even though both are just HS256 JWTs signed with the same key.
+    payload = {
+        "sub": user_id,
+        "purpose": "verify_email",
+        "exp": datetime.now(UTC) + EMAIL_VERIFICATION_TTL,
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+
+def decode_email_verification_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        if payload.get("purpose") != "verify_email":
+            return None
+        return payload.get("sub")
+    except jwt.PyJWTError:
+        return None

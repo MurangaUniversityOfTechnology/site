@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 
@@ -19,7 +21,14 @@ pytestmark = pytest.mark.integration
 def test_deleting_user_cascades_owned_rows(db_session, make_user):
     user = make_user(membership_status=MembershipStatus.active)
 
-    event = Event(slug="test-event", title="Test Event", audience=EventAudience.open_to_all)
+    event = Event(
+        slug="test-event",
+        title="Test Event",
+        audience=EventAudience.open_to_all,
+        starts_at=datetime.now(UTC),
+        venue="Test Venue",
+        description="Test description",
+    )
     db_session.add(event)
     db_session.flush()
 

@@ -11,6 +11,15 @@ class Settings(BaseSettings):
     secret_key: str
     database_url: str
     web_origin: str = "http://localhost:3000"
+    # Extra CORS-allowed origin for LAN dev testing (e.g. a phone on the same
+    # wifi hitting http://<lan-ip>:3000) — never used for generating links,
+    # only for the CORS allowlist, so it's additive and safe to leave unset.
+    lan_web_origin: str | None = None
+    # The API's own public URL — embedded in email verification links, which
+    # must hit this server directly (not the frontend), same reasoning as
+    # GOOGLE_REDIRECT_URI/GITHUB_REDIRECT_URI below being explicit rather
+    # than derived from the incoming request.
+    api_base_url: str = "http://localhost:8000"
 
     # Google OAuth
     google_client_id: str = ""
@@ -25,7 +34,7 @@ class Settings(BaseSettings):
     mpesa_passkey: str = ""
     mpesa_callback_base_url: str = ""
     mpesa_transaction_type: str = "CustomerPayBillOnline"  # or CustomerBuyGoodsOnline for a Till
-    membership_fee_kes: int = 500
+    membership_fee_kes: int = 200
 
     @property
     def mpesa_base_url(self) -> str:

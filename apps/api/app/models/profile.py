@@ -37,6 +37,11 @@ class Profile(Base):
     # Confirms MUT enrollment for admins during membership review. Never returned
     # from any public-facing endpoint — flow.md §7 is explicit this stays admin-only.
     registration_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Collected at onboarding so it's on file before a member ever needs to
+    # pay — an admin sending an STK push on someone's behalf (see
+    # services/membership.py) reads this instead of asking again. Same
+    # admin-only visibility as registration_number.
+    phone: Mapped[str | None] = mapped_column(String, nullable=True)
     course: Mapped[str | None] = mapped_column(String, nullable=True)
     year_of_study: Mapped[int | None] = mapped_column(Integer, nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -17,9 +17,7 @@ class MembershipStatus(str, enum.Enum):
     none = "none"
     payment_pending = "payment_pending"
     payment_received = "payment_received"
-    approval_pending = "approval_pending"
     active = "active"
-    rejected = "rejected"
     expired = "expired"
     suspended = "suspended"
 

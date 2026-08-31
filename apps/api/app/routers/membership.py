@@ -44,6 +44,8 @@ def activate_membership(
 def membership_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     membership_service.sync_expiry(db, user.membership)
     payment = membership_service.latest_payment(db, user)
+    if payment:
+        membership_service.sync_pending_payment(db, payment)
     return MembershipStatusResponse(
         membership_status=user.membership.status.value,
         latest_payment=_payment_response(payment) if payment else None,

@@ -74,7 +74,7 @@ export function MobileNav() {
               <Link
                 href="/publish"
                 onClick={() => setOpen(false)}
-                className="mt-2.5 block rounded-lg border border-accent-dim bg-accent/[0.06] px-4 py-3.5 text-center text-[15px] text-accent"
+                className="mt-2.5 block rounded-lg border border-accent-dim bg-accent/[0.06] px-4 py-3.5 text-center text-[15px] text-navy"
               >
                 Write something
               </Link>
@@ -93,7 +93,7 @@ export function MobileNav() {
       )}
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 flex items-stretch justify-around border-t border-[#161c1e] bg-background/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 flex items-stretch justify-around border-t border-[#ddd6c4] bg-background/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="Primary"
       >
         <TabLink href="/" label="Home" active={onHome} icon={<HomeIcon />} />
@@ -129,7 +129,7 @@ function TabLink({
     <Link
       href={href}
       className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] ${
-        active ? "text-accent" : "text-faint"
+        active ? "text-navy" : "text-faint"
       }`}
     >
       {icon}
@@ -156,7 +156,7 @@ function TabButton({
       onClick={onClick}
       aria-expanded={active}
       className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] ${
-        active ? "text-accent" : "text-faint"
+        active ? "text-navy" : "text-faint"
       }`}
     >
       {icon}

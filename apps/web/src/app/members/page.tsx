@@ -22,7 +22,7 @@ export default function MembersPage() {
     <main className="px-5 py-12 sm:px-10 sm:py-14">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">community</div>
       <h1 className="mt-3.5 text-[clamp(30px,5vw,54px)] leading-none tracking-[-0.04em]">MEMBERS</h1>
-      <p className="mt-4 max-w-[480px] text-[16.5px] leading-[1.55] text-[#9aa6a0]">
+      <p className="mt-4 max-w-[480px] text-[16.5px] leading-[1.55] text-[#7a7060]">
         Builders in the club, with profiles set to public.
       </p>
 
@@ -33,7 +33,7 @@ export default function MembersPage() {
             href={`/members/${m.user_id}`}
             className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-5 hover:border-accent-dim"
           >
-            <div className="grid h-11 w-11 flex-none place-items-center rounded-full border border-[#2b3a33] bg-[linear-gradient(150deg,#1b2b22,#0f1614)] font-mono text-[15px] text-accent">
+            <div className="grid h-11 w-11 flex-none place-items-center rounded-full border border-[#e8d9ad] bg-[linear-gradient(150deg,#fbf3df,#f5e6bf)] font-mono text-[15px] text-navy">
               {m.display_name[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">

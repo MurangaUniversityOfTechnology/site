@@ -6,9 +6,9 @@ import { notificationApi, type Notification } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 
 const KIND_COLOR: Record<string, string> = {
-  membership: "text-accent",
+  membership: "text-navy",
   event: "text-warn",
-  challenge: "text-accent",
+  challenge: "text-navy",
 };
 
 function timeAgo(iso: string): string {
@@ -68,7 +68,7 @@ export default function NotificationsPage() {
               await notificationApi.markAllRead();
               load();
             }}
-            className="font-mono text-[11px] uppercase tracking-[0.1em] text-accent"
+            className="font-mono text-[11px] uppercase tracking-[0.1em] text-navy"
           >
             mark all read
           </button>
@@ -83,7 +83,7 @@ export default function NotificationsPage() {
           <button
             key={n.id}
             onClick={() => markRead(n)}
-            className="flex w-full items-start gap-3.5 border-b border-[#14191b] px-5 py-4 text-left last:border-0"
+            className="flex w-full items-start gap-3.5 border-b border-[#e8e1d2] px-5 py-4 text-left last:border-0"
           >
             <span
               className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${n.read ? "bg-transparent" : "bg-warn"}`}

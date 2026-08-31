@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PublishedArticles } from "@/components/PublishedArticles";
 import { communityFeed, lookingForContributors } from "@/lib/data";
 
-const fg = { green: "text-accent", amber: "text-warn", muted: "text-muted" } as const;
+const fg = { green: "text-navy", amber: "text-warn", muted: "text-muted" } as const;
 
 export default function CommunityPage() {
   return (
@@ -28,9 +28,9 @@ export default function CommunityPage() {
         <div>
           <div className="overflow-hidden rounded-xl border border-border bg-surface">
             {communityFeed.map((a, i) => (
-              <div key={i} className="flex gap-3.5 border-b border-[#14191b] p-5 last:border-0">
+              <div key={i} className="flex gap-3.5 border-b border-[#e8e1d2] p-5 last:border-0">
                 <div
-                  className={`grid h-8.5 w-8.5 flex-none place-items-center rounded-full border border-border-strong bg-[#111617] font-mono text-[11px] ${fg[a.color as keyof typeof fg]}`}
+                  className={`grid h-8.5 w-8.5 flex-none place-items-center rounded-full border border-border-strong bg-[#f0ece0] font-mono text-[11px] ${fg[a.color as keyof typeof fg]}`}
                 >
                   {a.initials}
                 </div>
@@ -59,10 +59,10 @@ export default function CommunityPage() {
               {lookingForContributors.map((p, i) => (
                 <div
                   key={p.name}
-                  className={`py-3 ${i < lookingForContributors.length - 1 ? "border-b border-[#14191b]" : ""}`}
+                  className={`py-3 ${i < lookingForContributors.length - 1 ? "border-b border-[#e8e1d2]" : ""}`}
                 >
                   <div className="text-[15px]">{p.name}</div>
-                  <div className="mt-1 font-mono text-[10.5px] text-accent">{p.note}</div>
+                  <div className="mt-1 font-mono text-[10.5px] text-navy">{p.note}</div>
                 </div>
               ))}
             </div>

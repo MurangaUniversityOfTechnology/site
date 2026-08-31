@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
+import { BellIcon } from "@/components/icons";
 
 const links = [
   { href: "/projects", label: "Projects" },
@@ -22,17 +24,15 @@ export function Nav() {
   if (pathname?.startsWith("/admin")) return null;
 
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center gap-5 border-b border-[#161c1e] bg-background/95 px-4 backdrop-blur-sm sm:px-6">
+    <header className="sticky top-0 z-50 flex h-16 items-center gap-5 border-b border-navy-2 bg-navy px-4 text-white/90 backdrop-blur-sm sm:px-6">
       <Link href="/" className="flex flex-none items-center gap-2.5">
-        <div className="grid h-6 w-6 place-items-center rounded-[5px] border-[1.5px] border-accent font-mono text-[11px] font-bold text-accent">
-          M
-        </div>
-        <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-tight">MUT Tech</span>
+        <Image src="/images/logo.png" alt="MUT Tech Community" width={30} height={30} className="h-7.5 w-7.5" priority />
+        <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-tight text-white">MUT Tech</span>
       </Link>
 
-      <nav className="hidden min-w-0 flex-1 gap-5 overflow-x-auto text-[13.5px] text-muted md:flex">
+      <nav className="hidden min-w-0 flex-1 gap-5 overflow-x-auto text-[13.5px] text-white/60 md:flex">
         {links.map((l) => (
-          <Link key={l.href} href={l.href} className="whitespace-nowrap text-muted hover:text-foreground">
+          <Link key={l.href} href={l.href} className="whitespace-nowrap text-white/60 hover:text-white">
             {l.label}
           </Link>
         ))}
@@ -44,28 +44,28 @@ export function Nav() {
             <Link
               href="/notifications"
               aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-              className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/5"
+              className="relative flex h-9 w-9 items-center justify-center rounded-md hover:bg-white/10"
             >
-              <span className="relative block h-3.5 w-3.5 rounded-t-[3px] border-[1.4px] border-muted" aria-hidden="true" />
+              <BellIcon className="h-4.5 w-4.5 text-white/70" />
               {unread > 0 && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warn" aria-hidden="true" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
               )}
             </Link>
             <Link
               href="/dashboard"
-              className="whitespace-nowrap rounded-md border border-border-strong px-3.5 py-2 text-[13.5px] text-foreground hover:border-accent-dim"
+              className="whitespace-nowrap rounded-md border border-white/20 px-3.5 py-2 text-[13.5px] text-white hover:border-accent"
             >
               Dashboard
             </Link>
           </>
         ) : (
           <>
-            <Link href="/sign-in" className="whitespace-nowrap text-[13.5px] text-muted hover:text-foreground">
+            <Link href="/sign-in" className="whitespace-nowrap text-[13.5px] text-white/60 hover:text-white">
               Sign In
             </Link>
             <Link
               href="/sign-up"
-              className="whitespace-nowrap rounded-md bg-accent px-4 py-2 text-[13.5px] font-semibold text-[#04140b] hover:opacity-90"
+              className="whitespace-nowrap rounded-md bg-accent px-4 py-2 text-[13.5px] font-semibold text-navy hover:opacity-90"
             >
               Join Club
             </Link>

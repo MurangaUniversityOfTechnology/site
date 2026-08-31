@@ -37,9 +37,9 @@ export default function PayPage() {
   return (
     <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14 sm:px-8">
       <div className="w-full max-w-105">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent">step 02 of 02 · payment</div>
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-navy">step 02 of 02 · payment</div>
         <h1 className="mt-4 text-[clamp(28px,4vw,38px)] leading-[1.05] tracking-[-0.035em]">Pay with M-Pesa</h1>
-        <p className="mt-3 mb-7 text-[15.5px] leading-[1.55] text-[#9aa6a0]">
+        <p className="mt-3 mb-7 text-[15.5px] leading-[1.55] text-[#7a7060]">
           We&apos;ll send a payment request to your phone. You approve it there — never here.
         </p>
 
@@ -66,7 +66,7 @@ export default function PayPage() {
         <button
           onClick={sendRequest}
           disabled={!valid || submitting}
-          className="mt-5.5 w-full rounded-lg bg-accent py-4 text-[15.5px] font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+          className="mt-5.5 w-full rounded-lg bg-accent py-4 text-[15.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? "Sending…" : "Send Payment Request"}
         </button>

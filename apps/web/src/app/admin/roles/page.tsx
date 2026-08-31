@@ -47,19 +47,19 @@ export default function AdminRolesPage() {
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Roles</h1>
 
       <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="border-b border-[#14191b] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+        <div className="border-b border-[#e8e1d2] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
           current admins
         </div>
         {admins?.map((a) => (
-          <div key={a.user_id} className="flex items-center gap-3.5 border-b border-[#14191b] px-5 py-3.5 last:border-0">
-            <div className="grid h-8.5 w-8.5 flex-none place-items-center rounded-full border border-border-strong bg-[#111617] font-mono text-[11px] text-muted">
+          <div key={a.user_id} className="flex items-center gap-3.5 border-b border-[#e8e1d2] px-5 py-3.5 last:border-0">
+            <div className="grid h-8.5 w-8.5 flex-none place-items-center rounded-full border border-border-strong bg-[#f0ece0] font-mono text-[11px] text-muted">
               {a.name[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[15px] font-medium">{a.name}</div>
               <div className="mt-0.5 font-mono text-[10.5px] text-faint">{a.email}</div>
             </div>
-            <span className="rounded-md border border-[#3a3226] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-warn">
+            <span className="rounded-md border border-[#f0dfb8] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-warn">
               admin
             </span>
           </div>
@@ -95,8 +95,8 @@ export default function AdminRolesPage() {
               disabled={busy}
               className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${
                 found.is_admin
-                  ? "border border-[#5a3330] text-danger"
-                  : "border-0 bg-accent text-[#04140b]"
+                  ? "border border-[#f6d9d6] text-danger"
+                  : "border-0 bg-accent text-[#1a2744]"
               }`}
             >
               {found.is_admin ? "Remove admin" : "Make admin"}

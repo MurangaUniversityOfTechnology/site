@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { adminApi, type AuditEntry } from "@/lib/api";
 
 const KIND_COLOR: Record<string, string> = {
-  membership: "text-accent",
+  membership: "text-navy",
   payment: "text-warn",
   event: "text-muted",
   content: "text-danger",
@@ -32,13 +32,13 @@ export default function AuditPage() {
         {entries?.map((e, i) => (
           <div
             key={i}
-            className="grid grid-cols-[110px_1fr_auto] items-baseline gap-4 border-b border-[#14191b] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
+            className="grid grid-cols-[110px_1fr_auto] items-baseline gap-4 border-b border-[#e8e1d2] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
           >
             <span className="whitespace-nowrap text-faint">
               {new Date(e.at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
             </span>
             <div className="min-w-0">
-              <div className="text-[#c8d2cc]">{e.what}</div>
+              <div className="text-[#33302b]">{e.what}</div>
               <div className="mt-1 text-faint">{e.who}</div>
             </div>
             <span className={`justify-self-end whitespace-nowrap text-[10px] uppercase tracking-[0.08em] ${KIND_COLOR[e.kind] ?? "text-muted"}`}>

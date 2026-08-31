@@ -799,7 +799,7 @@ M-Pesa Receipt:
 QGH7ABC123
 
 Your membership is now
-awaiting club approval.
+active.
 
 [ Continue ]
 ```
@@ -853,44 +853,50 @@ Transaction cancelled / timed out / unavailable
 
 ---
 
-# 12. Membership Pending Approval
+# 12. Membership Pending — waiting on payment, not approval
 
-After successful payment:
-
-```text
-MEMBERSHIP APPLICATION
-
-● Payment received
-● Application submitted
-○ Admin approval
-○ Membership activated
-```
-
-Display:
+There is no post-payment waiting period anymore — the only "pending" state
+left is the brief window between sending the STK push and Safaricom
+confirming it (usually seconds). While that's in flight:
 
 ```text
-You're almost in.
+Check your phone
 
-Your payment has been confirmed.
-A club administrator will review
-your membership.
+We've sent an M-Pesa request to your phone.
+Enter your M-Pesa PIN on your phone to approve KSh 200.
 
-You can continue exploring while
-you wait.
+waiting for confirmation · 4s
 ```
 
-This gives the user peace of mind.
+If the callback hasn't landed within 20s, the backend actively asks
+Safaricom for the real status via STK Query instead of continuing to wait
+passively (see §41) — invisible to the member, it just resolves faster. Only
+if that's *also* inconclusive does the UI, after 60s total, admit it doesn't
+know yet:
+
+```text
+We haven't heard back yet
+
+We're still checking with M-Pesa. Don't pay again —
+if the payment does go through, we'll pick it up automatically.
+
+[ Check Again ]
+```
+
+The moment payment confirms — by either path — membership is active. There
+is no separate "application submitted, awaiting admin" step to depict.
 
 ---
 
 # 13. Member Dashboard — Pending State
 
-Dashboard banner:
+Dashboard banner, shown only during that same brief payment-confirmation
+window:
 
 ```text
-MEMBERSHIP PENDING
+PAYMENT PENDING
 
-Payment confirmed · Waiting for approval
+Waiting for M-Pesa confirmation
 ```
 
 Allow:
@@ -910,12 +916,25 @@ Lock:
 
 ---
 
-# 14. Admin Membership Approval
+# 14. Admin Membership Approval — superseded
 
-Admin receives:
+**This step no longer exists.** Membership now activates automatically the
+moment payment succeeds (via Safaricom's callback, or the STK Query fallback
+if the callback is dropped/delayed — see §41's payment flow) — there is no
+admin review queue, no "Approve"/"Reject"/"Request More Information" actions,
+and no separate `approval_pending` status to wait in.
+
+The `/admin/memberships` page still exists, but only as a read-only roster
+(filterable by active/all) for an admin to look up a member's payment and
+status — there's nothing to action on it, because there's nothing pending.
+
+The wireframes that used to live in this section (a "new membership" admin
+notification, a review page with Approve/Reject/Request-more-info buttons)
+are kept below only as a historical record of the original design — they
+were removed from the actual product, not just hidden:
 
 ```text
-NEW MEMBERSHIP
+NEW MEMBERSHIP (no longer sent — nothing to review)
 
 John Doe
 
@@ -931,12 +950,8 @@ QGH7ABC123
 [ Review ]
 ```
 
----
-
-## Admin Review Page
-
 ```text
-MEMBERSHIP APPLICATION
+MEMBERSHIP APPLICATION (page removed)
 
 Profile
 ----------------
@@ -964,19 +979,17 @@ Actions
 [ Request More Information ]
 ```
 
-The admin should be able to view payment information without manually checking M-Pesa every time if the backend has already verified the callback.
-
 ---
 
-# 15. Approval Success
+# 15. Instant Activation
 
-When admin approves:
+The moment payment succeeds:
 
 ```text
 Membership
-PENDING
+PAYMENT_PENDING
    ↓
-APPROVED
+ACTIVE
 ```
 
 Member receives:
@@ -991,7 +1004,8 @@ The community is waiting.
 [ Explore the Community ]
 ```
 
-Dashboard changes dramatically.
+Dashboard changes dramatically — and it happens in the same session as
+paying, not after a wait for someone to click Approve.
 
 ---
 
@@ -1553,7 +1567,7 @@ Notifications should be useful.
 Examples:
 
 ```text
-Membership approved ✓
+Membership active ✓
 
 Your project request was approved.
 
@@ -1601,8 +1615,8 @@ CLUB OVERVIEW
 137
 TOTAL MEMBERS
 
-24
-PENDING APPROVALS
+6
+UNMATCHED PAYMENTS
 
 8
 UPCOMING EVENTS
@@ -1624,35 +1638,31 @@ RECENT
 
 ---
 
-# 35. Membership Administration
+# 35. Membership Administration — read-only roster, no queue
 
-Table:
+Membership activates automatically on payment (§41), so there's no
+application queue left to administer. `/admin/memberships` is a plain,
+read-only roster for looking a member up — no bulk actions, because there's
+nothing left to action:
 
 ```text
-MEMBERSHIP APPLICATIONS
+MEMBERS
 
-John Doe       Payment ✓     Pending
-Amina Wanjiku  Payment ✓     Pending
-Brian Otieno   Payment ✓     Approved
+John Doe       Payment ✓     Active
+Amina Wanjiku  Payment ✓     Active
+Brian Otieno   Payment ✓     Active
 ```
 
 Filters:
 
 ```text
+Active
 All
-Pending
-Approved
-Rejected
-Payment Issues
 ```
 
-Bulk actions:
-
-```text
-Approve selected
-Reject selected
-Export
-```
+Payment issues (a callback that never resolved, an STK push that failed)
+are surfaced separately, in §36's payment reconciliation dashboard — not
+mixed into this roster.
 
 ---
 
@@ -1752,13 +1762,6 @@ Example:
 ```text
 AUDIT LOG
 
-24 Aug 20:15
-
-Admin: John Doe
-
-Approved membership:
-#MEM-00124
-
 24 Aug 20:21
 
 Admin: Jane Doe
@@ -1766,6 +1769,10 @@ Admin: Jane Doe
 Approved registration:
 #REG-00931
 ```
+
+Membership activation itself isn't logged here anymore — it's automatic
+(§41), not an admin action, so there's no admin to attribute it to. It's
+still fully traceable, just via the payment record instead of the audit log.
 
 This becomes especially valuable once multiple administrators exist.
 
@@ -1786,9 +1793,7 @@ MEMBERSHIP
  ├── none
  ├── payment_pending
  ├── payment_received
- ├── approval_pending
- ├── active
- ├── rejected
+ ├── active          (auto-activates on successful payment — no admin approval step)
  ├── expired
  └── suspended
 ```
@@ -1822,17 +1827,13 @@ These states should drive the UI.
 
 ---
 
-# 41. Critical UX Principle
+# 41. Critical UX Principle — revised
 
-Never confuse:
-
-**Payment success**
-
-with:
-
-**Membership activation**
-
-The correct flow is:
+**Superseded.** This section originally argued for keeping payment success
+and membership activation as two separate steps, gated by a human admin
+review in between. That admin-review gate has been removed — payment
+success is now itself the qualifying action, and membership activates
+automatically:
 
 ```text
 STK PUSH
@@ -1841,14 +1842,19 @@ M-PESA PAYMENT
    ↓
 PAYMENT CONFIRMED
    ↓
-MEMBERSHIP APPLICATION
-   ↓
-ADMIN REVIEW
-   ↓
 MEMBERSHIP ACTIVE
 ```
 
-This keeps the financial state and authorization state separate.
+What's still true, and worth keeping from the original principle: **payment
+state and authorization state remain two separate columns** (`Payment.status`
+vs `Membership.status`, in separate tables) — a completed payment doesn't
+directly imply "active" in the code, it's `_activate_membership()` reacting
+to it. That distinction is what let the system add a second, automatic path
+to the same activation (the STK Query fallback, for when Safaricom's
+callback is dropped or delayed) without touching the membership model at
+all. What changed is *who* (or what) is allowed to flip the switch — it used
+to require a human admin in the loop; now the payment provider's own
+confirmation is trusted directly.
 
 ---
 
@@ -1879,11 +1885,7 @@ M-PESA STK PUSH
       ↓
 PAYMENT CONFIRMED
       ↓
-MEMBERSHIP PENDING
-      ↓
-ADMIN APPROVES
-      ↓
-🎉 MEMBER ACTIVATED
+🎉 MEMBER ACTIVATED (instant — see §41)
       ↓
 ENTER MEMBER DASHBOARD
       ↓
@@ -1923,8 +1925,6 @@ This is just as important as the functional journey.
              ↓
 "That was easy."
              ↓
-"I'm waiting for approval."
-             ↓
 "I'm officially a member."
              ↓
 "I found a project."
@@ -1948,7 +1948,7 @@ Use moments of delight.
 
 ### Membership activation
 
-After approval:
+The moment payment confirms:
 
 ```text
 ACCOUNT
@@ -2160,8 +2160,6 @@ Signup
  ↓
 Pay
  ↓
-Approve
- ↓
 Member
 ```
 
@@ -2244,7 +2242,7 @@ The first production version should prioritize:
 ### Admin
 
 * Dashboard
-* Membership approvals
+* Membership roster
 * Event registration approvals
 * Payments/reconciliation
 * Events

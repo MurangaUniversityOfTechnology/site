@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import { GoogleIcon } from "@/components/icons";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -29,6 +30,20 @@ export default function SignInPage() {
     }
   }
 
+  async function handleDevLogin() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      await authApi.devLogin();
+      await refresh();
+      router.push("/admin");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <main className="flex min-h-full flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-sm">
@@ -38,8 +53,9 @@ export default function SignInPage() {
 
         <a
           href={authApi.googleStartUrl()}
-          className="mb-6 flex w-full items-center justify-center rounded-md border border-border-strong bg-surface px-4 py-3 text-sm text-foreground transition hover:border-accent-dim"
+          className="mb-6 flex w-full items-center justify-center gap-2.5 rounded-md border border-border-strong bg-surface px-4 py-3 text-sm text-foreground transition hover:border-accent-dim"
         >
+          <GoogleIcon />
           Continue with Google
         </a>
 
@@ -76,7 +92,7 @@ export default function SignInPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-2 rounded-md bg-accent px-4 py-3 text-sm font-medium text-[#07090a] transition hover:opacity-90 disabled:opacity-50"
+            className="mt-2 rounded-md bg-accent px-4 py-3 text-sm font-medium text-[#1a2744] transition hover:opacity-90 disabled:opacity-50"
           >
             {submitting ? "Signing in…" : "Sign In"}
           </button>
@@ -84,10 +100,24 @@ export default function SignInPage() {
 
         <p className="mt-6 text-sm text-muted">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-accent hover:underline">
+          <Link href="/sign-up" className="text-navy hover:underline">
             Join the club
           </Link>
         </p>
+
+        {process.env.NODE_ENV === "development" && (
+          <div className="mt-8 rounded-md border border-dashed border-[#f0dfb8] bg-warn/[0.04] p-3.5 text-center">
+            <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-warn">dev only</div>
+            <button
+              type="button"
+              onClick={handleDevLogin}
+              disabled={submitting}
+              className="mt-2 w-full rounded-md border border-border-strong py-2 text-sm text-muted hover:border-accent-dim disabled:opacity-50"
+            >
+              Sign in as dummy admin
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );

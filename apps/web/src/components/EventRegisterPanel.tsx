@@ -7,9 +7,9 @@ import { useMe } from "@/lib/useMe";
 
 const STATUS_COPY: Record<string, { label: string; color: string }> = {
   pending: { label: "Registered · pending approval", color: "text-warn" },
-  approved: { label: "You're registered ✓", color: "text-accent" },
+  approved: { label: "You're registered ✓", color: "text-navy" },
   waitlisted: { label: "You're on the waitlist", color: "text-warn" },
-  attended: { label: "Attended ✓", color: "text-accent" },
+  attended: { label: "Attended ✓", color: "text-navy" },
   rejected: { label: "Registration not approved", color: "text-danger" },
   cancelled: { label: "Registration cancelled", color: "text-muted" },
 };
@@ -89,7 +89,7 @@ export function EventRegisterPanel({
         <button
           onClick={registerAsMember}
           disabled={submitting}
-          className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? "Registering…" : cta}
         </button>
@@ -103,7 +103,7 @@ export function EventRegisterPanel({
     return (
       <Link
         href="/sign-in"
-        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+        className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
       >
         Sign in to register
       </Link>
@@ -116,7 +116,7 @@ export function EventRegisterPanel({
       <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={() => setShowGuestForm(true)}
-          className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+          className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
         >
           {cta}
         </button>
@@ -147,7 +147,7 @@ export function EventRegisterPanel({
       <button
         onClick={registerAsGuest}
         disabled={submitting || !guestName || !guestEmail}
-        className="rounded-md bg-accent py-2.5 text-sm font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+        className="rounded-md bg-accent py-2.5 text-sm font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
       >
         {submitting ? "Registering…" : "Confirm registration"}
       </button>

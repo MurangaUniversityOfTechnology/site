@@ -13,6 +13,7 @@ type FormState = {
   lastName: string;
   preferredName: string;
   registrationNumber: string;
+  phone: string;
   course: string;
   yearOfStudy: number | null;
   interests: string[];
@@ -29,6 +30,7 @@ const initialForm: FormState = {
   lastName: "",
   preferredName: "",
   registrationNumber: "",
+  phone: "",
   course: "",
   yearOfStudy: null,
   interests: [],
@@ -76,6 +78,7 @@ export default function OnboardingPage() {
         last_name: form.lastName.trim(),
         display_name: form.preferredName.trim(),
         registration_number: form.registrationNumber.trim() || null,
+        phone: form.phone.trim() || null,
         course: form.course.trim() || null,
         year_of_study: form.yearOfStudy,
         interests: form.interests,
@@ -103,7 +106,7 @@ export default function OnboardingPage() {
 
   return (
     <main className="flex min-h-[calc(100vh-64px)] flex-col">
-      <div className="flex overflow-x-auto border-b border-[#161c1e]">
+      <div className="flex overflow-x-auto border-b border-[#ddd6c4]">
         {STEPS.map((name, i) => {
           const n = i + 1;
           const active = n === step;
@@ -111,10 +114,10 @@ export default function OnboardingPage() {
           return (
             <div
               key={name}
-              className="min-w-27.5 flex-1 border-r border-[#161c1e] px-4.5 py-4"
-              style={{ background: active ? "#0e1314" : "transparent" }}
+              className="min-w-27.5 flex-1 border-r border-[#ddd6c4] px-4.5 py-4"
+              style={{ background: active ? "#f5f0e3" : "transparent" }}
             >
-              <div className={`font-mono text-[10px] tracking-[0.14em] ${active || done ? "text-accent" : "text-faint"}`}>
+              <div className={`font-mono text-[10px] tracking-[0.14em] ${active || done ? "text-navy" : "text-faint"}`}>
                 {String(n).padStart(2, "0")}
               </div>
               <div
@@ -134,7 +137,7 @@ export default function OnboardingPage() {
           {step === 1 && (
             <div className="animate-[rise_0.4s_ease_both]">
               <h1 className="m-0 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">What&apos;s your name?</h1>
-              <p className="mt-3 mb-8 text-[15.5px] text-[#9aa6a0]">This is how the community will know you.</p>
+              <p className="mt-3 mb-8 text-[15.5px] text-[#7a7060]">This is how the community will know you.</p>
 
               <div className="grid grid-cols-2 gap-4">
                 <Field label="first name">
@@ -163,7 +166,7 @@ export default function OnboardingPage() {
                 </Field>
               </div>
 
-              <div className="my-7 h-px bg-[#161c1e]" />
+              <div className="my-7 h-px bg-[#ddd6c4]" />
 
               <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">your studies</div>
               <p className="mt-2.5 mb-5.5 text-[14.5px] leading-[1.55] text-muted">
@@ -191,7 +194,7 @@ export default function OnboardingPage() {
                           type="button"
                           onClick={() => setForm({ ...form, yearOfStudy: i + 1 })}
                           className={`w-13 rounded-lg border py-2.5 font-mono text-[13px] ${
-                            on ? "border-accent-dim bg-accent/10 text-accent" : "border-border-strong text-muted"
+                            on ? "border-accent-dim bg-accent/10 text-navy" : "border-border-strong text-muted"
                           }`}
                         >
                           {label}
@@ -218,6 +221,21 @@ export default function OnboardingPage() {
                   <div className="mt-2 font-mono text-[10px] text-faint">start typing — MUT courses autocomplete</div>
                 </Field>
               </div>
+
+              <div className="mt-5">
+                <Field label="phone number">
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="0712 345 678"
+                    className="input max-w-65 font-mono text-sm tracking-wide"
+                  />
+                  <div className="mt-2 font-mono text-[10px] text-faint">
+                    for M-Pesa membership payments · admins only · never public
+                  </div>
+                </Field>
+              </div>
             </div>
           )}
 
@@ -226,7 +244,7 @@ export default function OnboardingPage() {
               <h1 className="m-0 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">
                 What are you into?
               </h1>
-              <p className="mt-3 mb-7.5 text-[15.5px] text-[#9aa6a0]">
+              <p className="mt-3 mb-7.5 text-[15.5px] text-[#7a7060]">
                 Select everything that interests you. We use this to suggest projects.
               </p>
               <div className="flex flex-wrap gap-2.5">
@@ -238,7 +256,7 @@ export default function OnboardingPage() {
                       type="button"
                       onClick={() => setForm({ ...form, interests: toggle(form.interests, label) })}
                       className={`rounded-full border px-4 py-2.5 text-[14.5px] font-medium transition-transform ${
-                        on ? "scale-105 border-accent-dim bg-accent/10 text-accent" : "border-border-strong text-muted"
+                        on ? "scale-105 border-accent-dim bg-accent/10 text-navy" : "border-border-strong text-muted"
                       }`}
                     >
                       {label}
@@ -257,7 +275,7 @@ export default function OnboardingPage() {
               <h1 className="m-0 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">
                 Where are you right now?
               </h1>
-              <p className="mt-3 mb-7.5 text-[15.5px] text-[#9aa6a0]">No wrong answer — this isn&apos;t an exam.</p>
+              <p className="mt-3 mb-7.5 text-[15.5px] text-[#7a7060]">No wrong answer — this isn&apos;t an exam.</p>
               <div className="flex flex-col gap-2.5">
                 {experienceLevels.map((lvl) => {
                   const on = form.experienceLevel === lvl.value;
@@ -278,7 +296,7 @@ export default function OnboardingPage() {
                         {on && <span className="h-2 w-2 rounded-full bg-accent" />}
                       </span>
                       <span className="flex-1">{lvl.label}</span>
-                      <span className="font-mono text-[10.5px] text-[#5d6a64]">{lvl.tag}</span>
+                      <span className="font-mono text-[10.5px] text-[#9c8d70]">{lvl.tag}</span>
                     </button>
                   );
                 })}
@@ -291,7 +309,7 @@ export default function OnboardingPage() {
               <h1 className="m-0 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">
                 What do you want to do here?
               </h1>
-              <p className="mt-3 mb-7.5 text-[15.5px] text-[#9aa6a0]">Pick as many as apply.</p>
+              <p className="mt-3 mb-7.5 text-[15.5px] text-[#7a7060]">Pick as many as apply.</p>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 {goalOptions.map((label) => {
                   const on = form.goals.includes(label);
@@ -304,7 +322,7 @@ export default function OnboardingPage() {
                         on ? "border-accent-dim bg-accent/5" : "border-border-strong"
                       }`}
                     >
-                      <span className={`font-mono text-xs ${on ? "text-accent" : "text-faint"}`}>{on ? "✓" : "○"}</span>
+                      <span className={`font-mono text-xs ${on ? "text-navy" : "text-faint"}`}>{on ? "✓" : "○"}</span>
                       {label}
                     </button>
                   );
@@ -316,10 +334,10 @@ export default function OnboardingPage() {
           {step === 5 && (
             <div className="animate-[rise_0.4s_ease_both]">
               <h1 className="m-0 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">Build your profile</h1>
-              <p className="mt-3 mb-6 text-[15.5px] text-[#9aa6a0]">All optional — you can finish this later.</p>
+              <p className="mt-3 mb-6 text-[15.5px] text-[#7a7060]">All optional — you can finish this later.</p>
 
               <div className="mb-6 flex items-center gap-4.5">
-                <div className="grid h-18 w-18 flex-none place-items-center rounded-full border border-dashed border-[#2f3a36] font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#5d6a64]">
+                <div className="grid h-18 w-18 flex-none place-items-center rounded-full border border-dashed border-[#d8cfb5] font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#9c8d70]">
                   photo
                 </div>
                 <button type="button" className="rounded-lg border border-border-strong px-4.5 py-2.5 text-sm">
@@ -407,7 +425,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={next}
               disabled={(step === 1 && !step1Valid) || submitting}
-              className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
             >
               {submitting ? "Saving…" : isLastStep ? "Finish" : "Continue"}
             </button>
@@ -423,16 +441,16 @@ export default function OnboardingPage() {
       <style jsx>{`
         :global(.input) {
           width: 100%;
-          background: #0d1112;
-          border: 1px solid #232b2d;
+          background: #ffffff;
+          border: 1px solid #c9bd9e;
           border-radius: 8px;
           padding: 12px 14px;
-          color: #e8eeea;
+          color: #1a1a1a;
           font-size: 15px;
           outline: none;
         }
         :global(.input:focus) {
-          border-color: #3dfa8a;
+          border-color: #c9a84c;
         }
       `}</style>
     </main>

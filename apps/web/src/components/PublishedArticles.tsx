@@ -23,14 +23,14 @@ export function PublishedArticles() {
 
   return (
     <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="border-b border-[#14191b] px-5 py-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
+      <div className="border-b border-[#e8e1d2] px-5 py-4 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
         from the community
       </div>
       {articles?.map((a) => (
         <Link
           key={a.id}
           href={`/community/articles/${a.id}`}
-          className="block border-b border-[#14191b] p-5 last:border-0 hover:bg-white/[0.02]"
+          className="block border-b border-[#e8e1d2] p-5 last:border-0 hover:bg-black/[0.02]"
         >
           <div className="text-[15.5px] font-medium">{a.title}</div>
           <p className="mt-1.5 line-clamp-2 text-[14px] leading-[1.5] text-muted">{a.excerpt}</p>

@@ -18,15 +18,31 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MUT Tech Community",
-  description: "A community of students building real things with technology.",
+  title: {
+    default: "MUT Tech Community",
+    template: "%s · MUT Tech Community",
+  },
+  description:
+    "A community of students at Murang'a University of Technology building real things with technology — in public, together, every week.",
+  openGraph: {
+    title: "MUT Tech Community",
+    description:
+      "A community of students at Murang'a University of Technology building real things with technology — in public, together, every week.",
+    siteName: "MUT Tech Community",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MUT Tech Community",
+    description: "Build. Learn. Ship. — a community of student builders at MUT.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <MeProvider>

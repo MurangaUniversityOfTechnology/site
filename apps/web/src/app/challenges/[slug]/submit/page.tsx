@@ -46,10 +46,10 @@ export default function SubmitBuildPage() {
     return (
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14 text-center">
         <div className="w-full max-w-105 animate-[rise_0.45s_ease_both]">
-          <div className="mx-auto grid h-16 w-16 animate-[glow_2.4s_ease-in-out_infinite] place-items-center rounded-full border border-accent-dim bg-accent/10 font-mono text-2xl text-accent">
+          <div className="mx-auto grid h-16 w-16 animate-[glow_2.4s_ease-in-out_infinite] place-items-center rounded-full border border-accent-dim bg-accent/10 font-mono text-2xl text-navy">
             ✓
           </div>
-          <div className="mt-6 font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent">
+          <div className="mt-6 font-mono text-[10.5px] uppercase tracking-[0.18em] text-navy">
             challenge complete
           </div>
           <h1 className="mt-3.5 text-[clamp(26px,3.8vw,34px)] leading-[1.15] tracking-[-0.03em]">
@@ -60,7 +60,7 @@ export default function SubmitBuildPage() {
           <div className="mt-7 flex justify-center gap-px overflow-hidden rounded-[10px] border border-border bg-border">
             <div className="bg-surface px-5 py-3.5">
               <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">credential</div>
-              <div className="mt-1.5 font-mono text-[13px] text-accent">#{challenge.num.padStart(2, "0")}</div>
+              <div className="mt-1.5 font-mono text-[13px] text-navy">#{challenge.num.padStart(2, "0")}</div>
             </div>
             <div className="bg-surface px-5 py-3.5">
               <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">builds shipped</div>
@@ -72,7 +72,7 @@ export default function SubmitBuildPage() {
           </p>
           <Link
             href="/dashboard"
-            className="mt-6 inline-block rounded-lg bg-accent px-6 py-3.5 text-[15px] font-semibold text-[#04140b] hover:opacity-90"
+            className="mt-6 inline-block rounded-lg bg-accent px-6 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
           >
             Back to Dashboard
           </Link>
@@ -105,7 +105,7 @@ export default function SubmitBuildPage() {
   return (
     <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14">
       <div className="w-full max-w-120">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent">submit your build</div>
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-navy">submit your build</div>
         <h1 className="mt-4 text-[clamp(26px,3.8vw,34px)] tracking-[-0.035em]">{challenge.title}</h1>
 
         <label className="mb-2 mt-6.5 block font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
@@ -144,7 +144,7 @@ export default function SubmitBuildPage() {
         <button
           onClick={submit}
           disabled={submitting || !github.trim()}
-          className="mt-5.5 w-full rounded-lg bg-accent py-4 text-[15.5px] font-semibold text-[#04140b] hover:opacity-90 disabled:opacity-50"
+          className="mt-5.5 w-full rounded-lg bg-accent py-4 text-[15.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? "Submitting…" : "Submit Build"}
         </button>
