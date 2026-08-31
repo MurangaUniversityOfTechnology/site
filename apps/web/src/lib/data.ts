@@ -45,117 +45,91 @@ export const mutCourses = [
   "Diploma in ICT",
 ];
 
-export type EventItem = {
-  slug: string;
-  dow: string;
-  day: string;
-  mon: string;
+// Sourced from the club's official Semester 2 2026 activity report
+// (submitted to the Dean of Students, ref. MTC/2026/7406). Real numbers —
+// update this alongside each semester's report rather than inventing figures.
+export type PastEvent = {
   title: string;
   meta: string;
-  audience: "open to all" | "members only";
-  fee: string;
-  capacity: string;
-  cta: string;
-  detail?: {
-    date: string;
-    time: string;
-    venue: string;
-    description: string;
-    whatYoullBuild: string;
-    schedule: { time: string; what: string }[];
-    speaker: { name: string; meta: string };
-    requirements: string[];
-    whoShouldAttend: string;
-  };
+  date: string;
+  venue: string;
+  category: string;
+  attendees: number;
+  studentAttendees: number;
+  sponsor: string;
+  speakers: { name: string; role: string; org: string }[];
+  outcome: string;
+  image?: string;
 };
 
-export const events: EventItem[] = [
+export const pastEvents: PastEvent[] = [
   {
-    slug: "rust-systems-workshop",
-    dow: "FRI",
-    day: "29",
-    mon: "AUG",
-    title: "Rust Systems Workshop",
-    meta: "5:00 PM · Engineering Lab 2 · Kevin Mwangi",
-    audience: "open to all",
-    fee: "free",
-    capacity: "8 of 30 seats left",
-    cta: "Register",
-    detail: {
-      date: "29 August",
-      time: "5:00 PM",
-      venue: "Engineering Lab 2",
-      description:
-        "Build systems that actually understand memory. Three hours, one compiler, zero garbage collection.",
-      whatYoullBuild:
-        "A working key-value store with a write-ahead log — the same shape as the storage engine underneath Redis, but small enough to finish in one sitting. You leave with code on your GitHub.",
-      schedule: [
-        { time: "17:00", what: "Setup & why Rust exists" },
-        { time: "17:30", what: "Ownership, borrowing, lifetimes" },
-        { time: "18:15", what: "Build: append-only log" },
-        { time: "19:15", what: "Build: index & recovery" },
-        { time: "20:00", what: "Demos + pizza" },
-      ],
-      speaker: { name: "Kevin Mwangi", meta: "4th year · systems · club lead" },
-      requirements: ["A laptop with Rust installed", "Comfort with any one language", "Active club membership"],
-      whoShouldAttend:
-        "Anyone who has written a program and wondered where the memory went. Intermediate — you don't need Rust experience.",
-    },
+    title: "OKX Blockchain Talk",
+    meta: "07 feb · 137 attended",
+    date: "February 7",
+    venue: "Assembly Hall",
+    category: "Tech Talk / Guest Lecture",
+    attendees: 137,
+    studentAttendees: 134,
+    sponsor: "OKX",
+    speakers: [
+      { name: "Ian Maguithi", role: "Speaker", org: "OKX" },
+      { name: "Cynthia Wanjiku", role: "Speaker", org: "OKX" },
+      { name: "Carol Hiri", role: "Speaker", org: "OKX" },
+    ],
+    outcome: "Over 100 students got acquainted with blockchain using OKX technologies.",
+    image: "/images/okx_event.png",
   },
   {
-    slug: "deploy-night",
-    dow: "TUE",
-    day: "02",
-    mon: "SEP",
-    title: "Deploy Night: ship your side project",
-    meta: "6:30 PM · Innovation Hub",
-    audience: "members only",
-    fee: "free",
-    capacity: "19 of 40 seats left",
-    cta: "Register",
-  },
-  {
-    slug: "mut-mini-hackathon",
-    dow: "SAT",
-    day: "06",
-    mon: "SEP",
-    title: "MUT Mini-Hackathon",
-    meta: "9:00 AM · Main Lab · lunch provided",
-    audience: "open to all",
-    fee: "KSh 100",
-    capacity: "full · 7 waiting",
-    cta: "Join waitlist",
-  },
-  {
-    slug: "cloud-study-group",
-    dow: "WED",
-    day: "10",
-    mon: "SEP",
-    title: "Cloud Study Group: week 1",
-    meta: "5:30 PM · Lab 4 · recurring",
-    audience: "members only",
-    fee: "free",
-    capacity: "no cap",
-    cta: "Register",
-  },
-  {
-    slug: "alumni-panel",
-    dow: "FRI",
-    day: "19",
-    mon: "SEP",
-    title: "Alumni Panel: first job in tech",
-    meta: "4:00 PM · Main Hall · 4 alumni",
-    audience: "open to all",
-    fee: "free",
-    capacity: "registration opens 1 sep",
-    cta: "Remind me",
+    title: "MUT Tech Day",
+    meta: "21 feb · 75 attended",
+    date: "February 21",
+    venue: "Assembly Hall",
+    category: "Workshop",
+    attendees: 75,
+    studentAttendees: 70,
+    sponsor: "Microsoft",
+    speakers: [
+      { name: "Julia Muiruri", role: "Cloud Advocate", org: "Microsoft" },
+      { name: "Bethany Jepchumba", role: "AI Cloud Advocate", org: "Microsoft" },
+      { name: "Mark Gatere", role: "Software Engineer", org: "Microsoft" },
+      { name: "Stephen Karanja", role: "Software Engineer", org: "Microsoft" },
+      { name: "Joylynn Kirui", role: "Cybersecurity Expert", org: "Prime Bank" },
+    ],
+    outcome: "Over 70 students were equipped with on-demand skills to navigate the current industry.",
+    image: "/images/MUT_Tech_day.png",
   },
 ];
 
-export const pastEvents = [
-  { title: "Intro to Git & GitHub", meta: "14 aug · 41 attended" },
-  { title: "Build Night: FastAPI", meta: "07 aug · 28 attended" },
-  { title: "Cyber Awareness Clinic", meta: "31 jul · 63 attended" },
+export const semesterSummary = {
+  period: "Semester 2 2026",
+  eventsHeld: 2,
+  totalAttendance: 212,
+  guestSpeakers: 8,
+  // "Companies & Sponsors Present" per the official report — Prime Bank was
+  // one guest speaker's employer, not a listed sponsor, so it's excluded here.
+  partnerOrgs: ["OKX", "Microsoft"],
+  // Broader than partnerOrgs: every org a speaker came from, for the "trusted by" strip.
+  speakerOrgs: ["OKX", "Microsoft", "Prime Bank"],
+};
+
+export const whyMutTech = [
+  {
+    title: "Real industry access",
+    detail: "Engineers and advocates from OKX and Microsoft spoke to students last semester alone.",
+  },
+  {
+    title: "You ship, not just attend",
+    detail: "Weekly build challenges and real repos — not another WhatsApp group that goes quiet.",
+  },
+  {
+    title: "Built by students, for students",
+    detail: "Run by your peers on a build-in-public rhythm, not a once-a-semester assembly.",
+  },
+  {
+    title: "Backed by the university",
+    detail: "An official School of Computing & IT community, patroned by the Dean of SCIT.",
+  },
 ];
 
 export type Challenge = {
@@ -339,7 +313,7 @@ export const learningPath = {
   otherPaths: ["Systems Programming", "AI / ML", "Cybersecurity", "Frontend", "Cloud & DevOps"],
 };
 
-export const membershipFeeKes = 500;
+export const membershipFeeKes = 200;
 
 export const membershipPerks = [
   "Member events & workshops",
@@ -364,3 +338,68 @@ export const liveTicker = [
   { text: "3 new members joined", color: "green" },
   { text: "Njeri shipped Past Lens v2", color: "green" },
 ] as const;
+
+// Leadership named in the club's official Semester 2 2026 activity report —
+// only list people we have a real, sourced name and role for.
+export type TeamMember = { name: string; role: string; meta: string; image?: string };
+
+export const leadership: TeamMember[] = [
+  { name: "John Kagunda", role: "Chairperson", meta: "Reg. No. SC212/3223/2023", image: "/images/JKagunda.png" },
+  { name: "Dr. John Ndia", role: "Club Patron", meta: "Dean, School of Computing & IT", image: "/images/J.Ndia.webp" },
+  { name: "Dr. Jane Njuki", role: "Head of Innovations", meta: "SCIT", image: "/images/JNjuki.webp" },
+];
+
+export const joinSteps = [
+  {
+    step: "01",
+    title: "Create your account",
+    detail: "Sign up with your email or Google — takes under a minute.",
+  },
+  {
+    step: "02",
+    title: "Tell us about you",
+    detail: "Course, year, and what you want to build. Helps us point you at the right events and projects.",
+  },
+  {
+    step: "03",
+    title: "Start building",
+    detail: "Join a weekly challenge, register for the next event, or pick up a project that's looking for hands.",
+  },
+];
+
+export type GalleryPhoto = {
+  caption: string;
+  image: string;
+};
+
+export const galleryPhotos: GalleryPhoto[] = [
+  { caption: "Fireside chat", image: "/images/fireside-chat.jpeg" },
+  { caption: "Workshop in progress", image: "/images/workshop-in-progress.png" },
+  { caption: "Guest speaker Q&A", image: "/images/guest_speaker_q_a.jpeg" },
+  { caption: "TEDx Riara University", image: "/images/Tedx-Riara-University.jpeg" },
+  { caption: "Community hangout", image: "/images/community-hangout.jpeg" },
+  { caption: "Demo day", image: "/images/demo-day.jpeg" },
+];
+
+export const faqs = [
+  {
+    q: "Do I need coding experience to join?",
+    a: "No. We have members ranging from just getting started to advanced — the weekly challenges and learning paths are built to meet you where you are.",
+  },
+  {
+    q: "How much does membership cost?",
+    a: `KSh ${membershipFeeKes} per semester. It covers member events, project access, weekly challenges, and a public builder profile.`,
+  },
+  {
+    q: "Is this only for Computer Science students?",
+    a: "No — we're open to students across Software Engineering, CS, IT, Computer Technology, Electrical & Electronic Engineering, Mechatronic Engineering, and the Diploma in ICT.",
+  },
+  {
+    q: "What do I actually get as a member?",
+    a: "Access to member-only events and workshops, the ability to join club projects, weekly build challenges, community resources, and a public profile showing what you've shipped.",
+  },
+  {
+    q: "How often does the club actually meet?",
+    a: "Weekly, not once a semester — build nights, study groups, and challenges run continuously alongside the bigger flagship events.",
+  },
+];

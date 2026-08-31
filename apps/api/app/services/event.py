@@ -1,10 +1,43 @@
+import io
+import logging
+import uuid
+from datetime import datetime, timedelta, timezone
+
+import qrcode
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import MembershipStatus
 from app.models.user import User
 from app.services import audit, notification
+from app.services import email as email_service
+from app.services.email_templates import render_email
+
+settings = get_settings()
+logger = logging.getLogger(__name__)
+
+# Must match TICKET_QR_PREFIX in apps/web/src/app/events/[slug]/pass/page.tsx
+# — the admin check-in scanner rejects anything without this prefix.
+TICKET_QR_PREFIX = "mut-ticket:"
+
+# The club runs on Africa/Nairobi time (UTC+3, no DST) — same fixed-offset
+# convention as CLUB_UTC_OFFSET in apps/web/src/lib/eventFormat.ts, so a
+# stored event time displays as the wall-clock time it was actually set to.
+NAIROBI = timezone(timedelta(hours=3))
+
+
+def _format_event_datetime(starts_at: datetime) -> str:
+    local = starts_at.astimezone(NAIROBI)
+    return local.strftime("%A, %-d %B · %-I:%M %p")
+
+
+def _ticket_qr_png(registration_id: uuid.UUID) -> bytes:
+    img = qrcode.make(f"{TICKET_QR_PREFIX}{registration_id}")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 class EventError(Exception):
@@ -16,6 +49,10 @@ def get_event(db: Session, slug: str) -> Event:
     if not event:
         raise EventError(f"Unknown event '{slug}'")
     return event
+
+
+def list_events(db: Session) -> list[Event]:
+    return db.query(Event).order_by(Event.starts_at.asc()).all()
 
 
 def _open_slots(db: Session, event: Event) -> int | None:
@@ -30,6 +67,43 @@ def _open_slots(db: Session, event: Event) -> int | None:
         .count()
     )
     return event.capacity - taken
+
+
+# Alias used by the public/admin read paths — same computation, clearer name
+# than the registration-flow's internal "_open_slots".
+seats_left = _open_slots
+
+
+def create_event(db: Session, admin: User, fields: dict) -> Event:
+    if db.query(Event).filter(Event.slug == fields["slug"]).first():
+        raise EventError(f"An event with slug '{fields['slug']}' already exists")
+    event = Event(**fields)
+    db.add(event)
+    audit.log(db, admin, "event", f"Created event {event.title}")
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def update_event(db: Session, admin: User, event: Event, fields: dict) -> Event:
+    new_slug = fields.get("slug")
+    if new_slug and new_slug != event.slug and db.query(Event).filter(Event.slug == new_slug).first():
+        raise EventError(f"An event with slug '{new_slug}' already exists")
+    for key, value in fields.items():
+        setattr(event, key, value)
+    audit.log(db, admin, "event", f"Updated event {event.title}")
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def delete_event(db: Session, admin: User, event: Event) -> None:
+    count = db.query(EventRegistration).filter(EventRegistration.event_id == event.id).count()
+    if count:
+        raise EventError(f"Can't delete — {count} registration(s) exist for this event")
+    audit.log(db, admin, "event", f"Deleted event {event.title}")
+    db.delete(event)
+    db.commit()
 
 
 def register(
@@ -104,6 +178,44 @@ NOTIFY_TITLE = {
 }
 
 
+def _send_ticket_email(registration: EventRegistration) -> None:
+    to = registration.user.email if registration.user else registration.guest_email
+    if not to:
+        return
+    reference = str(registration.id)[:8].upper()
+    pass_url = f"{settings.web_origin}/events/{registration.event.slug}/pass"
+    when = _format_event_datetime(registration.event.starts_at)
+    html = render_email(
+        eyebrow="event ticket",
+        heading="You're confirmed.",
+        body_html=(
+            f"Your spot for <strong>{registration.event.title}</strong> is booked. "
+            f"Reference: <strong>{reference}</strong>."
+            '<div style="margin-top:14px;padding:14px 16px;background:#faf8f3;border:1px solid #ddd6c4;'
+            'border-radius:8px;font-size:14px;line-height:1.7;">'
+            f"<strong>{when}</strong><br />{registration.event.venue}"
+            "</div>"
+            '<div style="margin-top:18px;text-align:center;">'
+            '<img src="cid:ticket-qr" width="200" height="200" alt="Ticket QR code" '
+            'style="display:inline-block;border:1px solid #ddd6c4;border-radius:8px;" />'
+            "</div>"
+            '<p style="margin-top:14px;">Show this QR code at the door — it&rsquo;s attached to this email, '
+            "so it works even offline. Or bring up your account / the reference above instead.</p>"
+        ),
+        cta_label="View your ticket online",
+        cta_url=pass_url,
+    )
+    try:
+        email_service.send_email(
+            to=to,
+            subject=f"Your ticket — {registration.event.title}",
+            html=html,
+            inline_images=[email_service.InlineImage(cid="ticket-qr", data=_ticket_qr_png(registration.id))],
+        )
+    except Exception:
+        logger.warning("Failed to send ticket email for registration %s", registration.id, exc_info=True)
+
+
 def _transition(db: Session, admin: User, registration: EventRegistration, to: RegistrationStatus, allowed_from: set[RegistrationStatus]) -> None:
     if registration.status not in allowed_from:
         raise EventError(f"Cannot move registration from '{registration.status.value}' to '{to.value}'")
@@ -113,6 +225,8 @@ def _transition(db: Session, admin: User, registration: EventRegistration, to: R
     if registration.user:
         notification.notify(db, registration.user, "event", NOTIFY_TITLE[to], registration.event.title)
     db.commit()
+    if to == RegistrationStatus.approved:
+        _send_ticket_email(registration)
 
 
 def approve(db: Session, admin: User, registration: EventRegistration) -> None:

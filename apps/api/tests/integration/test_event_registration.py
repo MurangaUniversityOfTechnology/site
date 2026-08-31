@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 
 from app.models.event import Event, EventAudience
@@ -14,7 +16,16 @@ def make_event(db_session):
 
     def _make(*, capacity=None, audience=EventAudience.open_to_all, fee_kes=0):
         counter["n"] += 1
-        event = Event(slug=f"event-{counter['n']}", title=f"Event {counter['n']}", capacity=capacity, audience=audience, fee_kes=fee_kes)
+        event = Event(
+            slug=f"event-{counter['n']}",
+            title=f"Event {counter['n']}",
+            capacity=capacity,
+            audience=audience,
+            fee_kes=fee_kes,
+            starts_at=datetime.now(UTC),
+            venue="Test Venue",
+            description="Test description",
+        )
         db_session.add(event)
         db_session.commit()
         db_session.refresh(event)
@@ -186,6 +197,64 @@ def test_mark_attended_requires_approved_first(db_session, make_user, make_event
 
     with pytest.raises(event_service.EventError):
         event_service.mark_attended(db_session, admin, reg)
+
+
+def test_approve_emails_a_ticket_to_the_member(db_session, make_user, make_event, mock_email):
+    event = make_event()
+    admin = make_user(is_admin=True, email="admin@example.com")
+    user = make_user(email="attendee@example.com")
+    reg = event_service.register(db_session, event.slug, user)
+
+    event_service.approve(db_session, admin, reg)
+
+    assert len(mock_email) == 1
+    assert mock_email[0]["to"] == "attendee@example.com"
+    assert event.title in mock_email[0]["html"]
+    assert str(reg.id)[:8].upper() in mock_email[0]["html"]
+    assert 'cid:ticket-qr' in mock_email[0]["html"]
+    assert event.venue in mock_email[0]["html"]
+    images = mock_email[0]["inline_images"]
+    assert images is not None and len(images) == 1
+    assert images[0].cid == "ticket-qr"
+    assert images[0].data[:8] == b"\x89PNG\r\n\x1a\n"  # PNG file signature
+
+
+def test_approve_emails_a_ticket_to_a_guest(db_session, make_user, make_event, mock_email):
+    event = make_event()
+    admin = make_user(is_admin=True, email="admin@example.com")
+    reg = event_service.register(db_session, event.slug, None, guest_name="Guest", guest_email="guest@example.com")
+
+    event_service.approve(db_session, admin, reg)
+
+    assert len(mock_email) == 1
+    assert mock_email[0]["to"] == "guest@example.com"
+
+
+@pytest.mark.parametrize("transition", ["reject", "waitlist"])
+def test_other_transitions_do_not_send_a_ticket(db_session, make_user, make_event, mock_email, transition):
+    event = make_event()
+    admin = make_user(is_admin=True, email="admin@example.com")
+    user = make_user(email="attendee@example.com")
+    reg = event_service.register(db_session, event.slug, user)
+
+    getattr(event_service, transition)(db_session, admin, reg)
+
+    assert mock_email == []
+
+
+def test_ticket_email_failure_does_not_block_approval(db_session, make_user, make_event, monkeypatch):
+    def _boom(**kwargs):
+        raise RuntimeError("SMTP is down")
+
+    monkeypatch.setattr("app.services.email.send_email", _boom)
+
+    event = make_event()
+    admin = make_user(is_admin=True, email="admin@example.com")
+    user = make_user(email="attendee@example.com")
+    reg = event_service.register(db_session, event.slug, user)
+
+    event_service.approve(db_session, admin, reg)  # must not raise
+    assert reg.status == RegistrationStatus.approved
 
 
 def test_guest_registration_transitions_use_guest_email_for_audit(db_session, make_user, make_event):

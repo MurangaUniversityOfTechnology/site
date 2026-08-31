@@ -7,9 +7,11 @@ from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
 from app.models.content import Content
+from app.models.event import Event
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
+from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
 from app.models.user import User
 from app.schemas.admin import (
@@ -18,15 +20,23 @@ from app.schemas.admin import (
     AdminOverview,
     AdminRow,
     AuditEntry,
+    ImportMemberResult,
+    ImportMembersRequest,
+    ImportMembersResponse,
     MembershipApplication,
     PaymentRow,
     PaymentsOverview,
     PaymentTotal,
 )
 from app.schemas.content import AdminContentRow
-from app.schemas.event import AdminRegistrationRow
+from app.schemas.event import (
+    AdminEventRow,
+    AdminRegistrationRow,
+    EventUpdateRequest,
+    EventWriteRequest,
+)
 from app.schemas.github import RosterRow
-from app.schemas.project import AdminJoinRequestRow
+from app.schemas.project import AddProjectRequest, AdminJoinRequestRow, AdminProjectRow
 from app.services import audit
 from app.services import content as content_service
 from app.services import event as event_service
@@ -37,20 +47,19 @@ from app.services import project as project_service
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 STATUS_FILTERS = {
-    "pending": [MembershipStatus.approval_pending],
     "active": [MembershipStatus.active],
-    "rejected": [MembershipStatus.rejected],
     "all": None,
 }
 
 
 @router.get("/overview", response_model=AdminOverview)
 def overview(db: Session = Depends(get_db)):
-    week_ago = datetime.now(UTC) - timedelta(days=7)
+    week_ago = (datetime.now(UTC) - timedelta(days=7)).date()
     return AdminOverview(
         total_members=db.query(Membership).filter(Membership.status == MembershipStatus.active).count(),
-        pending_approval=db.query(Membership).filter(Membership.status == MembershipStatus.approval_pending).count(),
-        new_this_week=db.query(User).filter(User.created_at >= week_ago).count(),
+        new_this_week=db.query(Membership)
+        .filter(Membership.status == MembershipStatus.active, Membership.period_start >= week_ago)
+        .count(),
         unmatched_payments=db.query(Payment)
         .filter(Payment.status.in_([PaymentStatus.pending, PaymentStatus.failed]))
         .count(),
@@ -58,8 +67,8 @@ def overview(db: Session = Depends(get_db)):
 
 
 @router.get("/memberships", response_model=list[MembershipApplication])
-def list_memberships(status_filter: str = "pending", db: Session = Depends(get_db)):
-    statuses = STATUS_FILTERS.get(status_filter, STATUS_FILTERS["pending"])
+def list_memberships(status_filter: str = "active", db: Session = Depends(get_db)):
+    statuses = STATUS_FILTERS.get(status_filter, STATUS_FILTERS["active"])
     query = db.query(Membership)
     if statuses is not None:
         query = query.filter(Membership.status.in_(statuses))
@@ -85,28 +94,6 @@ def list_memberships(status_filter: str = "pending", db: Session = Depends(get_d
             )
         )
     return out
-
-
-@router.post("/memberships/{user_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
-def approve_membership(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    applicant = db.get(User, user_id)
-    if not applicant:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    try:
-        membership_service.approve(db, admin, applicant)
-    except membership_service.MembershipError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-
-
-@router.post("/memberships/{user_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
-def reject_membership(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    applicant = db.get(User, user_id)
-    if not applicant:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    try:
-        membership_service.reject(db, admin, applicant)
-    except membership_service.MembershipError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("/payments", response_model=PaymentsOverview)
@@ -142,6 +129,74 @@ def payments_overview(db: Session = Depends(get_db)):
 def audit_log(db: Session = Depends(get_db)):
     entries = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
     return [AuditEntry(at=e.created_at, who=e.actor_name, what=e.action, kind=e.kind) for e in entries]
+
+
+# ── events (admin CRUD) ──────────────────────────────────────────────
+
+
+def _admin_event_row(db: Session, event: Event) -> AdminEventRow:
+    count = db.query(EventRegistration).filter(EventRegistration.event_id == event.id).count()
+    return AdminEventRow(
+        id=event.id,
+        slug=event.slug,
+        title=event.title,
+        starts_at=event.starts_at,
+        venue=event.venue,
+        description=event.description,
+        audience=event.audience,
+        fee_kes=event.fee_kes,
+        capacity=event.capacity,
+        seats_left=event_service.seats_left(db, event),
+        what_youll_build=event.what_youll_build,
+        schedule=event.schedule,
+        speaker_name=event.speaker_name,
+        speaker_meta=event.speaker_meta,
+        requirements=event.requirements,
+        who_should_attend=event.who_should_attend,
+        registration_count=count,
+    )
+
+
+@router.get("/events", response_model=list[AdminEventRow])
+def list_admin_events(db: Session = Depends(get_db)):
+    return [_admin_event_row(db, e) for e in event_service.list_events(db)]
+
+
+@router.post("/events", response_model=AdminEventRow, status_code=status.HTTP_201_CREATED)
+def create_event(payload: EventWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        event = event_service.create_event(db, admin, payload.model_dump())
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_event_row(db, event)
+
+
+def _get_event_or_404(db: Session, slug: str) -> Event:
+    try:
+        return event_service.get_event(db, slug)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.patch("/events/{slug}", response_model=AdminEventRow)
+def update_event(
+    slug: str, payload: EventUpdateRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    event = _get_event_or_404(db, slug)
+    try:
+        event = event_service.update_event(db, admin, event, payload.model_dump(exclude_unset=True))
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_event_row(db, event)
+
+
+@router.delete("/events/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    event = _get_event_or_404(db, slug)
+    try:
+        event_service.delete_event(db, admin, event)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("/events/{slug}/registrations", response_model=list[AdminRegistrationRow])
@@ -323,11 +378,84 @@ def add_member(payload: AddMemberRequest, admin: User = Depends(require_admin), 
             payload.registration_number,
             payload.github_handle,
             payload.reason,
+            payload.password,
+            payload.activation,
+            payload.phone,
+            payload.mpesa_receipt,
+            payload.amount_kes,
         )
     except membership_service.MembershipError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
-    return AddMemberResponse(user_id=user.id, email=user.email, temp_password=temp_password)
+    return AddMemberResponse(
+        user_id=user.id,
+        email=user.email,
+        temp_password=temp_password,
+        membership_status=user.membership.status.value,
+    )
+
+
+@router.post("/members/import", response_model=ImportMembersResponse)
+def import_members(payload: ImportMembersRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    results = []
+    for row in payload.rows:
+        try:
+            membership_service.admin_add_member(
+                db,
+                admin,
+                row.email,
+                row.display_name,
+                row.registration_number,
+                None,
+                "Migrated from legacy list",
+                None,
+                "active",
+                None,
+            )
+            results.append(ImportMemberResult(email=row.email, status="created"))
+        except membership_service.MembershipError as exc:
+            db.rollback()
+            results.append(ImportMemberResult(email=row.email, status="error", error=str(exc)))
+    return ImportMembersResponse(results=results)
+
+
+# ── tracked projects (admin CRUD) ─────────────────────────────────────
+
+
+def _admin_project_row(db: Session, project: Project) -> AdminProjectRow:
+    return AdminProjectRow(
+        slug=project.slug,
+        name=project.name,
+        repo_name=project.repo_name,
+        github_url=project.github_url,
+        language=project.language,
+        stars=project.stars,
+        member_count=len(project_service.list_members(db, project)),
+        synced_at=project.synced_at,
+    )
+
+
+@router.get("/projects", response_model=list[AdminProjectRow])
+def list_tracked_projects(db: Session = Depends(get_db)):
+    projects = db.query(Project).order_by(Project.name.asc()).all()
+    return [_admin_project_row(db, p) for p in projects]
+
+
+@router.post("/projects", response_model=AdminProjectRow, status_code=status.HTTP_201_CREATED)
+def add_project(payload: AddProjectRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        project = project_service.add_project(db, admin, payload.repo_name, payload.display_name)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_project_row(db, project)
+
+
+@router.delete("/projects/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = project_service.get_by_slug(db, slug)
+    if not project:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
+    project_service.remove_project(db, admin, project)
 
 
 # ── project join requests ───────────────────────────────────────────

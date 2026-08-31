@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { eventApi, type Registration } from "@/lib/api";
-import { events } from "@/lib/data";
+import QRCode from "qrcode";
+import { eventApi, type EventSummary, type Registration } from "@/lib/api";
+import { formatEventDay, formatEventMeta } from "@/lib/eventFormat";
 import { useMe } from "@/lib/useMe";
+
+// Prefixed so the door scanner can reject an unrelated QR code (wifi, a
+// random URL) instead of trying to look it up as a registration id.
+export const TICKET_QR_PREFIX = "mut-ticket:";
 
 export default function EventPassPage() {
   const params = useParams<{ slug: string }>();
@@ -12,8 +17,8 @@ export default function EventPassPage() {
   const router = useRouter();
   const { me, loading } = useMe();
   const [registration, setRegistration] = useState<Registration | null | undefined>(undefined);
-
-  const event = events.find((e) => e.slug === slug);
+  const [event, setEvent] = useState<EventSummary | null | undefined>(undefined);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !me) router.push("/sign-in");
@@ -22,9 +27,22 @@ export default function EventPassPage() {
   useEffect(() => {
     if (!me) return;
     eventApi.myRegistration(slug).then(setRegistration);
+    eventApi
+      .get(slug)
+      .then(setEvent)
+      .catch(() => setEvent(null));
   }, [me, slug]);
 
-  if (loading || !me || registration === undefined || !event) return null;
+  useEffect(() => {
+    if (!registration) return;
+    QRCode.toDataURL(`${TICKET_QR_PREFIX}${registration.id}`, {
+      width: 320,
+      margin: 1,
+      color: { dark: "#1a2744", light: "#ffffff" },
+    }).then(setQrDataUrl);
+  }, [registration]);
+
+  if (loading || !me || registration === undefined || event === undefined || !event) return null;
 
   if (!registration || (registration.status !== "approved" && registration.status !== "attended")) {
     return (
@@ -38,28 +56,31 @@ export default function EventPassPage() {
   }
 
   const reference = registration.id.slice(0, 8).toUpperCase();
+  const { dow, day, mon } = formatEventDay(event.starts_at);
 
   return (
     <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14">
       <div className="w-full max-w-90 overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="border-b border-border p-6 text-center">
-          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-accent">
+          <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-navy">
             {registration.status === "attended" ? "✓ attended" : "event pass"}
           </div>
           <div className="mt-3 text-xl font-semibold">{me.email.split("@")[0]}</div>
         </div>
 
         <div className="p-6 text-center">
-          <div className="mx-auto grid h-40 w-40 place-items-center rounded-lg border border-dashed border-border-strong bg-background">
-            <span className="px-3 text-center font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
-              qr code
-              <br />
-              <span className="text-foreground">{reference}</span>
-            </span>
+          <div className="mx-auto grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-border-strong bg-background">
+            {qrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- a data: URL, next/image can't optimize it anyway
+              <img src={qrDataUrl} alt={`Ticket QR code — reference ${reference}`} className="h-full w-full" />
+            ) : (
+              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">generating…</span>
+            )}
           </div>
+          <div className="mt-3 font-mono text-[11px] tracking-[0.08em] text-faint">{reference}</div>
           <div className="mt-5 text-[17px] font-semibold">{event.title}</div>
           <div className="mt-2 font-mono text-[11px] text-faint">
-            {event.dow} {event.day} {event.mon} · {event.meta}
+            {dow} {day} {mon} · {formatEventMeta(event)}
           </div>
         </div>
       </div>

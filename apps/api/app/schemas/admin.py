@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
 
 
 class AdminOverview(BaseModel):
     total_members: int
-    pending_approval: int
     new_this_week: int
     unmatched_payments: int
 
@@ -62,9 +62,56 @@ class AddMemberRequest(BaseModel):
     registration_number: str | None = None
     github_handle: str | None = None
     reason: str
+    # Admin can set a password directly; leaving it blank falls back to an
+    # auto-generated one-time password (the original behavior).
+    password: str | None = Field(default=None, min_length=8, max_length=72)
+    # "active" grants membership immediately for free (sponsor path, the
+    # original behavior). "stk_push" sends a real M-Pesa request to `phone` —
+    # the account exists right away, but membership only goes active once
+    # they actually pay (same reconciliation path as self-service signup:
+    # callback, or the STK Query fallback). "manual_receipt" is for a payment
+    # that already happened outside the app (cash, paid to a till/agent
+    # directly) — the admin records the M-Pesa receipt they were given and
+    # membership activates immediately with a real Payment row attached.
+    activation: Literal["active", "stk_push", "manual_receipt"] = "active"
+    phone: str | None = None
+    mpesa_receipt: str | None = Field(default=None, max_length=40)
+    amount_kes: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def _phone_required_for_stk_push(self) -> "AddMemberRequest":
+        if self.activation == "stk_push" and not self.phone:
+            raise ValueError("phone is required when activation is 'stk_push'")
+        if self.activation == "manual_receipt":
+            if not self.phone:
+                raise ValueError("phone is required when activation is 'manual_receipt'")
+            if not self.mpesa_receipt or not self.mpesa_receipt.strip():
+                raise ValueError("mpesa_receipt is required when activation is 'manual_receipt'")
+        return self
 
 
 class AddMemberResponse(BaseModel):
     user_id: uuid.UUID
     email: str
     temp_password: str | None
+    membership_status: str
+
+
+class ImportMemberRow(BaseModel):
+    email: str
+    display_name: str
+    registration_number: str | None = None
+
+
+class ImportMembersRequest(BaseModel):
+    rows: list[ImportMemberRow] = Field(min_length=1, max_length=500)
+
+
+class ImportMemberResult(BaseModel):
+    email: str
+    status: Literal["created", "error"]
+    error: str | None = None
+
+
+class ImportMembersResponse(BaseModel):
+    results: list[ImportMemberResult]

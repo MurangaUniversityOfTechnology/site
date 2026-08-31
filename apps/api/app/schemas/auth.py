@@ -13,6 +13,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str | None = None
+    new_password: str = Field(min_length=8, max_length=72)
+
+
 class MeResponse(BaseModel):
     id: uuid.UUID
     email: str

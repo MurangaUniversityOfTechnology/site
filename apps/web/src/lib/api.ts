@@ -1,4 +1,11 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+// Explicit NEXT_PUBLIC_API_URL wins (production). Otherwise, in the browser,
+// talk to whatever host served this page — so the same build works from
+// localhost:3000 and from a LAN IP (phone testing) without hardcoding an IP
+// that changes on every DHCP renewal. Server-side rendering has no window,
+// so it always hits the API on this same machine directly.
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (typeof window !== "undefined" ? `http://${window.location.hostname}:8000` : "http://localhost:8000");
 
 export class ApiError extends Error {
   status: number;
@@ -43,6 +50,11 @@ export const authApi = {
   logout: () => apiFetch<void>("/auth/logout", { method: "POST" }),
   me: () => apiFetch<Me>("/auth/me"),
   googleStartUrl: () => `${API_URL}/auth/google/start`,
+  // Dev-only — the backend 404s this outside ENVIRONMENT=development.
+  devLogin: () => apiFetch<Me>("/auth/dev-login", { method: "POST" }),
+  sendVerificationEmail: () => apiFetch<void>("/auth/send-verification-email", { method: "POST" }),
+  changePassword: (payload: { current_password: string | null; new_password: string }) =>
+    apiFetch<void>("/auth/change-password", { method: "POST", body: JSON.stringify(payload) }),
 };
 
 export type GithubStatus = { linked: boolean; login: string | null; invite_status: string };
@@ -62,6 +74,7 @@ export type Profile = {
   last_name: string | null;
   display_name: string | null;
   registration_number: string | null;
+  phone: string | null;
   course: string | null;
   year_of_study: number | null;
   interests: string[];
@@ -79,6 +92,7 @@ export type OnboardingPayload = {
   last_name: string;
   display_name: string;
   registration_number: string | null;
+  phone: string | null;
   course: string | null;
   year_of_study: number | null;
   interests: string[];
@@ -120,7 +134,6 @@ export const membershipApi = {
 
 export type AdminOverview = {
   total_members: number;
-  pending_approval: number;
   new_this_week: number;
   unmatched_payments: number;
 };
@@ -159,7 +172,56 @@ export type AdminRegistrationRow = {
   status: RegistrationStatus;
 };
 
+export type EventAudience = "open_to_all" | "members_only";
+
+export type ScheduleItem = { time: string; what: string };
+
+export type EventSummary = {
+  slug: string;
+  title: string;
+  starts_at: string;
+  venue: string;
+  description: string;
+  audience: EventAudience;
+  fee_kes: number;
+  capacity: number | null;
+  seats_left: number | null;
+};
+
+export type EventDetail = EventSummary & {
+  what_youll_build: string | null;
+  schedule: ScheduleItem[];
+  speaker_name: string | null;
+  speaker_meta: string | null;
+  requirements: string[];
+  who_should_attend: string | null;
+};
+
+export type AdminEventRow = EventDetail & {
+  id: string;
+  registration_count: number;
+};
+
+export type EventWritePayload = {
+  slug: string;
+  title: string;
+  starts_at: string;
+  venue: string;
+  description: string;
+  audience: EventAudience;
+  fee_kes: number;
+  capacity: number | null;
+  what_youll_build: string | null;
+  schedule: ScheduleItem[];
+  speaker_name: string | null;
+  speaker_meta: string | null;
+  requirements: string[];
+  who_should_attend: string | null;
+};
+
 export const eventApi = {
+  list: () => apiFetch<EventSummary[]>("/events"),
+  get: (slug: string) => apiFetch<EventDetail>(`/events/${slug}`),
   register: (slug: string, guest?: { guest_name: string; guest_email: string }) =>
     apiFetch<Registration>(`/events/${slug}/register`, { method: "POST", body: JSON.stringify(guest ?? {}) }),
   myRegistration: (slug: string) => apiFetch<Registration | null>(`/events/${slug}/registration`),
@@ -169,8 +231,6 @@ export const adminApi = {
   overview: () => apiFetch<AdminOverview>("/admin/overview"),
   memberships: (statusFilter: string) =>
     apiFetch<MembershipApplication[]>(`/admin/memberships?status_filter=${statusFilter}`),
-  approve: (userId: string) => apiFetch<void>(`/admin/memberships/${userId}/approve`, { method: "POST" }),
-  reject: (userId: string) => apiFetch<void>(`/admin/memberships/${userId}/reject`, { method: "POST" }),
   payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
   audit: () => apiFetch<AuditEntry[]>("/admin/audit"),
   eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),
@@ -192,11 +252,28 @@ export const adminApi = {
     registration_number: string | null;
     github_handle: string | null;
     reason: string;
+    password: string | null;
+    activation: "active" | "stk_push" | "manual_receipt";
+    phone: string | null;
+    mpesa_receipt?: string | null;
+    amount_kes?: number | null;
   }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
+  importMembers: (rows: ImportMemberRow[]) =>
+    apiFetch<ImportMembersResponse>("/admin/members/import", { method: "POST", body: JSON.stringify({ rows }) }),
   joinRequests: () => apiFetch<AdminJoinRequestRow[]>("/admin/projects/join-requests"),
   approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
   rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),
   syncProjects: () => apiFetch<void>("/admin/projects/sync", { method: "POST" }),
+  listTrackedProjects: () => apiFetch<AdminProjectRow[]>("/admin/projects"),
+  addProject: (payload: { repo_name: string; display_name: string | null }) =>
+    apiFetch<AdminProjectRow>("/admin/projects", { method: "POST", body: JSON.stringify(payload) }),
+  removeProject: (slug: string) => apiFetch<void>(`/admin/projects/${slug}`, { method: "DELETE" }),
+  listEvents: () => apiFetch<AdminEventRow[]>("/admin/events"),
+  createEvent: (payload: EventWritePayload) =>
+    apiFetch<AdminEventRow>("/admin/events", { method: "POST", body: JSON.stringify(payload) }),
+  updateEvent: (slug: string, payload: Partial<EventWritePayload>) =>
+    apiFetch<AdminEventRow>(`/admin/events/${slug}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteEvent: (slug: string) => apiFetch<void>(`/admin/events/${slug}`, { method: "DELETE" }),
   roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
   refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
   resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),
@@ -314,7 +391,28 @@ export type AdminContentRow = { id: string; title: string; body: string; author:
 
 export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean };
 
-export type AddMemberResponse = { user_id: string; email: string; temp_password: string | null };
+export type AddMemberResponse = {
+  user_id: string;
+  email: string;
+  temp_password: string | null;
+  membership_status: string;
+};
+
+export type ImportMemberRow = {
+  email: string;
+  display_name: string;
+  registration_number?: string | null;
+};
+
+export type ImportMemberResult = {
+  email: string;
+  status: "created" | "error";
+  error: string | null;
+};
+
+export type ImportMembersResponse = {
+  results: ImportMemberResult[];
+};
 
 export type AdminJoinRequestRow = {
   id: string;
@@ -325,6 +423,17 @@ export type AdminJoinRequestRow = {
   contribution_areas: string[];
   message: string | null;
   created_at: string;
+};
+
+export type AdminProjectRow = {
+  slug: string;
+  name: string;
+  repo_name: string;
+  github_url: string;
+  language: string | null;
+  stars: number;
+  member_count: number;
+  synced_at: string | null;
 };
 
 export type RosterRow = {

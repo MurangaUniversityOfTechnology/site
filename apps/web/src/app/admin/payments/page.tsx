@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { adminApi, type PaymentsOverview } from "@/lib/api";
 
 const STATUS_COLOR: Record<string, string> = {
-  completed: "text-accent",
+  completed: "text-navy",
   pending: "text-warn",
   initiated: "text-warn",
   failed: "text-danger",
@@ -38,18 +38,21 @@ export default function PaymentsPage() {
       )}
 
       <div className="mt-6 overflow-hidden rounded-[11px] border border-border bg-surface">
-        <div className="grid grid-cols-[1fr_1.2fr_0.8fr_0.8fr] gap-3.5 border-b border-[#161c1e] bg-[#090c0d] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
+        <div className="grid grid-cols-[1fr_1.2fr_0.8fr_0.8fr] gap-3.5 border-b border-[#ddd6c4] bg-[#f5f0e3] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
           <span>receipt</span>
           <span>member</span>
           <span>amount</span>
           <span>status</span>
         </div>
+        {data?.rows.length === 0 && (
+          <div className="px-4.5 py-8 text-center text-sm text-muted">No payments yet.</div>
+        )}
         {data?.rows.map((r, i) => (
           <div
             key={i}
-            className="grid grid-cols-[1fr_1.2fr_0.8fr_0.8fr] items-center gap-3.5 border-b border-[#14191b] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
+            className="grid grid-cols-[1fr_1.2fr_0.8fr_0.8fr] items-center gap-3.5 border-b border-[#e8e1d2] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
           >
-            <span className="truncate text-[#c8d2cc]">{r.receipt ?? "—"}</span>
+            <span className="truncate text-[#33302b]">{r.receipt ?? "—"}</span>
             <span className="truncate text-muted">{r.member}</span>
             <span className="text-foreground">KSh {r.amount.toFixed(0)}</span>
             <span className={`uppercase ${STATUS_COLOR[r.status] ?? "text-muted"}`}>{r.status}</span>
@@ -57,7 +60,7 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-      <div className="mt-5 max-w-160 rounded-lg border border-dashed border-[#3a3226] bg-warn/[0.04] p-4.5">
+      <div className="mt-5 max-w-160 rounded-lg border border-dashed border-[#f0dfb8] bg-warn/[0.04] p-4.5">
         <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-warn">no manual overrides</div>
         <p className="mt-2.5 text-[14.5px] leading-[1.55] text-muted">
           Payment status comes only from the M-Pesa transaction callback. If a member says they paid and the row

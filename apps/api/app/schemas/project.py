@@ -54,3 +54,21 @@ class AdminJoinRequestRow(BaseModel):
     contribution_areas: list[str]
     message: str | None
     created_at: datetime
+
+
+class AdminProjectRow(BaseModel):
+    slug: str
+    name: str
+    repo_name: str
+    github_url: str
+    language: str | None
+    stars: int
+    member_count: int
+    synced_at: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class AddProjectRequest(BaseModel):
+    repo_name: str
+    display_name: str | None = None

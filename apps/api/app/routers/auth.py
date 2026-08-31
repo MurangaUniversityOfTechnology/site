@@ -1,4 +1,6 @@
+import logging
 import secrets
+from datetime import date, timedelta
 from urllib.parse import urlencode
 
 import httpx
@@ -13,18 +15,30 @@ from app.core.rate_limit import limiter
 from app.core.security import (
     SESSION_COOKIE_NAME,
     SESSION_TTL,
+    create_email_verification_token,
     create_session_token,
+    decode_email_verification_token,
+    hash_password,
     verify_password,
 )
+from app.models.membership import MembershipStatus
 from app.models.user import User
-from app.schemas.auth import LoginRequest, MeResponse, SignupRequest
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    MeResponse,
+    SignupRequest,
+)
 from app.schemas.github import GithubStatus
 from app.services import auth as auth_service
+from app.services import email as email_service
 from app.services import github as github_service
 from app.services import membership as membership_service
+from app.services.email_templates import render_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -47,6 +61,25 @@ def _set_session_cookie(response: Response, user_id: str) -> None:
     )
 
 
+def _send_verification_email(user: User) -> None:
+    token = create_email_verification_token(str(user.id))
+    verify_url = f"{settings.api_base_url}/auth/verify-email?token={token}"
+    html = render_email(
+        eyebrow="verify your email",
+        heading="One more step.",
+        body_html=(
+            f"Confirm <strong>{user.email}</strong> to finish setting up your MUT Tech Community account. "
+            "This link expires in 48 hours."
+        ),
+        cta_label="Verify email",
+        cta_url=verify_url,
+    )
+    try:
+        email_service.send_email(to=user.email, subject="Verify your email — MUT Tech Community", html=html)
+    except Exception:
+        logger.warning("Failed to send verification email to user %s", user.id, exc_info=True)
+
+
 @router.post("/signup", response_model=MeResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/hour")
 def signup(request: Request, payload: SignupRequest, response: Response, db: Session = Depends(get_db)):
@@ -54,8 +87,32 @@ def signup(request: Request, payload: SignupRequest, response: Response, db: Ses
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists")
 
     user = auth_service.create_user(db, payload.email, payload.password)
+    _send_verification_email(user)
     _set_session_cookie(response, str(user.id))
     return _to_me_response(user)
+
+
+@router.post("/send-verification-email", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/hour")
+def send_verification_email(request: Request, user: User = Depends(get_current_user)):
+    if user.email_verified:
+        return
+    _send_verification_email(user)
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    user_id = decode_email_verification_token(token)
+    if not user_id:
+        return RedirectResponse(f"{settings.web_origin}/verify-email?status=invalid")
+
+    user = db.get(User, user_id)
+    if not user:
+        return RedirectResponse(f"{settings.web_origin}/verify-email?status=invalid")
+
+    user.email_verified = True
+    db.commit()
+    return RedirectResponse(f"{settings.web_origin}/verify-email?status=success")
 
 
 @router.post("/login", response_model=MeResponse)
@@ -72,6 +129,53 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response):
     response.delete_cookie(SESSION_COOKIE_NAME)
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(payload: ChangePasswordRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # A password-less account (signed up via Google only) has nothing to
+    # verify against — anyone else does, including a temp password from an
+    # admin-created account.
+    if user.password_hash and not (
+        payload.current_password and verify_password(payload.current_password, user.password_hash)
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+
+DEV_ADMIN_EMAIL = "dev-admin@mut-tech.local"
+
+
+@router.post("/dev-login", response_model=MeResponse)
+def dev_login(response: Response, db: Session = Depends(get_db)):
+    """Dev-only shortcut: signs in as a dummy admin account (creating it on
+    first use, with an active membership), so local development never needs
+    real Google/GitHub OAuth or a manual make-admin round trip just to reach
+    the admin views. Hard-gated to ENVIRONMENT=development — 404s (not 403)
+    everywhere else, so it doesn't even advertise the route exists if this
+    were ever reached somewhere misconfigured."""
+    if settings.environment != "development":
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+
+    user = auth_service.get_user_by_email(db, DEV_ADMIN_EMAIL)
+    if not user:
+        user = auth_service.create_user(db, DEV_ADMIN_EMAIL, password=None)
+        user.profile.display_name = "Dev Admin"
+        user.email_verified = True
+
+    user.is_admin = True
+    if user.membership.status != MembershipStatus.active:
+        user.membership.status = MembershipStatus.active
+        # Naive local date, not a tz-aware datetime — see membership.py's
+        # _activate_membership(), which this mirrors for the dummy account.
+        user.membership.period_start = date.today()  # noqa: DTZ011
+        user.membership.period_end = date.today() + timedelta(days=365)  # noqa: DTZ011
+    db.commit()
+
+    _set_session_cookie(response, str(user.id))
+    return _to_me_response(user)
 
 
 @router.get("/me", response_model=MeResponse)

@@ -38,6 +38,24 @@ def _log_failure(action: str, exc: httpx.HTTPError) -> None:
         logger.warning("%s: GitHub API request failed — %s", action, exc)
 
 
+def fetch_repo(repo_name: str) -> dict:
+    """Confirms repo_name exists in the configured org, raising GithubError
+    with a message safe to show an admin directly (unknown repo, missing
+    config, API failure) rather than silently creating a broken Project row."""
+    if not settings.github_org or not settings.github_sync_token:
+        raise GithubError("GitHub sync isn't configured (GITHUB_ORG/GITHUB_SYNC_TOKEN)")
+    try:
+        res = httpx.get(f"{API_BASE}/repos/{settings.github_org}/{repo_name}", headers=_headers(), timeout=15)
+        res.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            raise GithubError(f"No repo named '{repo_name}' found in {settings.github_org}") from exc
+        raise GithubError(f"GitHub API returned {exc.response.status_code}") from exc
+    except httpx.HTTPError as exc:
+        raise GithubError(f"Couldn't reach GitHub: {exc}") from exc
+    return res.json()
+
+
 def sync_project(db: Session, project: Project) -> None:
     """Refreshes repo metadata + good-first-issue cache from GitHub. Leaves
     synced_at (and all cached data) untouched on failure — a rate limit or

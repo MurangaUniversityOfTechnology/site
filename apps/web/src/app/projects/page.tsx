@@ -23,7 +23,7 @@ export default function ProjectsPage() {
         {projects ? `${projects.length} projects · synced from github` : "loading…"}
       </div>
       <h1 className="mt-3.5 text-[clamp(30px,5vw,54px)] leading-none tracking-[-0.04em]">BUILD WITH US</h1>
-      <p className="mt-4 max-w-[480px] text-[16.5px] leading-[1.55] text-[#9aa6a0]">
+      <p className="mt-4 max-w-[480px] text-[16.5px] leading-[1.55] text-[#7a7060]">
         Every project is a repo in the club org, maintained by students.
       </p>
 
@@ -40,7 +40,7 @@ export default function ProjectsPage() {
             href={`/projects/${p.slug}`}
             className="flex flex-col rounded-xl border border-border bg-surface p-5.5 hover:border-accent-dim"
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-accent">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-navy">
               <span className="h-1.5 w-1.5 flex-none rounded-full bg-accent" />
               {p.language || "unspecified"}
             </div>

@@ -16,6 +16,8 @@ dependencies = [
     "python-multipart>=0.0.12",
     "itsdangerous>=2.2",
     "slowapi>=0.1.9",
+    "mpesakit>=2.2.0",
+    "qrcode[pil]>=8.0",
 ]
 
 [project.optional-dependencies]

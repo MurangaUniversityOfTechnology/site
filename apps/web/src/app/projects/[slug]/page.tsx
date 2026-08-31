@@ -41,7 +41,7 @@ export default function ProjectDetailPage() {
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 text-center">
         <div>
           <h1 className="text-2xl tracking-[-0.02em]">Project not found</h1>
-          <Link href="/projects" className="mt-3 inline-block text-accent hover:underline">
+          <Link href="/projects" className="mt-3 inline-block text-navy hover:underline">
             Back to projects
           </Link>
         </div>
@@ -51,30 +51,30 @@ export default function ProjectDetailPage() {
 
   return (
     <main>
-      <div className="border-b border-[#161c1e] bg-[linear-gradient(rgba(255,255,255,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.02)_1px,transparent_1px)] bg-[length:56px_56px] px-5 py-12 sm:px-10 sm:py-16">
+      <div className="border-b border-[#ddd6c4] bg-[linear-gradient(rgba(26,39,68,.02)_1px,transparent_1px),linear-gradient(90deg,rgba(26,39,68,.02)_1px,transparent_1px)] bg-[length:56px_56px] px-5 py-12 sm:px-10 sm:py-16">
         <Link href="/projects" className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint hover:text-foreground">
           ← projects
         </Link>
         <h1 className="mt-5.5 text-[clamp(36px,7vw,78px)] uppercase leading-[0.94] tracking-[-0.04em]">
           {project.name}
         </h1>
-        <p className="mt-5 max-w-[480px] text-[17px] leading-[1.55] text-[#9aa6a0]">
+        <p className="mt-5 max-w-[480px] text-[17px] leading-[1.55] text-[#7a7060]">
           {project.description || "No description on GitHub yet."}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-7 font-mono">
-          <div className="text-[11px] text-[#7f8d87]">
+          <div className="text-[11px] text-[#8f8368]">
             {project.member_count} <span className="text-faint">contributors</span>
           </div>
-          <div className="text-[11px] text-[#7f8d87]">
+          <div className="text-[11px] text-[#8f8368]">
             {project.open_issues_count} <span className="text-faint">open issues</span>
           </div>
           {project.language && (
-            <div className="text-[11px] text-[#7f8d87]">
+            <div className="text-[11px] text-[#8f8368]">
               <span className="text-foreground">{project.language}</span> <span className="text-faint">primary language</span>
             </div>
           )}
-          <div className="text-[11px] text-[#7f8d87]">
+          <div className="text-[11px] text-[#8f8368]">
             ★ {project.stars} <span className="text-faint">stars</span>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-px bg-[#161c1e] md:grid-cols-2">
+      <div className="grid gap-px bg-[#ddd6c4] md:grid-cols-2">
         <div className="bg-background p-6 sm:p-10">
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">contributors</div>
           {project.members.length === 0 ? (
@@ -100,7 +100,7 @@ export default function ProjectDetailPage() {
           ) : (
             <div className="mt-4 flex flex-col">
               {project.members.map((name) => (
-                <div key={name} className="border-b border-[#14191b] py-3 text-[15px] last:border-0">
+                <div key={name} className="border-b border-[#e8e1d2] py-3 text-[15px] last:border-0">
                   {name}
                 </div>
               ))}
@@ -125,7 +125,7 @@ export default function ProjectDetailPage() {
           <div className="flex items-baseline gap-3">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">good first issues</div>
             {project.synced_at ? (
-              <span className="font-mono text-[10.5px] text-accent">synced {timeAgo(project.synced_at)}</span>
+              <span className="font-mono text-[10.5px] text-navy">synced {timeAgo(project.synced_at)}</span>
             ) : (
               <span className="font-mono text-[10.5px] text-warn">not synced yet</span>
             )}
@@ -146,7 +146,7 @@ export default function ProjectDetailPage() {
                   <div className="text-[14.5px] text-foreground">{issue.title}</div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {issue.labels.map((l) => (
-                      <span key={l} className="rounded border border-accent-dim px-2 py-0.5 font-mono text-[10px] text-accent">
+                      <span key={l} className="rounded border border-accent-dim px-2 py-0.5 font-mono text-[10px] text-navy">
                         {l}
                       </span>
                     ))}
