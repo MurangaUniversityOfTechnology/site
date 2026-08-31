@@ -23,6 +23,9 @@ def pytest_configure(config):
 
     os.environ["DATABASE_URL"] = _pg_container.get_connection_url()
     os.environ.setdefault("SECRET_KEY", "test-secret-key-do-not-use-in-prod")
+    # A real Fernet key (must decode as one — signature tests round-trip a
+    # real encrypt/decrypt through it), not just an arbitrary string.
+    os.environ.setdefault("SIGNATURE_ENCRYPTION_KEY", "DPmgEHgzhur5ujRgUaHDC05SxuS7AvzYoGdCXm8vBSA=")
     os.environ.setdefault("WEB_ORIGIN", "http://testserver")
     # Not "test" — _set_session_cookie() sets Secure=True for anything other
     # than "development", and TestClient's transport is plain HTTP (matches
