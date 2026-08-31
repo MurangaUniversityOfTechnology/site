@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
+import { useSignOut } from "@/lib/useSignOut";
 
 const MORE_LINKS = [
   { href: "/projects", label: "Projects" },
@@ -15,16 +16,29 @@ const MORE_LINKS = [
 
 const MORE_PREFIXES = ["/projects", "/challenges", "/learn", "/members"];
 
+const PROFILE_PREFIXES = [
+  "/dashboard",
+  "/settings",
+  "/sign-in",
+  "/sign-up",
+  "/onboarding",
+  "/welcome",
+  "/membership",
+];
+
+type Sheet = "more" | "profile" | null;
+
 export function MobileNav() {
   const pathname = usePathname();
   const { me } = useMe();
+  const signOut = useSignOut();
   const unread = useUnreadCount(me, pathname);
-  const [open, setOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
-    setOpen(false);
+    setSheet(null);
   }
 
   if (pathname?.startsWith("/admin")) return null;
@@ -32,63 +46,91 @@ export function MobileNav() {
   const onHome = pathname === "/";
   const onEvents = pathname?.startsWith("/events") ?? false;
   const onCommunity = (pathname?.startsWith("/community") || pathname?.startsWith("/publish")) ?? false;
-  const onMore = open || MORE_PREFIXES.some((p) => pathname?.startsWith(p));
-  const onProfile =
-    (pathname?.startsWith("/dashboard") ||
-      pathname?.startsWith("/sign-in") ||
-      pathname?.startsWith("/sign-up") ||
-      pathname?.startsWith("/onboarding") ||
-      pathname?.startsWith("/welcome") ||
-      pathname?.startsWith("/membership")) ??
-    false;
+  const onMore = sheet === "more" || MORE_PREFIXES.some((p) => pathname?.startsWith(p));
+  const onProfile = sheet === "profile" || PROFILE_PREFIXES.some((p) => pathname?.startsWith(p));
 
   return (
     <>
       <div className="h-16 md:hidden" aria-hidden />
 
-      {open && (
+      {sheet && (
         <>
           <button
             aria-label="Close menu"
-            onClick={() => setOpen(false)}
+            onClick={() => setSheet(null)}
             className="fixed inset-0 z-40 animate-[overlay-in_0.15s_ease_both] bg-black/60 md:hidden"
           />
-          <div
-            role="dialog"
-            aria-label="More"
-            className="fixed inset-x-0 bottom-16 z-50 animate-[sheet-up_0.2s_ease_both] rounded-t-2xl border-t border-border bg-surface p-5 pb-6 md:hidden"
-          >
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border-strong" />
-            <div className="grid grid-cols-2 gap-2.5">
-              {MORE_LINKS.map((l) => (
+          {sheet === "more" && (
+            <div
+              role="dialog"
+              aria-label="More"
+              className="fixed inset-x-0 bottom-16 z-50 animate-[sheet-up_0.2s_ease_both] rounded-t-2xl border-t border-border bg-surface p-5 pb-6 md:hidden"
+            >
+              <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border-strong" />
+              <div className="grid grid-cols-2 gap-2.5">
+                {MORE_LINKS.map((l) => (
+                  <Link
+                    key={l.href}
+                    href={l.href}
+                    className="rounded-lg border border-border-strong px-4 py-3.5 text-[15px] text-foreground hover:border-accent-dim"
+                  >
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+              {me && (
                 <Link
-                  key={l.href}
-                  href={l.href}
-                  className="rounded-lg border border-border-strong px-4 py-3.5 text-[15px] text-foreground hover:border-accent-dim"
+                  href="/publish"
+                  onClick={() => setSheet(null)}
+                  className="mt-2.5 block rounded-lg border border-accent-dim bg-accent/[0.06] px-4 py-3.5 text-center text-[15px] text-navy"
                 >
-                  {l.label}
+                  Write something
                 </Link>
-              ))}
+              )}
+              {me?.is_admin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setSheet(null)}
+                  className="mt-2.5 block rounded-lg border border-border-strong px-4 py-3.5 text-center text-[15px] text-muted"
+                >
+                  Admin
+                </Link>
+              )}
             </div>
-            {me && (
-              <Link
-                href="/publish"
-                onClick={() => setOpen(false)}
-                className="mt-2.5 block rounded-lg border border-accent-dim bg-accent/[0.06] px-4 py-3.5 text-center text-[15px] text-navy"
+          )}
+          {sheet === "profile" && me && (
+            <div
+              role="dialog"
+              aria-label="Account"
+              className="fixed inset-x-0 bottom-16 z-50 animate-[sheet-up_0.2s_ease_both] rounded-t-2xl border-t border-border bg-surface p-5 pb-6 md:hidden"
+            >
+              <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border-strong" />
+              <div className="mb-1 truncate px-1 text-[13px] text-faint">{me.email}</div>
+              <div className="flex flex-col">
+                <SheetLink href="/dashboard" onClick={() => setSheet(null)}>
+                  Dashboard
+                </SheetLink>
+                <SheetLink href="/settings" onClick={() => setSheet(null)}>
+                  Settings
+                </SheetLink>
+                {me.is_admin && (
+                  <SheetLink href="/admin" onClick={() => setSheet(null)}>
+                    Admin
+                  </SheetLink>
+                )}
+              </div>
+              <div className="my-2.5 h-px bg-border" />
+              <button
+                onClick={() => {
+                  setSheet(null);
+                  signOut();
+                }}
+                className="w-full rounded-lg px-3 py-3 text-left text-[15px] text-danger hover:bg-surface-raised"
               >
-                Write something
-              </Link>
-            )}
-            {me?.is_admin && (
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="mt-2.5 block rounded-lg border border-border-strong px-4 py-3.5 text-center text-[15px] text-muted"
-              >
-                Admin
-              </Link>
-            )}
-          </div>
+                Sign out
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -99,16 +141,28 @@ export function MobileNav() {
         <TabLink href="/" label="Home" active={onHome} icon={<HomeIcon />} />
         <TabLink href="/events" label="Events" active={onEvents} icon={<EventsIcon />} />
         <TabLink href="/community" label="Community" active={onCommunity} icon={<CommunityIcon />} />
-        <TabButton label="More" active={onMore} icon={<MoreIcon />} onClick={() => setOpen((o) => !o)} />
-        <TabLink
-          href={me ? "/dashboard" : "/sign-in"}
-          label={me ? "Profile" : "Sign In"}
-          active={onProfile}
-          icon={<ProfileIcon />}
-          badge={unread > 0}
-        />
+        <TabButton label="More" active={onMore} icon={<MoreIcon />} onClick={() => setSheet((s) => (s === "more" ? null : "more"))} />
+        {me ? (
+          <TabButton
+            label="Profile"
+            active={onProfile}
+            icon={<ProfileIcon />}
+            badge={unread > 0}
+            onClick={() => setSheet((s) => (s === "profile" ? null : "profile"))}
+          />
+        ) : (
+          <TabLink href="/sign-in" label="Sign In" active={onProfile} icon={<ProfileIcon />} />
+        )}
       </nav>
     </>
+  );
+}
+
+function SheetLink({ href, onClick, children }: { href: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <Link href={href} onClick={onClick} className="rounded-lg px-3 py-3 text-[15px] text-foreground hover:bg-surface-raised">
+      {children}
+    </Link>
   );
 }
 
@@ -143,11 +197,13 @@ function TabButton({
   label,
   active,
   icon,
+  badge,
   onClick,
 }: {
   label: string;
   active: boolean;
   icon: React.ReactNode;
+  badge?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -155,11 +211,12 @@ function TabButton({
       type="button"
       onClick={onClick}
       aria-expanded={active}
-      className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] ${
+      className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[10.5px] ${
         active ? "text-navy" : "text-faint"
       }`}
     >
       {icon}
+      {badge && <span className="absolute right-[26%] top-1.5 h-2 w-2 rounded-full bg-warn" />}
       {label}
     </button>
   );

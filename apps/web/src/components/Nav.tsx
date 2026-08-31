@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
 import { BellIcon } from "@/components/icons";
+import { AccountMenu } from "@/components/AccountMenu";
 
 const links = [
   { href: "/projects", label: "Projects" },
@@ -51,12 +52,7 @@ export function Nav() {
                 <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
               )}
             </Link>
-            <Link
-              href="/dashboard"
-              className="whitespace-nowrap rounded-md border border-white/20 px-3.5 py-2 text-[13.5px] text-white hover:border-accent"
-            >
-              Dashboard
-            </Link>
+            <AccountMenu />
           </>
         ) : (
           <>

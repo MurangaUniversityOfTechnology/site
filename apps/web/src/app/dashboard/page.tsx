@@ -7,6 +7,7 @@ import { authApi, eventApi, githubApi, projectApi, type EventSummary, type Githu
 import { challenges, membershipFeeKes, membershipPerks } from "@/lib/data";
 import { formatEventDay } from "@/lib/eventFormat";
 import { useMe } from "@/lib/useMe";
+import { useSignOut } from "@/lib/useSignOut";
 
 const STATUS_LABEL: Record<string, string> = {
   none: "not started",
@@ -28,7 +29,8 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { me, loading, refresh } = useMe();
+  const { me, loading } = useMe();
+  const signOut = useSignOut();
   const [projectCount, setProjectCount] = useState<number | null>(null);
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [githubStatus, setGithubStatus] = useState<GithubStatus | null>(null);
@@ -248,11 +250,7 @@ export default function DashboardPage() {
           </div>
 
           <button
-            onClick={async () => {
-              await authApi.logout();
-              await refresh();
-              router.push("/");
-            }}
+            onClick={signOut}
             className="w-fit rounded-md border border-border-strong px-4 py-2.5 text-sm text-muted hover:border-accent-dim hover:text-foreground"
           >
             Sign out

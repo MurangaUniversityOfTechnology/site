@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { MobileNav } from "@/components/MobileNav";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { MeProvider } from "@/lib/useMe";
 import "./globals.css";
 
@@ -46,9 +47,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <MeProvider>
-          <Nav />
-          {children}
-          <MobileNav />
+          <ConfirmProvider>
+            <Nav />
+            {children}
+            <MobileNav />
+          </ConfirmProvider>
         </MeProvider>
       </body>
     </html>
