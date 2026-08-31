@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ApiError, adminApi, type AdminJoinRequestRow, type AdminProjectRow } from "@/lib/api";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function AdminProjectsPage() {
   const [rows, setRows] = useState<AdminJoinRequestRow[] | null>(null);
@@ -13,6 +14,7 @@ export default function AdminProjectsPage() {
   const [displayName, setDisplayName] = useState("");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   function loadProjects() {
     adminApi.listTrackedProjects().then(setProjects);
@@ -67,7 +69,12 @@ export default function AdminProjectsPage() {
     }
   }
 
-  async function removeProject(slug: string) {
+  async function removeProject(slug: string, name: string) {
+    const ok = await confirm({
+      title: "Stop tracking project?",
+      message: `"${name}" will be removed from the tracked projects list. The GitHub repo itself is untouched.`,
+    });
+    if (!ok) return;
     setBusy(slug);
     try {
       await adminApi.removeProject(slug);
@@ -134,7 +141,7 @@ export default function AdminProjectsPage() {
             <span className="font-mono text-[10.5px] text-muted">{p.language ?? "—"}</span>
             <span className="font-mono text-[10.5px] text-muted">{p.member_count} members</span>
             <button
-              onClick={() => removeProject(p.slug)}
+              onClick={() => removeProject(p.slug, p.name)}
               disabled={busy === p.slug}
               className="rounded-md border border-[#f6d9d6] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
             >

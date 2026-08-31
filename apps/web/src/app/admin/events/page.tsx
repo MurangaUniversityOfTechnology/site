@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, adminApi, type AdminEventRow } from "@/lib/api";
 import { formatEventDateLong, formatEventMeta } from "@/lib/eventFormat";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function AdminEventsPage() {
   const [view, setView] = useState<"active" | "archived">("active");
   const [rows, setRows] = useState<AdminEventRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     let active = true;
@@ -21,7 +23,12 @@ export default function AdminEventsPage() {
     };
   }, [view]);
 
-  async function remove(slug: string) {
+  async function remove(slug: string, title: string) {
+    const ok = await confirm({
+      title: "Delete event?",
+      message: `"${title}" will be permanently deleted. This only works if no one has registered yet.`,
+    });
+    if (!ok) return;
     setBusy(slug);
     setError(null);
     try {
@@ -140,7 +147,7 @@ export default function AdminEventsPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => remove(e.slug)}
+                      onClick={() => remove(e.slug, e.title)}
                       disabled={busy === e.slug}
                       className="rounded-md border border-[#f6d9d6] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
                     >

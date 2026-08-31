@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, adminApi, type AdminRow, type Tag } from "@/lib/api";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function AdminRolesPage() {
   const [admins, setAdmins] = useState<AdminRow[] | null>(null);
@@ -16,6 +17,7 @@ export default function AdminRolesPage() {
   const [renamingTagId, setRenamingTagId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [pickedTagId, setPickedTagId] = useState("");
+  const confirm = useConfirm();
 
   const loadAdmins = useCallback(() => {
     adminApi.listAdmins().then(setAdmins);
@@ -39,6 +41,13 @@ export default function AdminRolesPage() {
 
   async function toggle() {
     if (!found) return;
+    if (found.is_admin) {
+      const ok = await confirm({
+        title: "Remove admin access?",
+        message: `${found.name} will lose access to the admin panel. They'll keep their membership.`,
+      });
+      if (!ok) return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -84,7 +93,12 @@ export default function AdminRolesPage() {
     }
   }
 
-  async function removeTagDefinition(tagId: string) {
+  async function removeTagDefinition(tagId: string, tagName: string) {
+    const ok = await confirm({
+      title: "Delete tag?",
+      message: `"${tagName}" will be removed from every member who currently has it.`,
+    });
+    if (!ok) return;
     setTagError(null);
     try {
       await adminApi.deleteTag(tagId);
@@ -287,7 +301,7 @@ export default function AdminRolesPage() {
                   >
                     Rename
                   </button>
-                  <button onClick={() => removeTagDefinition(t.id)} className="text-sm text-danger hover:underline">
+                  <button onClick={() => removeTagDefinition(t.id, t.name)} className="text-sm text-danger hover:underline">
                     Delete
                   </button>
                 </>
