@@ -40,9 +40,16 @@ export default function ProjectsPage() {
             href={`/projects/${p.slug}`}
             className="flex flex-col rounded-xl border border-border bg-surface p-5.5 hover:border-accent-dim"
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-navy">
-              <span className="h-1.5 w-1.5 flex-none rounded-full bg-accent" />
-              {p.language || "unspecified"}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-navy">
+                <span className="h-1.5 w-1.5 flex-none rounded-full bg-accent" />
+                {p.language || "unspecified"}
+              </div>
+              {p.completed_at && (
+                <span className="rounded border border-border-strong px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">
+                  completed
+                </span>
+              )}
             </div>
             <div className="mt-3.5 text-xl font-semibold tracking-[-0.02em]">{p.name}</div>
             <p className="mt-2.5 flex-1 text-[14.5px] leading-[1.55] text-muted">

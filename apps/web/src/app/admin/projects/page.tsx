@@ -6,9 +6,11 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function AdminProjectsPage() {
   const [rows, setRows] = useState<AdminJoinRequestRow[] | null>(null);
+  const [view, setView] = useState<"active" | "archived">("active");
   const [projects, setProjects] = useState<AdminProjectRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
 
   const [repoName, setRepoName] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -17,7 +19,7 @@ export default function AdminProjectsPage() {
   const confirm = useConfirm();
 
   function loadProjects() {
-    adminApi.listTrackedProjects().then(setProjects);
+    adminApi.listTrackedProjects(view === "archived").then(setProjects);
   }
 
   useEffect(() => {
@@ -25,13 +27,20 @@ export default function AdminProjectsPage() {
     adminApi.joinRequests().then((result) => {
       if (active) setRows(result);
     });
-    adminApi.listTrackedProjects().then((result) => {
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    adminApi.listTrackedProjects(view === "archived").then((result) => {
       if (active) setProjects(result);
     });
     return () => {
       active = false;
     };
-  }, []);
+  }, [view]);
 
   async function act(id: string, action: "approve" | "reject") {
     setBusy(id);
@@ -84,6 +93,63 @@ export default function AdminProjectsPage() {
     }
   }
 
+  async function completeProject(slug: string) {
+    setBusy(slug);
+    setProjectError(null);
+    try {
+      const updated = await adminApi.completeProject(slug);
+      setProjects((p) => p?.map((x) => (x.slug === slug ? updated : x)) ?? null);
+    } catch (err) {
+      setProjectError(err instanceof ApiError ? err.message : "Couldn't mark project completed.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function activateProject(slug: string) {
+    setBusy(slug);
+    setProjectError(null);
+    try {
+      const updated = await adminApi.activateProject(slug);
+      setProjects((p) => p?.map((x) => (x.slug === slug ? updated : x)) ?? null);
+    } catch (err) {
+      setProjectError(err instanceof ApiError ? err.message : "Couldn't mark project active.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function archiveProject(slug: string, name: string) {
+    const ok = await confirm({
+      title: "Archive project?",
+      message: `"${name}" will drop out of the tracked-projects and public lists. It can be unarchived later.`,
+    });
+    if (!ok) return;
+    setBusy(slug);
+    setProjectError(null);
+    try {
+      await adminApi.archiveProject(slug);
+      setProjects((p) => p?.filter((x) => x.slug !== slug) ?? null);
+    } catch (err) {
+      setProjectError(err instanceof ApiError ? err.message : "Couldn't archive project.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function unarchiveProject(slug: string) {
+    setBusy(slug);
+    setProjectError(null);
+    try {
+      await adminApi.unarchiveProject(slug);
+      setProjects((p) => p?.filter((x) => x.slug !== slug) ?? null);
+    } catch (err) {
+      setProjectError(err instanceof ApiError ? err.message : "Couldn't unarchive project.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="max-w-190">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -130,23 +196,92 @@ export default function AdminProjectsPage() {
         {addError && <p className="w-full text-sm text-danger">{addError}</p>}
       </form>
 
-      <div className="mt-6 overflow-hidden rounded-[11px] border border-border bg-surface">
-        {projects?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">No projects tracked yet.</div>}
+      <div className="mt-6 flex gap-2 font-mono text-[10.5px] uppercase tracking-[0.1em]">
+        <button
+          onClick={() => setView("active")}
+          className={`rounded-md px-3.5 py-2 ${view === "active" ? "bg-accent text-[#1a2744]" : "border border-border-strong text-muted"}`}
+        >
+          Active
+        </button>
+        <button
+          onClick={() => setView("archived")}
+          className={`rounded-md px-3.5 py-2 ${view === "archived" ? "bg-accent text-[#1a2744]" : "border border-border-strong text-muted"}`}
+        >
+          Archived
+        </button>
+      </div>
+
+      {projectError && <p className="mt-3.5 text-sm text-danger">{projectError}</p>}
+
+      <div className="mt-4 overflow-hidden rounded-[11px] border border-border bg-surface">
+        {projects?.length === 0 && (
+          <div className="px-4.5 py-8 text-center text-sm text-muted">
+            {view === "archived" ? "No archived projects." : "No projects tracked yet."}
+          </div>
+        )}
         {projects?.map((p) => (
           <div key={p.slug} className="flex flex-wrap items-center gap-4 border-b border-[#e8e1d2] px-4.5 py-4 last:border-0">
             <div className="min-w-45 flex-1">
-              <div className="text-[15px] font-medium">{p.name}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-medium">{p.name}</span>
+                {p.completed_at && (
+                  <span className="rounded border border-border-strong px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-muted">
+                    completed
+                  </span>
+                )}
+              </div>
               <div className="mt-1 font-mono text-[10.5px] text-faint">{p.repo_name}</div>
             </div>
             <span className="font-mono text-[10.5px] text-muted">{p.language ?? "—"}</span>
             <span className="font-mono text-[10.5px] text-muted">{p.member_count} members</span>
-            <button
-              onClick={() => removeProject(p.slug, p.name)}
-              disabled={busy === p.slug}
-              className="rounded-md border border-[#f6d9d6] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
-            >
-              remove
-            </button>
+            <div className="flex flex-wrap gap-2">
+              {view === "active" && (
+                <>
+                  {p.completed_at ? (
+                    <button
+                      onClick={() => activateProject(p.slug)}
+                      disabled={busy === p.slug}
+                      className="rounded-md border border-border-strong px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted disabled:opacity-50"
+                    >
+                      undo
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => completeProject(p.slug)}
+                      disabled={busy === p.slug}
+                      className="rounded-md border border-accent-dim px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-navy disabled:opacity-50"
+                    >
+                      complete
+                    </button>
+                  )}
+                  {p.completed_at && (
+                    <button
+                      onClick={() => archiveProject(p.slug, p.name)}
+                      disabled={busy === p.slug}
+                      className="rounded-md border border-border-strong px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted disabled:opacity-50"
+                    >
+                      archive
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeProject(p.slug, p.name)}
+                    disabled={busy === p.slug}
+                    className="rounded-md border border-[#f6d9d6] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-danger disabled:opacity-50"
+                  >
+                    remove
+                  </button>
+                </>
+              )}
+              {view === "archived" && (
+                <button
+                  onClick={() => unarchiveProject(p.slug)}
+                  disabled={busy === p.slug}
+                  className="rounded-md bg-accent px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-[#1a2744] disabled:opacity-50"
+                >
+                  unarchive
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>

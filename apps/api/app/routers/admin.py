@@ -515,12 +515,14 @@ def _admin_project_row(db: Session, project: Project) -> AdminProjectRow:
         stars=project.stars,
         member_count=len(project_service.list_members(db, project)),
         synced_at=project.synced_at,
+        completed_at=project.completed_at,
+        archived_at=project.archived_at,
     )
 
 
 @router.get("/projects", response_model=list[AdminProjectRow])
-def list_tracked_projects(db: Session = Depends(get_db)):
-    projects = db.query(Project).order_by(Project.name.asc()).all()
+def list_tracked_projects(archived: bool = False, db: Session = Depends(get_db)):
+    projects = project_service.list_tracked_projects(db, archived=archived)
     return [_admin_project_row(db, p) for p in projects]
 
 
@@ -533,12 +535,57 @@ def add_project(payload: AddProjectRequest, admin: User = Depends(require_admin)
     return _admin_project_row(db, project)
 
 
-@router.delete("/projects/{slug}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def _get_project_or_404(db: Session, slug: str) -> Project:
     project = project_service.get_by_slug(db, slug)
     if not project:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
+    return project
+
+
+@router.delete("/projects/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, slug)
     project_service.remove_project(db, admin, project)
+
+
+@router.post("/projects/{slug}/complete", response_model=AdminProjectRow)
+def complete_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, slug)
+    try:
+        project = project_service.mark_completed(db, admin, project)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_project_row(db, project)
+
+
+@router.post("/projects/{slug}/activate", response_model=AdminProjectRow)
+def activate_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, slug)
+    try:
+        project = project_service.mark_active(db, admin, project)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_project_row(db, project)
+
+
+@router.post("/projects/{slug}/archive", response_model=AdminProjectRow)
+def archive_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, slug)
+    try:
+        project = project_service.archive_project(db, admin, project)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_project_row(db, project)
+
+
+@router.post("/projects/{slug}/unarchive", response_model=AdminProjectRow)
+def unarchive_project(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, slug)
+    try:
+        project = project_service.unarchive_project(db, admin, project)
+    except project_service.ProjectError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_project_row(db, project)
 
 
 # ── project join requests ───────────────────────────────────────────

@@ -103,3 +103,136 @@ def test_list_tracked_projects(client, db_session, make_user, login_as):
     res = client.get("/admin/projects")
     assert res.status_code == 200
     assert any(row["slug"] == "p1" for row in res.json())
+
+
+def _project(db_session, **overrides):
+    fields = {"slug": "test-project", "name": "Test Project", "repo_owner": "mut-tech-test-org", "repo_name": "test-project"}
+    fields.update(overrides)
+    project = Project(**fields)
+    db_session.add(project)
+    db_session.commit()
+    return project
+
+
+def test_complete_project(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/projects/test-project/complete")
+    assert res.status_code == 200, res.text
+    assert res.json()["completed_at"] is not None
+
+
+def test_cannot_complete_already_completed_project(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+
+    res = client.post("/admin/projects/test-project/complete")
+    assert res.status_code == 400
+
+
+def test_activate_reverses_completion(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+
+    res = client.post("/admin/projects/test-project/activate")
+    assert res.status_code == 200, res.text
+    assert res.json()["completed_at"] is None
+
+
+def test_cannot_activate_project_that_isnt_completed(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/projects/test-project/activate")
+    assert res.status_code == 400
+
+
+def test_cannot_archive_project_that_isnt_completed(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/projects/test-project/archive")
+    assert res.status_code == 400
+
+
+def test_archive_completed_project(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+
+    res = client.post("/admin/projects/test-project/archive")
+    assert res.status_code == 200, res.text
+    assert res.json()["archived_at"] is not None
+
+
+def test_cannot_activate_archived_project(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+    client.post("/admin/projects/test-project/archive")
+
+    res = client.post("/admin/projects/test-project/activate")
+    assert res.status_code == 400
+
+
+def test_unarchive_project(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+    client.post("/admin/projects/test-project/archive")
+
+    res = client.post("/admin/projects/test-project/unarchive")
+    assert res.status_code == 200, res.text
+    assert res.json()["archived_at"] is None
+    assert res.json()["completed_at"] is not None
+
+
+def test_admin_projects_list_excludes_archived_by_default(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+    client.post("/admin/projects/test-project/archive")
+
+    res = client.get("/admin/projects")
+    assert res.json() == []
+
+    res = client.get("/admin/projects", params={"archived": "true"})
+    assert [p["slug"] for p in res.json()] == ["test-project"]
+
+
+def test_public_projects_list_excludes_archived(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+    client.post("/admin/projects/test-project/archive")
+
+    res = client.get("/projects")
+    assert res.json() == []
+
+    res = client.get("/projects/archived")
+    assert [p["slug"] for p in res.json()] == ["test-project"]
+
+
+def test_archived_project_still_reachable_by_direct_slug(client, db_session, make_user, login_as):
+    _project(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/projects/test-project/complete")
+    client.post("/admin/projects/test-project/archive")
+
+    res = client.get("/projects/test-project")
+    assert res.status_code == 200
+    assert res.json()["slug"] == "test-project"

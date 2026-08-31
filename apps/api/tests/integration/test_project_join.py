@@ -41,6 +41,15 @@ def test_request_join_succeeds_for_active_member(db_session, make_user, make_pro
     assert req.status.value == "pending"
 
 
+def test_request_join_blocked_if_project_completed(db_session, make_user, make_project):
+    project = make_project()
+    admin = make_user(is_admin=True, email="admin@example.com")
+    project_service.mark_completed(db_session, admin, project)
+    user = make_user(membership_status=MembershipStatus.active)
+    with pytest.raises(project_service.ProjectError):
+        project_service.request_join(db_session, project, user, ["Backend"], "Interested")
+
+
 def test_request_join_blocked_if_already_a_member(db_session, make_user, make_project):
     from app.models.project_member import ProjectMember
 

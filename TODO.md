@@ -4,10 +4,13 @@ Backlog of known gaps and feature ideas — not yet scheduled or scoped in detai
 
 ## Features
 
-- [ ] **Project archiving.** Mirror the event archive pattern (see `Event.archived_at`,
-      `app/services/event.py`'s `archive_event`/`unarchive_event`) for projects once a
-      project is completed. `Project` currently has no completion/status concept at all —
-      this needs that added first, then an archive step on top of it.
+- [x] **Project archiving.** `Project` gained `completed_at` (admin-set, no objective
+      signal like an event's `starts_at` to compute it from) and `archived_at`, mirroring
+      `Event`. Archiving requires completion first — same "has to be earned" gate as an
+      event needing to have already happened. Admin projects page has Active/Archived tabs
+      plus Complete/Undo/Archive/Unarchive/Remove actions; public `/projects` excludes
+      archived and shows a "completed" badge; a completed project can no longer be joined.
+      Archive is confirm-gated via the shared `ConfirmDialog`.
 
 ## UX
 

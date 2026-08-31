@@ -289,10 +289,15 @@ export const adminApi = {
   approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
   rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),
   syncProjects: () => apiFetch<void>("/admin/projects/sync", { method: "POST" }),
-  listTrackedProjects: () => apiFetch<AdminProjectRow[]>("/admin/projects"),
+  listTrackedProjects: (archived = false) => apiFetch<AdminProjectRow[]>(`/admin/projects?archived=${archived}`),
   addProject: (payload: { repo_name: string; display_name: string | null }) =>
     apiFetch<AdminProjectRow>("/admin/projects", { method: "POST", body: JSON.stringify(payload) }),
   removeProject: (slug: string) => apiFetch<void>(`/admin/projects/${slug}`, { method: "DELETE" }),
+  completeProject: (slug: string) => apiFetch<AdminProjectRow>(`/admin/projects/${slug}/complete`, { method: "POST" }),
+  activateProject: (slug: string) => apiFetch<AdminProjectRow>(`/admin/projects/${slug}/activate`, { method: "POST" }),
+  archiveProject: (slug: string) => apiFetch<AdminProjectRow>(`/admin/projects/${slug}/archive`, { method: "POST" }),
+  unarchiveProject: (slug: string) =>
+    apiFetch<AdminProjectRow>(`/admin/projects/${slug}/unarchive`, { method: "POST" }),
   listEvents: (archived = false) => apiFetch<AdminEventRow[]>(`/admin/events?archived=${archived}`),
   createEvent: (payload: EventWritePayload) =>
     apiFetch<AdminEventRow>("/admin/events", { method: "POST", body: JSON.stringify(payload) }),
@@ -392,6 +397,7 @@ export type ProjectSummary = {
   topics: string[];
   stars: number;
   open_issues_count: number;
+  completed_at: string | null;
 };
 
 export type ProjectDetail = ProjectSummary & {
@@ -406,6 +412,7 @@ export type ProjectDetail = ProjectSummary & {
 
 export const projectApi = {
   list: () => apiFetch<ProjectSummary[]>("/projects"),
+  archived: () => apiFetch<ProjectSummary[]>("/projects/archived"),
   get: (slug: string) => apiFetch<ProjectDetail>(`/projects/${slug}`),
   join: (slug: string, payload: { contribution_areas: string[]; message: string | null }) =>
     apiFetch<{ id: string; status: string; created_at: string }>(`/projects/${slug}/join`, {
@@ -463,6 +470,8 @@ export type AdminProjectRow = {
   stars: number;
   member_count: number;
   synced_at: string | null;
+  completed_at: string | null;
+  archived_at: string | null;
 };
 
 export type RosterRow = {

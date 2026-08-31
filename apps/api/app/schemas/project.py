@@ -20,6 +20,7 @@ class ProjectSummary(BaseModel):
     topics: list[str]
     stars: int
     open_issues_count: int
+    completed_at: datetime | None
 
 
 class ProjectDetail(ProjectSummary):
@@ -65,6 +66,8 @@ class AdminProjectRow(BaseModel):
     stars: int
     member_count: int
     synced_at: datetime | None
+    completed_at: datetime | None
+    archived_at: datetime | None
 
     model_config = {"from_attributes": True}
 

@@ -23,7 +23,12 @@ def _name(u: User) -> str:
 
 @router.get("", response_model=list[ProjectSummary])
 def list_projects(db: Session = Depends(get_db)):
-    return db.query(Project).order_by(Project.name.asc()).all()
+    return db.query(Project).filter(Project.archived_at.is_(None)).order_by(Project.name.asc()).all()
+
+
+@router.get("/archived", response_model=list[ProjectSummary])
+def list_archived_projects(db: Session = Depends(get_db)):
+    return db.query(Project).filter(Project.archived_at.isnot(None)).order_by(Project.name.asc()).all()
 
 
 @router.get("/{slug}", response_model=ProjectDetail)
@@ -43,6 +48,7 @@ def get_project(slug: str, user: User | None = Depends(get_current_user_optional
         topics=project.topics,
         stars=project.stars,
         open_issues_count=project.open_issues_count,
+        completed_at=project.completed_at,
         github_url=project.github_url,
         synced_at=project.synced_at,
         issues=[IssueSummary(**i) for i in project.cached_issues],
