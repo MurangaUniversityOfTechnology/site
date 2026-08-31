@@ -1,7 +1,8 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from app.models.audit_log import AuditLog
 from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import MembershipStatus
@@ -161,3 +162,115 @@ def test_get_public_event_detail_includes_schedule(client, db_session):
 def test_get_public_event_detail_404_for_unknown_slug(client):
     res = client.get("/events/unknown-slug")
     assert res.status_code == 404
+
+
+def _past_event(db_session, **overrides):
+    fields = {
+        "slug": "past-event",
+        "title": "Past Event",
+        "starts_at": datetime.now(UTC) - timedelta(days=7),
+        "venue": "V",
+        "description": "d",
+    }
+    fields.update(overrides)
+    event = Event(**fields)
+    db_session.add(event)
+    db_session.commit()
+    return event
+
+
+def test_archive_event_requires_admin(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    user = make_user()
+    login_as(user)
+
+    res = client.post("/admin/events/past-event/archive")
+    assert res.status_code == 403
+
+
+def test_archive_past_event(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/events/past-event/archive")
+    assert res.status_code == 200, res.text
+    assert res.json()["archived_at"] is not None
+
+    assert db_session.query(AuditLog).filter(AuditLog.actor_id == admin.id, AuditLog.kind == "event").count() == 1
+
+
+def test_cannot_archive_future_event(client, db_session, make_user, login_as):
+    _past_event(db_session, starts_at=datetime.now(UTC) + timedelta(days=7))
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/events/past-event/archive")
+    assert res.status_code == 400
+
+
+def test_cannot_archive_already_archived_event(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/events/past-event/archive")
+
+    res = client.post("/admin/events/past-event/archive")
+    assert res.status_code == 400
+
+
+def test_unarchive_event(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/events/past-event/archive")
+
+    res = client.post("/admin/events/past-event/unarchive")
+    assert res.status_code == 200, res.text
+    assert res.json()["archived_at"] is None
+
+
+def test_cannot_unarchive_event_that_isnt_archived(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+
+    res = client.post("/admin/events/past-event/unarchive")
+    assert res.status_code == 400
+
+
+def test_admin_events_list_excludes_archived_by_default(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/events/past-event/archive")
+
+    res = client.get("/admin/events")
+    assert res.json() == []
+
+    res = client.get("/admin/events", params={"archived": "true"})
+    assert [e["slug"] for e in res.json()] == ["past-event"]
+
+
+def test_public_events_list_excludes_archived(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/events/past-event/archive")
+
+    res = client.get("/events")
+    assert res.json() == []
+
+    res = client.get("/events/archived")
+    assert [e["slug"] for e in res.json()] == ["past-event"]
+
+
+def test_archived_event_still_reachable_by_direct_slug(client, db_session, make_user, login_as):
+    _past_event(db_session)
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    client.post("/admin/events/past-event/archive")
+
+    res = client.get("/events/past-event")
+    assert res.status_code == 200
+    assert res.json()["slug"] == "past-event"

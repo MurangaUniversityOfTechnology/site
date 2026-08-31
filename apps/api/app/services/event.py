@@ -51,8 +51,10 @@ def get_event(db: Session, slug: str) -> Event:
     return event
 
 
-def list_events(db: Session) -> list[Event]:
-    return db.query(Event).order_by(Event.starts_at.asc()).all()
+def list_events(db: Session, archived: bool = False) -> list[Event]:
+    query = db.query(Event).filter(Event.archived_at.isnot(None) if archived else Event.archived_at.is_(None))
+    order = Event.starts_at.desc() if archived else Event.starts_at.asc()
+    return query.order_by(order).all()
 
 
 def _open_slots(db: Session, event: Event) -> int | None:
@@ -104,6 +106,28 @@ def delete_event(db: Session, admin: User, event: Event) -> None:
     audit.log(db, admin, "event", f"Deleted event {event.title}")
     db.delete(event)
     db.commit()
+
+
+def archive_event(db: Session, admin: User, event: Event) -> Event:
+    if event.archived_at is not None:
+        raise EventError("Event is already archived")
+    if event.starts_at > datetime.now(NAIROBI):
+        raise EventError("Can't archive an event that hasn't happened yet")
+    event.archived_at = datetime.now(NAIROBI)
+    audit.log(db, admin, "event", f"Archived event {event.title}")
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def unarchive_event(db: Session, admin: User, event: Event) -> Event:
+    if event.archived_at is None:
+        raise EventError("Event is not archived")
+    event.archived_at = None
+    audit.log(db, admin, "event", f"Unarchived event {event.title}")
+    db.commit()
+    db.refresh(event)
+    return event
 
 
 def register(

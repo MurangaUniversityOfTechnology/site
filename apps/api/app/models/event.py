@@ -40,4 +40,9 @@ class Event(Base):
     speaker_meta: Mapped[str | None] = mapped_column(String, nullable=True)
     requirements: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     who_should_attend: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Set once an admin archives the event (only allowed after starts_at has
+    # passed) — tucks it out of the public "upcoming" list and the admin's
+    # active events list without deleting it (registrations/attendance stay
+    # intact). Null means active/upcoming.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -200,6 +200,7 @@ export type EventDetail = EventSummary & {
 export type AdminEventRow = EventDetail & {
   id: string;
   registration_count: number;
+  archived_at: string | null;
 };
 
 export type EventWritePayload = {
@@ -235,6 +236,7 @@ export const signatureApi = {
 
 export const eventApi = {
   list: () => apiFetch<EventSummary[]>("/events"),
+  archived: () => apiFetch<EventSummary[]>("/events/archived"),
   get: (slug: string) => apiFetch<EventDetail>(`/events/${slug}`),
   register: (slug: string, guest?: { guest_name: string; guest_email: string }) =>
     apiFetch<Registration>(`/events/${slug}/register`, { method: "POST", body: JSON.stringify(guest ?? {}) }),
@@ -291,12 +293,14 @@ export const adminApi = {
   addProject: (payload: { repo_name: string; display_name: string | null }) =>
     apiFetch<AdminProjectRow>("/admin/projects", { method: "POST", body: JSON.stringify(payload) }),
   removeProject: (slug: string) => apiFetch<void>(`/admin/projects/${slug}`, { method: "DELETE" }),
-  listEvents: () => apiFetch<AdminEventRow[]>("/admin/events"),
+  listEvents: (archived = false) => apiFetch<AdminEventRow[]>(`/admin/events?archived=${archived}`),
   createEvent: (payload: EventWritePayload) =>
     apiFetch<AdminEventRow>("/admin/events", { method: "POST", body: JSON.stringify(payload) }),
   updateEvent: (slug: string, payload: Partial<EventWritePayload>) =>
     apiFetch<AdminEventRow>(`/admin/events/${slug}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteEvent: (slug: string) => apiFetch<void>(`/admin/events/${slug}`, { method: "DELETE" }),
+  archiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/archive`, { method: "POST" }),
+  unarchiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/unarchive`, { method: "POST" }),
   roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
   refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
   resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),

@@ -58,6 +58,7 @@ class EventDetail(EventSummary):
 class AdminEventRow(EventDetail):
     id: uuid.UUID
     registration_count: int
+    archived_at: datetime | None
 
 
 class EventWriteRequest(BaseModel):

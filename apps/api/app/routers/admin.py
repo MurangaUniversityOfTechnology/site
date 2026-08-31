@@ -157,12 +157,13 @@ def _admin_event_row(db: Session, event: Event) -> AdminEventRow:
         requirements=event.requirements,
         who_should_attend=event.who_should_attend,
         registration_count=count,
+        archived_at=event.archived_at,
     )
 
 
 @router.get("/events", response_model=list[AdminEventRow])
-def list_admin_events(db: Session = Depends(get_db)):
-    return [_admin_event_row(db, e) for e in event_service.list_events(db)]
+def list_admin_events(archived: bool = False, db: Session = Depends(get_db)):
+    return [_admin_event_row(db, e) for e in event_service.list_events(db, archived=archived)]
 
 
 @router.post("/events", response_model=AdminEventRow, status_code=status.HTTP_201_CREATED)
@@ -200,6 +201,26 @@ def delete_event(slug: str, admin: User = Depends(require_admin), db: Session = 
         event_service.delete_event(db, admin, event)
     except event_service.EventError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/events/{slug}/archive", response_model=AdminEventRow)
+def archive_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    event = _get_event_or_404(db, slug)
+    try:
+        event = event_service.archive_event(db, admin, event)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_event_row(db, event)
+
+
+@router.post("/events/{slug}/unarchive", response_model=AdminEventRow)
+def unarchive_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    event = _get_event_or_404(db, slug)
+    try:
+        event = event_service.unarchive_event(db, admin, event)
+    except event_service.EventError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_event_row(db, event)
 
 
 @router.get("/events/{slug}/registrations", response_model=list[AdminRegistrationRow])

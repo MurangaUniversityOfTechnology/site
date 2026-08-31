@@ -47,6 +47,11 @@ def list_events(db: Session = Depends(get_db)):
     return [_summary(db, e) for e in event_service.list_events(db)]
 
 
+@router.get("/archived", response_model=list[EventSummary])
+def list_archived_events(db: Session = Depends(get_db)):
+    return [_summary(db, e) for e in event_service.list_events(db, archived=True)]
+
+
 @router.get("/{slug}", response_model=EventDetail)
 def get_event_detail(slug: str, db: Session = Depends(get_db)):
     try:
