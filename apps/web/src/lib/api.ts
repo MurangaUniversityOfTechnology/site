@@ -219,6 +219,20 @@ export type EventWritePayload = {
   who_should_attend: string | null;
 };
 
+export type SignatureStatus = { has_signature: boolean; updated_at: string | null };
+export type SignatureImage = { image_base64: string; updated_at: string };
+
+export const signatureApi = {
+  status: () => apiFetch<SignatureStatus>("/profile/me/signature"),
+  image: () => apiFetch<SignatureImage>("/profile/me/signature/image"),
+  save: (imageBase64: string) =>
+    apiFetch<SignatureStatus>("/profile/me/signature", {
+      method: "PUT",
+      body: JSON.stringify({ image_base64: imageBase64 }),
+    }),
+  remove: () => apiFetch<void>("/profile/me/signature", { method: "DELETE" }),
+};
+
 export const eventApi = {
   list: () => apiFetch<EventSummary[]>("/events"),
   get: (slug: string) => apiFetch<EventDetail>(`/events/${slug}`),

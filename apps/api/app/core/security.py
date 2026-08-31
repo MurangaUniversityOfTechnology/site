@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
+from cryptography.fernet import Fernet
 
 from app.core.config import get_settings
 
@@ -42,6 +43,18 @@ def decode_session_token(token: str) -> str | None:
         return payload.get("sub")
     except jwt.PyJWTError:
         return None
+
+
+def _signature_fernet() -> Fernet:
+    return Fernet(settings.signature_encryption_key.encode("utf-8"))
+
+
+def encrypt_bytes(data: bytes) -> bytes:
+    return _signature_fernet().encrypt(data)
+
+
+def decrypt_bytes(token: bytes) -> bytes:
+    return _signature_fernet().decrypt(token)
 
 
 EMAIL_VERIFICATION_TTL = timedelta(hours=48)

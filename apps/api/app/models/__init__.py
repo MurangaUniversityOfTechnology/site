@@ -10,6 +10,7 @@ from app.models.profile import ExperienceLevel, Profile, ProfileVisibility
 from app.models.project import Project
 from app.models.project_join_request import JoinRequestStatus, ProjectJoinRequest
 from app.models.project_member import ProjectMember
+from app.models.signature import Signature
 from app.models.tag import Tag
 from app.models.user import GithubOrgInviteStatus, User
 from app.models.user_tag import UserTag
@@ -36,6 +37,7 @@ __all__ = [
     "ProjectJoinRequest",
     "ProjectMember",
     "RegistrationStatus",
+    "Signature",
     "Tag",
     "User",
     "UserTag",

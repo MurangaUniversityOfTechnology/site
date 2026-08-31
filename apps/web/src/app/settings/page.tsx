@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, authApi } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import SignaturePanel from "@/components/SignaturePanel";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -97,6 +98,8 @@ export default function SettingsPage() {
           </button>
         </form>
       </div>
+
+      <SignaturePanel />
     </main>
   );
 }

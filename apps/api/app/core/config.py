@@ -9,6 +9,11 @@ class Settings(BaseSettings):
     # Core
     environment: str = "development"
     secret_key: str
+    # Symmetric key (Fernet, url-safe base64, 32 bytes) used only to
+    # encrypt/decrypt signature images at rest — separate from secret_key so
+    # rotating one never invalidates sessions or vice versa. Generate with
+    # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    signature_encryption_key: str
     database_url: str
     web_origin: str = "http://localhost:3000"
     # Extra CORS-allowed origin for LAN dev testing (e.g. a phone on the same
