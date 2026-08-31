@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, adminApi, type AdminRow } from "@/lib/api";
+import { ApiError, adminApi, type AdminRow, type Tag } from "@/lib/api";
 
 export default function AdminRolesPage() {
   const [admins, setAdmins] = useState<AdminRow[] | null>(null);
@@ -10,13 +10,25 @@ export default function AdminRolesPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [tags, setTags] = useState<Tag[] | null>(null);
+  const [newTagName, setNewTagName] = useState("");
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [renamingTagId, setRenamingTagId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [pickedTagId, setPickedTagId] = useState("");
+
   const loadAdmins = useCallback(() => {
     adminApi.listAdmins().then(setAdmins);
   }, []);
 
+  const loadTags = useCallback(() => {
+    adminApi.listTags().then(setTags);
+  }, []);
+
   useEffect(() => {
     loadAdmins();
-  }, [loadAdmins]);
+    loadTags();
+  }, [loadAdmins, loadTags]);
 
   async function search() {
     setError(null);
@@ -41,6 +53,79 @@ export default function AdminRolesPage() {
     }
   }
 
+  async function createTag() {
+    const name = newTagName.trim();
+    if (!name) return;
+    setTagError(null);
+    try {
+      await adminApi.createTag(name);
+      setNewTagName("");
+      loadTags();
+    } catch (err) {
+      setTagError(err instanceof ApiError ? err.message : "Couldn't create tag.");
+    }
+  }
+
+  async function saveRename(tagId: string) {
+    const name = renameValue.trim();
+    if (!name) return;
+    setTagError(null);
+    try {
+      await adminApi.renameTag(tagId, name);
+      setRenamingTagId(null);
+      loadTags();
+      loadAdmins();
+      if (found) {
+        const result = await adminApi.searchUser(found.email);
+        setFound(result);
+      }
+    } catch (err) {
+      setTagError(err instanceof ApiError ? err.message : "Couldn't rename tag.");
+    }
+  }
+
+  async function removeTagDefinition(tagId: string) {
+    setTagError(null);
+    try {
+      await adminApi.deleteTag(tagId);
+      loadTags();
+      loadAdmins();
+      if (found) {
+        const result = await adminApi.searchUser(found.email);
+        setFound(result);
+      }
+    } catch (err) {
+      setTagError(err instanceof ApiError ? err.message : "Couldn't delete tag.");
+    }
+  }
+
+  async function assignPickedTag() {
+    if (!found || !pickedTagId) return;
+    setError(null);
+    try {
+      const updated = await adminApi.assignTag(found.user_id, pickedTagId);
+      setFound(updated);
+      setPickedTagId("");
+      loadAdmins();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't assign tag.");
+    }
+  }
+
+  async function removeMemberTag(tagId: string) {
+    if (!found) return;
+    setError(null);
+    try {
+      const updated = await adminApi.unassignTag(found.user_id, tagId);
+      setFound(updated);
+      loadAdmins();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't remove tag.");
+    }
+  }
+
+  const availableTags = tags?.filter((t) => !found?.tags.some((ft) => ft.id === t.id)) ?? [];
+
   return (
     <div className="max-w-160">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">settings · people</div>
@@ -58,6 +143,18 @@ export default function AdminRolesPage() {
             <div className="min-w-0 flex-1">
               <div className="text-[15px] font-medium">{a.name}</div>
               <div className="mt-0.5 font-mono text-[10.5px] text-faint">{a.email}</div>
+              {a.tags.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {a.tags.map((t) => (
+                    <span
+                      key={t.id}
+                      className="rounded-md border border-border-strong px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted"
+                    >
+                      {t.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <span className="rounded-md border border-[#f0dfb8] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-warn">
               admin
@@ -85,25 +182,136 @@ export default function AdminRolesPage() {
 
         {found === null && <p className="mt-3.5 text-sm text-muted">No user with that email.</p>}
         {found && (
-          <div className="mt-4.5 flex items-center gap-3.5 rounded-lg border border-border-strong p-4">
-            <div className="min-w-0 flex-1">
-              <div className="text-[15px]">{found.name}</div>
-              <div className="mt-0.5 font-mono text-[10.5px] text-faint">{found.email}</div>
+          <div className="mt-4.5 rounded-lg border border-border-strong p-4">
+            <div className="flex items-center gap-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px]">{found.name}</div>
+                <div className="mt-0.5 font-mono text-[10.5px] text-faint">{found.email}</div>
+              </div>
+              <button
+                onClick={toggle}
+                disabled={busy}
+                className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${
+                  found.is_admin
+                    ? "border border-[#f6d9d6] text-danger"
+                    : "border-0 bg-accent text-[#1a2744]"
+                }`}
+              >
+                {found.is_admin ? "Remove admin" : "Make admin"}
+              </button>
             </div>
-            <button
-              onClick={toggle}
-              disabled={busy}
-              className={`rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 ${
-                found.is_admin
-                  ? "border border-[#f6d9d6] text-danger"
-                  : "border-0 bg-accent text-[#1a2744]"
-              }`}
-            >
-              {found.is_admin ? "Remove admin" : "Make admin"}
-            </button>
+
+            <div className="mt-4 border-t border-[#e8e1d2] pt-3.5">
+              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">tags</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {found.tags.length === 0 && <span className="text-sm text-faint">No tags yet.</span>}
+                {found.tags.map((t) => (
+                  <span
+                    key={t.id}
+                    className="flex items-center gap-1.5 rounded-md border border-border-strong px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted"
+                  >
+                    {t.name}
+                    <button
+                      onClick={() => removeMemberTag(t.id)}
+                      className="text-faint hover:text-danger"
+                      aria-label={`Remove ${t.name} tag`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              {availableTags.length > 0 && (
+                <div className="mt-3 flex gap-2">
+                  <select
+                    value={pickedTagId}
+                    onChange={(e) => setPickedTagId(e.target.value)}
+                    className="flex-1 rounded-md border border-border-strong bg-background px-3 py-2 font-mono text-[13px] outline-none focus:border-accent"
+                  >
+                    <option value="">Add a tag…</option>
+                    {availableTags.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={assignPickedTag}
+                    disabled={!pickedTagId}
+                    className="rounded-md border border-border-strong px-3.5 py-2 text-sm hover:border-accent-dim disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
         {error && <p className="mt-3.5 text-sm text-danger">{error}</p>}
+      </div>
+
+      <div className="mt-7 rounded-xl border border-border bg-surface p-5.5">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">manage tags</div>
+        <p className="mt-2 text-[13px] text-muted">
+          Tags are decorative labels (Dean, Chairperson, Guest…) admins can pin to a member — they don&apos;t change
+          permissions.
+        </p>
+
+        <div className="mt-3.5 space-y-2">
+          {tags?.map((t) => (
+            <div key={t.id} className="flex items-center gap-2 rounded-md border border-border-strong px-3.5 py-2.5">
+              {renamingTagId === t.id ? (
+                <>
+                  <input
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    autoFocus
+                    className="flex-1 rounded-md border border-border-strong bg-background px-2.5 py-1.5 font-mono text-sm outline-none focus:border-accent"
+                  />
+                  <button onClick={() => saveRename(t.id)} className="text-sm text-accent-dim hover:underline">
+                    Save
+                  </button>
+                  <button onClick={() => setRenamingTagId(null)} className="text-sm text-faint hover:underline">
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm">{t.name}</span>
+                  <button
+                    onClick={() => {
+                      setRenamingTagId(t.id);
+                      setRenameValue(t.name);
+                    }}
+                    className="text-sm text-muted hover:underline"
+                  >
+                    Rename
+                  </button>
+                  <button onClick={() => removeTagDefinition(t.id)} className="text-sm text-danger hover:underline">
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+          {tags?.length === 0 && <p className="text-sm text-faint">No tags yet.</p>}
+        </div>
+
+        <div className="mt-3.5 flex gap-2">
+          <input
+            value={newTagName}
+            onChange={(e) => setNewTagName(e.target.value)}
+            placeholder="e.g. Dean, Treasurer, Guest"
+            className="flex-1 rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
+          />
+          <button
+            onClick={createTag}
+            className="rounded-md border border-border-strong px-4 py-2.5 text-sm hover:border-accent-dim"
+          >
+            Create tag
+          </button>
+        </div>
+        {tagError && <p className="mt-3.5 text-sm text-danger">{tagError}</p>}
       </div>
     </div>
   );

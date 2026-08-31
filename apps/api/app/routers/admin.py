@@ -13,6 +13,7 @@ from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
+from app.models.tag import Tag
 from app.models.user import User
 from app.schemas.admin import (
     AddMemberRequest,
@@ -37,12 +38,14 @@ from app.schemas.event import (
 )
 from app.schemas.github import RosterRow
 from app.schemas.project import AddProjectRequest, AdminJoinRequestRow, AdminProjectRow
+from app.schemas.tag import AssignTagRequest, CreateTagRequest, RenameTagRequest, TagRow
 from app.services import audit
 from app.services import content as content_service
 from app.services import event as event_service
 from app.services import github as github_service
 from app.services import membership as membership_service
 from app.services import project as project_service
+from app.services import tags as tag_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -315,18 +318,20 @@ def request_content_changes(content_id: str, admin: User = Depends(require_admin
 # ── roles ────────────────────────────────────────────────────────────
 
 
+def _to_admin_row(db: Session, u: User) -> AdminRow:
+    return AdminRow(
+        user_id=u.id,
+        name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
+        email=u.email,
+        is_admin=u.is_admin,
+        tags=tag_service.list_member_tags(db, u),
+    )
+
+
 @router.get("/admins", response_model=list[AdminRow])
 def list_admins(db: Session = Depends(get_db)):
     admins = db.query(User).filter(User.is_admin.is_(True)).all()
-    return [
-        AdminRow(
-            user_id=u.id,
-            name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
-            email=u.email,
-            is_admin=True,
-        )
-        for u in admins
-    ]
+    return [_to_admin_row(db, u) for u in admins]
 
 
 @router.get("/users/search", response_model=AdminRow | None)
@@ -334,12 +339,7 @@ def search_user(email: str, db: Session = Depends(get_db)):
     u = db.query(User).filter(User.email == email.lower()).first()
     if not u:
         return None
-    return AdminRow(
-        user_id=u.id,
-        name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
-        email=u.email,
-        is_admin=u.is_admin,
-    )
+    return _to_admin_row(db, u)
 
 
 @router.post("/users/{user_id}/make-admin", status_code=status.HTTP_204_NO_CONTENT)
@@ -362,6 +362,68 @@ def remove_admin(user_id: str, admin: User = Depends(require_admin), db: Session
     target.is_admin = False
     audit.log(db, admin, "settings", f"Removed admin access from {target.email}")
     db.commit()
+
+
+# ── tags ─────────────────────────────────────────────────────────────
+
+
+@router.get("/tags", response_model=list[TagRow])
+def list_tags(db: Session = Depends(get_db)):
+    return tag_service.list_tags(db)
+
+
+@router.post("/tags", response_model=TagRow, status_code=status.HTTP_201_CREATED)
+def create_tag(payload: CreateTagRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        return tag_service.create_tag(db, admin, payload.name)
+    except tag_service.TagError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+def _get_tag_or_404(db: Session, tag_id: str) -> Tag:
+    tag = db.get(Tag, tag_id)
+    if not tag:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Tag not found")
+    return tag
+
+
+@router.patch("/tags/{tag_id}", response_model=TagRow)
+def rename_tag(
+    tag_id: str, payload: RenameTagRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    tag = _get_tag_or_404(db, tag_id)
+    try:
+        return tag_service.rename_tag(db, admin, tag, payload.name)
+    except tag_service.TagError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tag(tag_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    tag = _get_tag_or_404(db, tag_id)
+    tag_service.delete_tag(db, admin, tag)
+
+
+@router.post("/users/{user_id}/tags", response_model=AdminRow)
+def assign_tag(
+    user_id: str, payload: AssignTagRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    tag = _get_tag_or_404(db, str(payload.tag_id))
+    tag_service.assign_tag(db, admin, target, tag)
+    return _to_admin_row(db, target)
+
+
+@router.delete("/users/{user_id}/tags/{tag_id}", response_model=AdminRow)
+def unassign_tag(user_id: str, tag_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    tag = _get_tag_or_404(db, tag_id)
+    tag_service.unassign_tag(db, admin, target, tag)
+    return _to_admin_row(db, target)
 
 
 # ── add member without payment ──────────────────────────────────────

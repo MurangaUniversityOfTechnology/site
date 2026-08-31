@@ -246,6 +246,15 @@ export const adminApi = {
   searchUser: (email: string) => apiFetch<AdminRow | null>(`/admin/users/search?email=${encodeURIComponent(email)}`),
   makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
   removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
+  listTags: () => apiFetch<Tag[]>("/admin/tags"),
+  createTag: (name: string) => apiFetch<Tag>("/admin/tags", { method: "POST", body: JSON.stringify({ name }) }),
+  renameTag: (tagId: string, name: string) =>
+    apiFetch<Tag>(`/admin/tags/${tagId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteTag: (tagId: string) => apiFetch<void>(`/admin/tags/${tagId}`, { method: "DELETE" }),
+  assignTag: (userId: string, tagId: string) =>
+    apiFetch<AdminRow>(`/admin/users/${userId}/tags`, { method: "POST", body: JSON.stringify({ tag_id: tagId }) }),
+  unassignTag: (userId: string, tagId: string) =>
+    apiFetch<AdminRow>(`/admin/users/${userId}/tags/${tagId}`, { method: "DELETE" }),
   addMember: (payload: {
     email: string;
     display_name: string;
@@ -389,7 +398,9 @@ export const projectApi = {
 
 export type AdminContentRow = { id: string; title: string; body: string; author: string; when: string };
 
-export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean };
+export type Tag = { id: string; name: string; created_at: string };
+
+export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean; tags: Tag[] };
 
 export type AddMemberResponse = {
   user_id: string;

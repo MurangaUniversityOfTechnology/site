@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.tag import TagRow
+
 
 class AdminOverview(BaseModel):
     total_members: int
@@ -54,6 +56,7 @@ class AdminRow(BaseModel):
     name: str
     email: str
     is_admin: bool
+    tags: list[TagRow] = []
 
 
 class AddMemberRequest(BaseModel):
