@@ -83,6 +83,34 @@ def test_invite_fires_when_all_conditions_met(db_session, make_user, mock_github
     assert db_session.query(Notification).filter(Notification.user_id == user.id).count() == 1
 
 
+def test_invite_already_member_reconciles_to_accepted(db_session, make_user):
+    user = make_user(membership_status=MembershipStatus.active)
+    _link_github(user)
+    db_session.commit()
+
+    with respx.mock(assert_all_called=False) as m:
+        m.post(url__regex=r".*/orgs/.*/invitations").mock(
+            return_value=httpx.Response(
+                422,
+                json={
+                    "message": "Validation Failed",
+                    "errors": [
+                        {
+                            "resource": "OrganizationInvitation",
+                            "code": "unprocessable",
+                            "field": "data",
+                            "message": "Invitee is already a part of this organization",
+                        }
+                    ],
+                },
+            )
+        )
+        m.get(url__regex=r".*/orgs/.*/memberships/.*").mock(return_value=httpx.Response(200, json={"state": "active"}))
+        github_service.maybe_invite_to_org(db_session, user)
+
+    assert user.github_org_invite_status == GithubOrgInviteStatus.accepted
+
+
 def test_invite_failure_is_logged_and_leaves_status_none(db_session, make_user, caplog):
     user = make_user(membership_status=MembershipStatus.active)
     _link_github(user)

@@ -5,9 +5,9 @@ import { adminApi, type RosterRow } from "@/lib/api";
 
 const STATE: Record<string, { label: string; fg: string; bd: string }> = {
   none: { label: "no github linked", fg: "text-faint", bd: "border-border-strong" },
-  invited: { label: "invite sent", fg: "text-warn", bd: "border-[#3a3226]" },
-  accepted: { label: "in org", fg: "text-accent", bd: "border-accent-dim" },
-  expired: { label: "expired", fg: "text-danger", bd: "border-[#5a3330]" },
+  invited: { label: "invite sent", fg: "text-warn", bd: "border-[#f0dfb8]" },
+  accepted: { label: "in org", fg: "text-navy", bd: "border-accent-dim" },
+  expired: { label: "expired", fg: "text-danger", bd: "border-[#f6d9d6]" },
 };
 
 export default function AdminGithubPage() {
@@ -57,7 +57,7 @@ export default function AdminGithubPage() {
         {rows?.map((r) => {
           const s = STATE[r.invite_status] ?? STATE.none;
           return (
-            <div key={r.user_id} className="flex flex-wrap items-center gap-3.5 border-b border-[#14191b] px-5 py-3.5 last:border-0">
+            <div key={r.user_id} className="flex flex-wrap items-center gap-3.5 border-b border-[#e8e1d2] px-5 py-3.5 last:border-0">
               <div className="min-w-0 flex-1">
                 <div className="text-[15px] font-medium">{r.name}</div>
                 <div className="mt-0.5 font-mono text-[10.5px] text-faint">
@@ -78,7 +78,7 @@ export default function AdminGithubPage() {
                 <button
                   onClick={() => resend(r.user_id)}
                   disabled={busy === r.user_id}
-                  className="rounded-md border border-accent-dim px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-accent disabled:opacity-50"
+                  className="rounded-md border border-accent-dim px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-navy disabled:opacity-50"
                 >
                   {r.invite_status === "none" ? "invite" : "re-send"}
                 </button>

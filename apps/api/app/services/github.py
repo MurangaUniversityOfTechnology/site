@@ -102,6 +102,12 @@ def maybe_invite_to_org(db: Session, user: User) -> None:
             timeout=15,
         )
         res.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 422 and "already a part of this organization" in exc.response.text:
+            refresh_invite_status(db, user)
+            return
+        _log_failure(f"maybe_invite_to_org({user.email})", exc)
+        return
     except httpx.HTTPError as exc:
         _log_failure(f"maybe_invite_to_org({user.email})", exc)
         return
