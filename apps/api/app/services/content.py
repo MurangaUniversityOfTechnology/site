@@ -11,7 +11,7 @@ class ContentError(Exception):
 
 
 def submit(db: Session, user: User, title: str, body: str, tags: list[str]) -> Content:
-    if user.membership.status != MembershipStatus.active:
+    if not user.is_admin and user.membership.status != MembershipStatus.active:
         raise ContentError("Active club membership is required to publish")
 
     content = Content(author_id=user.id, title=title, body=body, tags=tags, status=ContentStatus.pending_review)

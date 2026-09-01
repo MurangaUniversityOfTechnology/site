@@ -135,7 +135,7 @@ def request_join(
 ) -> ProjectJoinRequest:
     if project.completed_at is not None:
         raise ProjectError("This project is marked completed and isn't accepting new members")
-    if not user.membership or user.membership.status != MembershipStatus.active:
+    if not user.is_admin and (not user.membership or user.membership.status != MembershipStatus.active):
         raise ProjectError("Only active members can join a project")
     if is_member(db, project, user):
         raise ProjectError("Already a member of this project")

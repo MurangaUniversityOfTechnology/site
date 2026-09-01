@@ -58,6 +58,13 @@ def test_register_members_only_event_succeeds_when_active(db_session, make_user,
     assert reg.status == RegistrationStatus.pending
 
 
+def test_register_members_only_event_succeeds_for_admin_without_active_membership(db_session, make_user, make_event):
+    event = make_event(audience=EventAudience.members_only)
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.none)
+    reg = event_service.register(db_session, event.slug, admin)
+    assert reg.status == RegistrationStatus.pending
+
+
 def test_guest_registration_requires_name_and_email(db_session, make_event):
     event = make_event()
     with pytest.raises(event_service.EventError):

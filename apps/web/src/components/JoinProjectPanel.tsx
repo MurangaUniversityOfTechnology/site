@@ -52,7 +52,7 @@ export function JoinProjectPanel({
     );
   }
 
-  if (me.membership_status !== "active") {
+  if (!me.is_admin && me.membership_status !== "active") {
     return (
       <Link
         href="/membership/activate"

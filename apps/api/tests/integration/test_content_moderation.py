@@ -19,6 +19,12 @@ def test_submit_succeeds_for_active_member(db_session, make_user):
     assert content.status == ContentStatus.pending_review
 
 
+def test_submit_succeeds_for_admin_without_active_membership(db_session, make_user):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.none)
+    content = content_service.submit(db_session, admin, "Title", "Body", [])
+    assert content.status == ContentStatus.pending_review
+
+
 def test_publish_from_pending_review(db_session, make_user):
     admin = make_user(is_admin=True, email="admin@example.com")
     author = make_user(membership_status=MembershipStatus.active, email="author@example.com")

@@ -10,7 +10,7 @@ class MemberError(Exception):
 
 
 def _viewer_is_active_member(viewer: User | None) -> bool:
-    return bool(viewer and viewer.membership.status == MembershipStatus.active)
+    return bool(viewer and (viewer.is_admin or viewer.membership.status == MembershipStatus.active))
 
 
 def directory(db: Session, viewer: User | None) -> list[Profile]:

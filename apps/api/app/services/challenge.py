@@ -10,7 +10,7 @@ class ChallengeError(Exception):
 
 
 def submit(db: Session, slug: str, user: User, github_url: str, demo_url: str | None, learned: str | None) -> ChallengeSubmission:
-    if user.membership.status != MembershipStatus.active:
+    if not user.is_admin and user.membership.status != MembershipStatus.active:
         raise ChallengeError("Active club membership is required to submit a build")
 
     existing = (

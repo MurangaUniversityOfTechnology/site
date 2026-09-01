@@ -41,6 +41,13 @@ def test_request_join_succeeds_for_active_member(db_session, make_user, make_pro
     assert req.status.value == "pending"
 
 
+def test_request_join_succeeds_for_admin_without_active_membership(db_session, make_user, make_project):
+    project = make_project()
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.none)
+    req = project_service.request_join(db_session, project, admin, ["Backend"], "Interested")
+    assert req.status.value == "pending"
+
+
 def test_request_join_blocked_if_project_completed(db_session, make_user, make_project):
     project = make_project()
     admin = make_user(is_admin=True, email="admin@example.com")

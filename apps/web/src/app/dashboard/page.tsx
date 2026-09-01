@@ -68,9 +68,11 @@ export default function DashboardPage() {
   if (loading || !me) return null;
 
   const status = me.membership_status;
-  const canActivate = status === "none" || status === "expired";
-  const isPending = status === "payment_pending" || status === "payment_received";
-  const isActive = status === "active";
+  // Admins get full access regardless of payment status (see the backend
+  // checks this mirrors) — never nag them to activate/pay.
+  const canActivate = !me.is_admin && (status === "none" || status === "expired");
+  const isPending = !me.is_admin && (status === "payment_pending" || status === "payment_received");
+  const isActive = me.is_admin || status === "active";
 
   async function sendVerification() {
     setSendingVerification(true);
