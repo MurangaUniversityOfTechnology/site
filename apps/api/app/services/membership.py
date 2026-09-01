@@ -158,11 +158,15 @@ def latest_payment(db: Session, user: User) -> Payment | None:
 
 
 # How long to wait before actively querying Safaricom rather than just
-# trusting their callback to arrive. The frontend polls /membership/status
-# every 3s (see POLL_INTERVAL_MS in apps/web/.../membership/waiting/page.tsx),
-# so this fires on the first poll tick after the threshold — well before that
+# trusting their callback to arrive. This is a fallback path only — the real
+# callback (apply_stk_callback, POST /mpesa/callback) fires the moment
+# Safaricom has it, independent of this threshold, and the frontend polls
+# /membership/status every 3s (see POLL_INTERVAL_MS in
+# apps/web/.../membership/waiting/page.tsx), so a member who approves
+# promptly sees success within a few seconds — this only kicks in for a
+# callback that's slow or never arrives. Still comfortably before that
 # page's own, separate 60s UNKNOWN_AFTER_MS starts showing "status unknown".
-PENDING_RECONCILE_AFTER_SECONDS = 20
+PENDING_RECONCILE_AFTER_SECONDS = 45
 
 
 def sync_pending_payment(db: Session, payment: Payment) -> None:

@@ -208,7 +208,7 @@ def test_sync_pending_payment_too_recent_is_left_alone(db_session, make_user, mo
 
     membership_service.sync_pending_payment(db_session, payment)
 
-    # Still well under the 60s threshold — a query should never even fire.
+    # Still well under the 45s threshold — a query should never even fire.
     assert query_route.call_count == 0
     assert payment.status == PaymentStatus.pending
 
@@ -216,7 +216,7 @@ def test_sync_pending_payment_too_recent_is_left_alone(db_session, make_user, mo
 def test_sync_pending_payment_resolves_success_but_has_no_receipt(db_session, make_user, mock_mpesa_success):
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     _mock_stk_query(mock_mpesa_success, 0, "The service request is processed successfully.")
 
     membership_service.sync_pending_payment(db_session, payment)
@@ -232,7 +232,7 @@ def test_sync_pending_payment_resolves_success_but_has_no_receipt(db_session, ma
 def test_sync_pending_payment_resolves_cancelled(db_session, make_user, mock_mpesa_success):
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     _mock_stk_query(mock_mpesa_success, 1032, "Request cancelled by user")
 
     membership_service.sync_pending_payment(db_session, payment)
@@ -244,7 +244,7 @@ def test_sync_pending_payment_resolves_cancelled(db_session, make_user, mock_mpe
 def test_sync_pending_payment_resolves_generic_failure(db_session, make_user, mock_mpesa_success):
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     _mock_stk_query(mock_mpesa_success, 1, "The balance is insufficient for the transaction.")
 
     membership_service.sync_pending_payment(db_session, payment)
@@ -258,7 +258,7 @@ def test_sync_pending_payment_still_processing_leaves_pending(db_session, make_u
     # prompt — an error response, not a ResultCode. Must not be treated as failed.
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     mock_mpesa_success.post(url__regex=r".*/mpesa/stkpushquery/v1/query").mock(
         return_value=httpx.Response(
             500, json={"errorCode": "500.001.1001", "errorMessage": "The transaction is being processed"}
@@ -275,7 +275,7 @@ def test_sync_pending_payment_ignores_already_terminal_payment(db_session, make_
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
     payment.status = PaymentStatus.completed
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     query_route = _mock_stk_query(mock_mpesa_success, 0)
 
     membership_service.sync_pending_payment(db_session, payment)
@@ -288,7 +288,7 @@ def test_membership_status_endpoint_triggers_reconciliation(
 ):
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     _mock_stk_query(mock_mpesa_success, 0, "done")
     login_as(user)
 
@@ -303,7 +303,7 @@ def test_membership_status_endpoint_triggers_reconciliation(
 def test_late_callback_backfills_receipt_after_query_reconciliation(client, db_session, make_user, mock_mpesa_success):
     user = _activated_user(db_session, make_user, mock_mpesa_success)
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
-    _age_payment(db_session, payment, 21)
+    _age_payment(db_session, payment, 46)
     _mock_stk_query(mock_mpesa_success, 0, "done")
     membership_service.sync_pending_payment(db_session, payment)
     assert payment.status == PaymentStatus.completed
