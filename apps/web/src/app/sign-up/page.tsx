@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
@@ -9,11 +9,17 @@ import { GoogleIcon } from "@/components/icons";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const { refresh } = useMe();
+  const { me, loading, refresh } = useMe();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!loading && me) router.push(me.onboarded ? "/dashboard" : "/onboarding");
+  }, [loading, me, router]);
+
+  if (loading || me) return null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
