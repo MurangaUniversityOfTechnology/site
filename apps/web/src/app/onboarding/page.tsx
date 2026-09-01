@@ -61,10 +61,17 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !me) router.push("/sign-in");
+    if (authLoading) return;
+    if (!me) {
+      router.push("/sign-in");
+    } else if (me.onboarded) {
+      // Already done (or an admin, who skips onboarding entirely) — manage
+      // your profile from Settings instead of running the wizard again.
+      router.push("/settings");
+    }
   }, [authLoading, me, router]);
 
-  if (authLoading || !me) return null;
+  if (authLoading || !me || me.onboarded) return null;
 
   const step1Valid = form.firstName.trim() && form.lastName.trim() && form.preferredName.trim();
   const isLastStep = step === STEPS.length;

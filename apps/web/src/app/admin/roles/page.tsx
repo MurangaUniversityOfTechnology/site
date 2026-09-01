@@ -6,8 +6,10 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function AdminRolesPage() {
   const [admins, setAdmins] = useState<AdminRow[] | null>(null);
-  const [email, setEmail] = useState("");
-  const [found, setFound] = useState<AdminRow | null | undefined>(undefined);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<AdminRow[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [found, setFound] = useState<AdminRow | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -32,11 +34,38 @@ export default function AdminRolesPage() {
     loadTags();
   }, [loadAdmins, loadTags]);
 
-  async function search() {
-    setError(null);
+  useEffect(() => {
+    const q = query.trim();
+    if (!q || found) return;
+    const timeout = setTimeout(() => {
+      adminApi
+        .searchUsers(q)
+        .then(setResults)
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [query, found]);
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim()) setSearching(true);
+  }
+
+  function pick(row: AdminRow) {
+    setFound(row);
+    setResults([]);
+    setQuery("");
+  }
+
+  function clearSelection() {
     setFound(undefined);
-    const result = await adminApi.searchUser(email.trim());
-    setFound(result);
+    setError(null);
+  }
+
+  async function refreshFound() {
+    if (!found) return;
+    const matches = await adminApi.searchUsers(found.email);
+    setFound(matches.find((m) => m.user_id === found.user_id) ?? found);
   }
 
   async function toggle() {
@@ -84,10 +113,7 @@ export default function AdminRolesPage() {
       setRenamingTagId(null);
       loadTags();
       loadAdmins();
-      if (found) {
-        const result = await adminApi.searchUser(found.email);
-        setFound(result);
-      }
+      await refreshFound();
     } catch (err) {
       setTagError(err instanceof ApiError ? err.message : "Couldn't rename tag.");
     }
@@ -104,10 +130,7 @@ export default function AdminRolesPage() {
       await adminApi.deleteTag(tagId);
       loadTags();
       loadAdmins();
-      if (found) {
-        const result = await adminApi.searchUser(found.email);
-        setFound(result);
-      }
+      await refreshFound();
     } catch (err) {
       setTagError(err instanceof ApiError ? err.message : "Couldn't delete tag.");
     }
@@ -179,22 +202,48 @@ export default function AdminRolesPage() {
 
       <div className="mt-7 rounded-xl border border-border bg-surface p-5.5">
         <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">grant or revoke access</div>
-        <div className="mt-3.5 flex gap-2">
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="member@students.mut.ac.ke"
-            className="flex-1 rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
-          />
-          <button
-            onClick={search}
-            className="rounded-md border border-border-strong px-4 py-2.5 text-sm hover:border-accent-dim"
-          >
-            Search
-          </button>
-        </div>
+        <p className="mt-1.5 text-[13px] text-muted">
+          Any member can be promoted — active or not, paid or not.
+        </p>
 
-        {found === null && <p className="mt-3.5 text-sm text-muted">No user with that email.</p>}
+        {!found && (
+          <div className="relative mt-3.5">
+            <input
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              placeholder="Search by name, GitHub username, or email…"
+              className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
+            />
+            {query.trim() && (
+              <div className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border-strong bg-surface shadow-lg">
+                {searching && <div className="px-3.5 py-2.5 text-sm text-faint">Searching…</div>}
+                {!searching && results.length === 0 && (
+                  <div className="px-3.5 py-2.5 text-sm text-faint">No matches.</div>
+                )}
+                {!searching &&
+                  results.map((r) => (
+                    <button
+                      key={r.user_id}
+                      type="button"
+                      onClick={() => pick(r)}
+                      className="flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left hover:bg-surface-raised"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px]">{r.name}</span>
+                        <span className="block truncate font-mono text-[10.5px] text-faint">{r.email}</span>
+                      </span>
+                      {r.is_admin && (
+                        <span className="flex-none font-mono text-[9.5px] uppercase tracking-[0.1em] text-warn">
+                          admin
+                        </span>
+                      )}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {found && (
           <div className="mt-4.5 rounded-lg border border-border-strong p-4">
             <div className="flex items-center gap-3.5">
@@ -202,6 +251,9 @@ export default function AdminRolesPage() {
                 <div className="text-[15px]">{found.name}</div>
                 <div className="mt-0.5 font-mono text-[10.5px] text-faint">{found.email}</div>
               </div>
+              <button onClick={clearSelection} className="flex-none text-sm text-muted hover:underline">
+                Change
+              </button>
               <button
                 onClick={toggle}
                 disabled={busy}

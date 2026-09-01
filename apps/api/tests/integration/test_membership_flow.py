@@ -421,7 +421,7 @@ def test_admin_add_member_emails_the_temp_password(client, db_session, make_user
     assert temp_password in mock_email[0]["html"]
 
 
-def test_admin_add_member_with_chosen_password_sends_no_welcome_email(client, make_user, login_as, mock_email):
+def test_admin_add_member_with_chosen_password_emails_without_leaking_it(client, make_user, login_as, mock_email):
     admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
     login_as(admin)
 
@@ -437,7 +437,14 @@ def test_admin_add_member_with_chosen_password_sends_no_welcome_email(client, ma
         },
     )
     assert res.status_code == 201
-    assert len(mock_email) == 0
+
+    # Still notified they now have an account — an admin manually adding a
+    # member should always trigger an email — just without the admin-chosen
+    # password itself, which the admin (not this email) is responsible for
+    # sharing with them.
+    assert len(mock_email) == 1
+    assert mock_email[0]["to"] == "chose-own2@example.com"
+    assert "a-real-password123" not in mock_email[0]["html"]
 
 
 def test_admin_add_member_reuses_never_activated_account_no_temp_password(client, make_user, login_as):

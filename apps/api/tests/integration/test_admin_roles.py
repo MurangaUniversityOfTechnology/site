@@ -86,10 +86,28 @@ def test_search_user_by_email(client, make_user, login_as):
     make_user(email="findme@example.com")
     login_as(admin)
 
-    res = client.get("/admin/users/search", params={"email": "findme@example.com"})
+    res = client.get("/admin/users/search", params={"query": "findme@example.com"})
     assert res.status_code == 200
-    assert res.json()["email"] == "findme@example.com"
+    assert [u["email"] for u in res.json()] == ["findme@example.com"]
 
-    res = client.get("/admin/users/search", params={"email": "nobody@example.com"})
+    res = client.get("/admin/users/search", params={"query": "nobody@example.com"})
     assert res.status_code == 200
-    assert res.json() is None
+    assert res.json() == []
+
+
+def test_search_user_by_partial_name_or_github_login(client, db_session, make_user, login_as):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    target = make_user(email="jane@example.com")
+    target.profile.first_name = "Jane"
+    target.profile.last_name = "Wanjiru"
+    target.github_login = "janew"
+    db_session.commit()
+    login_as(admin)
+
+    res = client.get("/admin/users/search", params={"query": "wanjiru"})
+    assert res.status_code == 200
+    assert [u["email"] for u in res.json()] == ["jane@example.com"]
+
+    res = client.get("/admin/users/search", params={"query": "janew"})
+    assert res.status_code == 200
+    assert [u["email"] for u in res.json()] == ["jane@example.com"]

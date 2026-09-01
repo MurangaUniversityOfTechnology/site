@@ -40,6 +40,7 @@ export type Me = {
   email_verified: boolean;
   is_admin: boolean;
   membership_status: string;
+  onboarded: boolean;
 };
 
 export const authApi = {
@@ -55,6 +56,10 @@ export const authApi = {
   sendVerificationEmail: () => apiFetch<void>("/auth/send-verification-email", { method: "POST" }),
   changePassword: (payload: { current_password: string | null; new_password: string }) =>
     apiFetch<void>("/auth/change-password", { method: "POST", body: JSON.stringify(payload) }),
+  forgotPassword: (email: string) =>
+    apiFetch<void>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
+  resetPassword: (payload: { token: string; new_password: string }) =>
+    apiFetch<void>("/auth/reset-password", { method: "POST", body: JSON.stringify(payload) }),
 };
 
 export type GithubStatus = { linked: boolean; login: string | null; invite_status: string };
@@ -85,6 +90,7 @@ export type Profile = {
   github_url: string | null;
   linkedin_url: string | null;
   visibility: ProfileVisibility;
+  onboarded: boolean;
 };
 
 export type OnboardingPayload = {
@@ -149,6 +155,7 @@ export type MembershipApplication = {
   payment_receipt: string | null;
   payment_status: string | null;
   membership_status: string;
+  is_admin: boolean;
 };
 
 export type PaymentTotal = { label: string; amount_kes: number; count: number };
@@ -259,7 +266,7 @@ export const adminApi = {
   rejectContent: (id: string) => apiFetch<void>(`/admin/content/${id}/reject`, { method: "POST" }),
   requestContentChanges: (id: string) => apiFetch<void>(`/admin/content/${id}/request-changes`, { method: "POST" }),
   listAdmins: () => apiFetch<AdminRow[]>("/admin/admins"),
-  searchUser: (email: string) => apiFetch<AdminRow | null>(`/admin/users/search?email=${encodeURIComponent(email)}`),
+  searchUsers: (query: string) => apiFetch<AdminRow[]>(`/admin/users/search?query=${encodeURIComponent(query)}`),
   makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
   removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
   listTags: () => apiFetch<Tag[]>("/admin/tags"),

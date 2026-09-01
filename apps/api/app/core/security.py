@@ -1,3 +1,4 @@
+import hashlib
 from datetime import UTC, datetime, timedelta
 
 import bcrypt
@@ -81,3 +82,50 @@ def decode_email_verification_token(token: str) -> str | None:
         return payload.get("sub")
     except jwt.PyJWTError:
         return None
+
+
+PASSWORD_RESET_TTL = timedelta(hours=1)
+
+
+def _password_hash_fingerprint(password_hash: str | None) -> str:
+    # A stable (not Python's hash(), which is randomized per-process) digest
+    # of the current password_hash, folded into the "pwh" claim — makes a
+    # reset link single-use in practice, since setting a new password changes
+    # this fingerprint and any old link stops matching, with no server-side
+    # token storage/invalidation needed.
+    return hashlib.sha256((password_hash or "").encode("utf-8")).hexdigest()
+
+
+def create_password_reset_token(user_id: str, password_hash: str | None) -> str:
+    payload = {
+        "sub": user_id,
+        "purpose": "reset_password",
+        "pwh": _password_hash_fingerprint(password_hash),
+        "exp": datetime.now(UTC) + PASSWORD_RESET_TTL,
+        "iat": datetime.now(UTC),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+
+
+def decode_password_reset_token_subject(token: str) -> str | None:
+    """First pass: who does this token claim to be for? Doesn't confirm the
+    token is still valid for that user — call verify_password_reset_token()
+    with their current password_hash once loaded, since the fingerprint check
+    needs it and it isn't worth a second, separate DB lookup path."""
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        if payload.get("purpose") != "reset_password":
+            return None
+        return payload.get("sub")
+    except jwt.PyJWTError:
+        return None
+
+
+def verify_password_reset_token(token: str, password_hash: str | None) -> bool:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return False
+    if payload.get("purpose") != "reset_password":
+        return False
+    return payload.get("pwh") == _password_hash_fingerprint(password_hash)

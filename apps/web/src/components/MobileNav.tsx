@@ -21,6 +21,8 @@ const PROFILE_PREFIXES = [
   "/settings",
   "/sign-in",
   "/sign-up",
+  "/forgot-password",
+  "/reset-password",
   "/onboarding",
   "/welcome",
   "/membership",

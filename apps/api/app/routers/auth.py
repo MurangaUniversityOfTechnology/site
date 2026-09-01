@@ -16,17 +16,22 @@ from app.core.security import (
     SESSION_COOKIE_NAME,
     SESSION_TTL,
     create_email_verification_token,
+    create_password_reset_token,
     create_session_token,
     decode_email_verification_token,
+    decode_password_reset_token_subject,
     hash_password,
     verify_password,
+    verify_password_reset_token,
 )
 from app.models.membership import MembershipStatus
 from app.models.user import User
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     MeResponse,
+    ResetPasswordRequest,
     SignupRequest,
 )
 from app.schemas.github import GithubStatus
@@ -113,6 +118,48 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user.email_verified = True
     db.commit()
     return RedirectResponse(f"{settings.web_origin}/verify-email?status=success")
+
+
+def _send_password_reset_email(user: User) -> None:
+    token = create_password_reset_token(str(user.id), user.password_hash)
+    reset_url = f"{settings.web_origin}/reset-password?token={token}"
+    html = render_email(
+        eyebrow="reset your password",
+        heading="Reset your password.",
+        body_html=(
+            "We got a request to reset the password for this MUT Tech Community account. "
+            "This link expires in 1 hour and can only be used once. "
+            "If you didn't request this, you can ignore this email."
+        ),
+        cta_label="Reset password",
+        cta_url=reset_url,
+    )
+    try:
+        email_service.send_email(to=user.email, subject="Reset your password — MUT Tech Community", html=html)
+    except Exception:
+        logger.warning("Failed to send password reset email to user %s", user.id, exc_info=True)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/hour")
+def forgot_password(request: Request, payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    # Always 204, whether or not the email matches an account — otherwise
+    # this endpoint becomes a free account-enumeration oracle.
+    user = auth_service.get_user_by_email(db, payload.email)
+    if user:
+        _send_password_reset_email(user)
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/hour")
+def reset_password(request: Request, payload: ResetPasswordRequest, db: Session = Depends(get_db)):
+    user_id = decode_password_reset_token_subject(payload.token)
+    user = db.get(User, user_id) if user_id else None
+    if not user or not verify_password_reset_token(payload.token, user.password_hash):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
 
 
 @router.post("/login", response_model=MeResponse)
@@ -249,7 +296,8 @@ def google_callback(
         else:
             user = auth_service.create_user(db, email, password=None, google_sub=google_sub)
 
-    redirect = RedirectResponse(f"{settings.web_origin}/onboarding")
+    destination = "/dashboard" if _is_onboarded(user) else "/onboarding"
+    redirect = RedirectResponse(f"{settings.web_origin}{destination}")
     _set_session_cookie(redirect, str(user.id))
     redirect.delete_cookie(OAUTH_STATE_COOKIE)
     return redirect
@@ -337,6 +385,13 @@ def github_revoke(user: User = Depends(get_current_user), db: Session = Depends(
     db.commit()
 
 
+def _is_onboarded(user: User) -> bool:
+    # Admins skip onboarding entirely, however their account was created —
+    # covers the bootstrap admin (granted by DB migration, never onboarded)
+    # as much as one made admin later from the members/roles UI.
+    return user.is_admin or bool(user.profile and user.profile.onboarded)
+
+
 def _to_me_response(user: User) -> MeResponse:
     return MeResponse(
         id=user.id,
@@ -344,4 +399,5 @@ def _to_me_response(user: User) -> MeResponse:
         email_verified=user.email_verified,
         is_admin=user.is_admin,
         membership_status=user.membership.status.value if user.membership else "none",
+        onboarded=_is_onboarded(user),
     )

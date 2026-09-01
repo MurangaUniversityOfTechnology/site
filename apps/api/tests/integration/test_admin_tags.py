@@ -161,6 +161,6 @@ def test_admins_list_and_search_include_tags(client, make_user, login_as):
     row = next(r for r in res.json() if r["user_id"] == str(admin.id))
     assert [t["name"] for t in row["tags"]] == ["Chairperson"]
 
-    res = client.get("/admin/users/search", params={"email": admin.email})
+    res = client.get("/admin/users/search", params={"query": admin.email})
     assert res.status_code == 200
-    assert [t["name"] for t in res.json()["tags"]] == ["Chairperson"]
+    assert [t["name"] for t in res.json()[0]["tags"]] == ["Chairperson"]

@@ -15,12 +15,15 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 
-def _send_welcome_email(user: User, temp_password: str) -> None:
+def _send_membership_email(user: User, temp_password: str | None) -> None:
+    """Always sent when an admin manually adds a member — regardless of
+    whether a brand-new account (with an auto-generated password) was
+    created, or an existing account was reactivated / given an admin-chosen
+    password (temp_password is None either way, since the admin either
+    already knows the password they set or the account already had one)."""
     sign_in_url = f"{settings.web_origin}/sign-in"
-    html = render_email(
-        eyebrow="your account",
-        heading="You're in — here's your login.",
-        body_html=(
+    if temp_password:
+        body_html = (
             "An admin added you to MUT Tech Community. Sign in with:"
             '<div style="margin-top:14px;padding:14px 16px;background:#faf8f3;border:1px solid #ddd6c4;'
             'border-radius:8px;font-size:14px;line-height:1.9;">'
@@ -28,14 +31,19 @@ def _send_welcome_email(user: User, temp_password: str) -> None:
             f'<strong>Password:</strong> <span style="font-family:\'Courier New\',monospace;">{temp_password}</span>'
             "</div>"
             '<p style="margin-top:14px;">This is a one-time password — change it from Settings once you\'re signed in.</p>'
-        ),
-        cta_label="Sign in",
-        cta_url=sign_in_url,
-    )
+        )
+        heading = "You're in — here's your login."
+    else:
+        body_html = (
+            f"An admin added <strong>{user.email}</strong> to MUT Tech Community. Sign in with your existing "
+            "password, or use \"Forgot password\" on the sign-in page if you don't remember it."
+        )
+        heading = "You're in."
+    html = render_email(eyebrow="your account", heading=heading, body_html=body_html, cta_label="Sign in", cta_url=sign_in_url)
     try:
-        email_service.send_email(to=user.email, subject="Your MUT Tech Community login", html=html)
+        email_service.send_email(to=user.email, subject="Your MUT Tech Community account", html=html)
     except Exception:
-        logger.warning("Failed to send welcome email to %s", user.email, exc_info=True)
+        logger.warning("Failed to send membership email to %s", user.email, exc_info=True)
 
 
 class MembershipError(Exception):
@@ -294,6 +302,5 @@ def admin_add_member(
         db.commit()
 
     db.refresh(user)
-    if temp_password:
-        _send_welcome_email(user, temp_password)
+    _send_membership_email(user, temp_password)
     return user, temp_password

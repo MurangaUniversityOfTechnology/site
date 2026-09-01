@@ -24,6 +24,7 @@ class MembershipApplication(BaseModel):
     payment_receipt: str | None
     payment_status: str | None
     membership_status: str
+    is_admin: bool
 
 
 class PaymentTotal(BaseModel):

@@ -58,6 +58,7 @@ describe("MobileNav", () => {
       email_verified: true,
       is_admin: false,
       membership_status: "active",
+      onboarded: true,
     });
     fireEvent.click(screen.getByRole("button", { name: /profile/i }));
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
@@ -69,7 +70,7 @@ describe("MobileNav", () => {
     const signOut = vi.fn();
     setup(
       "/dashboard",
-      { id: "1", email: "a@example.com", email_verified: true, is_admin: true, membership_status: "active" },
+      { id: "1", email: "a@example.com", email_verified: true, is_admin: true, membership_status: "active", onboarded: true },
       signOut,
     );
     fireEvent.click(screen.getByRole("button", { name: /profile/i }));
@@ -92,13 +93,13 @@ describe("MobileNav", () => {
   });
 
   test("Admin link only shows in the sheet for admins", () => {
-    setup("/", { id: "1", email: "a@example.com", email_verified: true, is_admin: false, membership_status: "active" });
+    setup("/", { id: "1", email: "a@example.com", email_verified: true, is_admin: false, membership_status: "active", onboarded: true });
     fireEvent.click(screen.getByRole("button", { name: /more/i }));
     expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
   });
 
   test("Admin link shows in the sheet when me.is_admin is true", () => {
-    setup("/", { id: "1", email: "a@example.com", email_verified: true, is_admin: true, membership_status: "active" });
+    setup("/", { id: "1", email: "a@example.com", email_verified: true, is_admin: true, membership_status: "active", onboarded: true });
     fireEvent.click(screen.getByRole("button", { name: /more/i }));
     expect(screen.getByRole("link", { name: /admin/i })).toHaveAttribute("href", "/admin");
   });

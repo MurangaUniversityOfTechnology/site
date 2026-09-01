@@ -28,6 +28,7 @@ def update_my_profile(
     profile = user.profile
     for field, value in payload.model_dump().items():
         setattr(profile, field, value)
+    profile.onboarded = True
     db.commit()
     db.refresh(profile)
     return profile

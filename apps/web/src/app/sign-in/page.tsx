@@ -20,9 +20,9 @@ export default function SignInPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await authApi.login(email, password);
+      const me = await authApi.login(email, password);
       await refresh();
-      router.push("/dashboard");
+      router.push(me.onboarded ? "/dashboard" : "/onboarding");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
     } finally {
@@ -77,7 +77,12 @@ export default function SignInPage() {
             />
           </label>
           <label className="flex flex-col gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Password</span>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Password</span>
+              <Link href="/forgot-password" className="text-[12.5px] text-muted hover:text-navy hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required

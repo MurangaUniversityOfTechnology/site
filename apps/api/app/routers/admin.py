@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -11,6 +12,7 @@ from app.models.event import Event
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
+from app.models.profile import Profile
 from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
 from app.models.tag import Tag
@@ -94,6 +96,7 @@ def list_memberships(status_filter: str = "active", db: Session = Depends(get_db
                 payment_receipt=payment.mpesa_receipt if payment else None,
                 payment_status=payment.status.value if payment else None,
                 membership_status=m.status.value,
+                is_admin=user.is_admin,
             )
         )
     return out
@@ -355,12 +358,36 @@ def list_admins(db: Session = Depends(get_db)):
     return [_to_admin_row(db, u) for u in admins]
 
 
-@router.get("/users/search", response_model=AdminRow | None)
-def search_user(email: str, db: Session = Depends(get_db)):
-    u = db.query(User).filter(User.email == email.lower()).first()
-    if not u:
-        return None
-    return _to_admin_row(db, u)
+SEARCH_RESULT_LIMIT = 10
+
+
+@router.get("/users/search", response_model=list[AdminRow])
+def search_users(query: str, db: Session = Depends(get_db)):
+    """Matches on full name, display name, email, or GitHub username —
+    whichever the admin typed. Any of these can be a partial, case-insensitive
+    match; results are capped since this is meant to feed a live dropdown,
+    not a full roster browse (that's what the members list is for)."""
+    q = query.strip()
+    if not q:
+        return []
+    like = f"%{q.lower()}%"
+    full_name = func.lower(func.concat_ws(" ", Profile.first_name, Profile.last_name))
+    users = (
+        db.query(User)
+        .outerjoin(Profile, Profile.user_id == User.id)
+        .filter(
+            or_(
+                func.lower(User.email).like(like),
+                func.lower(func.coalesce(User.github_login, "")).like(like),
+                func.lower(func.coalesce(Profile.display_name, "")).like(like),
+                full_name.like(like),
+            )
+        )
+        .order_by(User.email)
+        .limit(SEARCH_RESULT_LIMIT)
+        .all()
+    )
+    return [_to_admin_row(db, u) for u in users]
 
 
 @router.post("/users/{user_id}/make-admin", status_code=status.HTTP_204_NO_CONTENT)

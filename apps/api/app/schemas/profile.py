@@ -39,5 +39,6 @@ class ProfileResponse(BaseModel):
     github_url: str | None
     linkedin_url: str | None
     visibility: ProfileVisibility
+    onboarded: bool
 
     model_config = {"from_attributes": True}

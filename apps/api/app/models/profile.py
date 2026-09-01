@@ -2,7 +2,7 @@ import enum
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ARRAY, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import ARRAY, Boolean, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -53,5 +53,11 @@ class Profile(Base):
     goals: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
     experience_level: Mapped[ExperienceLevel | None] = mapped_column(Enum(ExperienceLevel), nullable=True)
     visibility: Mapped[ProfileVisibility] = mapped_column(Enum(ProfileVisibility), default=ProfileVisibility.public)
+    # Set once the member has been through the onboarding wizard (or edited
+    # their profile from Settings) — lets auth flows send a first-time signer
+    # to /onboarding without re-prompting an existing member on every login.
+    # Admins are treated as onboarded regardless (see MeResponse) — this
+    # column only matters for everyone else.
+    onboarded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     user: Mapped["User"] = relationship(back_populates="profile")
