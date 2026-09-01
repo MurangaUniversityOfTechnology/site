@@ -8,6 +8,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Passed as a build arg (not read from .env.local — .dockerignore excludes
+# .env* from the build context on purpose) since Next.js bakes NEXT_PUBLIC_*
+# vars in at build time, not read at container runtime.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 FROM node:24-slim AS runner

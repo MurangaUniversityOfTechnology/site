@@ -19,6 +19,12 @@ services:
   web:
     build:
       context: ../apps/web
+      args:
+        # Next.js bakes this in at build time, so it has to arrive as a build
+        # arg (see apps/web/Dockerfile) — env_file below only affects the
+        # running container, too late for the client bundle. deploy.sh sets
+        # this shell var from apps/web/.env.local before calling `build`.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
     env_file:
       - ../apps/web/.env.local
