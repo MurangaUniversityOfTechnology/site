@@ -11,6 +11,8 @@ class ContentError(Exception):
 
 
 def submit(db: Session, user: User, title: str, body: str, tags: list[str]) -> Content:
+    if not user.is_admin and not user.email_verified:
+        raise ContentError("Verify your email before publishing")
     if not user.is_admin and user.membership.status != MembershipStatus.active:
         raise ContentError("Active club membership is required to publish")
 

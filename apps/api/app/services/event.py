@@ -142,6 +142,8 @@ def register(
     if event.audience == EventAudience.members_only:
         if not user:
             raise EventError("Sign in with an active membership to register for this event")
+        if not user.is_admin and not user.email_verified:
+            raise EventError("Verify your email before registering for this event")
         if not user.is_admin and user.membership.status != MembershipStatus.active:
             raise EventError("Active club membership is required for this event")
 

@@ -33,6 +33,22 @@ def test_onboarding_saves_phone_number(client, make_user, login_as):
     assert res.json()["phone"] == "0712345678"
 
 
+def test_onboarding_requires_verified_email(client, make_user, login_as):
+    user = make_user(email_verified=False)
+    login_as(user)
+
+    res = client.patch("/profile/me", json=_onboarding_payload())
+    assert res.status_code == 403
+
+
+def test_onboarding_allowed_for_unverified_admin(client, make_user, login_as):
+    admin = make_user(is_admin=True, email_verified=False)
+    login_as(admin)
+
+    res = client.patch("/profile/me", json=_onboarding_payload())
+    assert res.status_code == 200
+
+
 def test_get_profile_returns_saved_phone(client, make_user, login_as):
     user = make_user()
     login_as(user)

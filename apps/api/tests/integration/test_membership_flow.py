@@ -12,6 +12,25 @@ from app.services import membership as membership_service
 pytestmark = pytest.mark.integration
 
 
+# ── POST /membership/activate (router-level — email verification gate) ──
+
+
+def test_activate_membership_requires_verified_email(client, make_user, login_as, mock_mpesa_success):
+    user = make_user(email_verified=False)
+    login_as(user)
+
+    res = client.post("/membership/activate", json={"phone": "0712345678"})
+    assert res.status_code == 403
+
+
+def test_activate_membership_succeeds_when_verified(client, make_user, login_as, mock_mpesa_success):
+    user = make_user(email_verified=True)
+    login_as(user)
+
+    res = client.post("/membership/activate", json={"phone": "0712345678"})
+    assert res.status_code == 201
+
+
 # ── start_activation ────────────────────────────────────────────────────
 
 

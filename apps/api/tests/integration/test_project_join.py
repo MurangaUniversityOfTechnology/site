@@ -48,6 +48,13 @@ def test_request_join_succeeds_for_admin_without_active_membership(db_session, m
     assert req.status.value == "pending"
 
 
+def test_request_join_requires_verified_email(db_session, make_user, make_project):
+    project = make_project()
+    user = make_user(membership_status=MembershipStatus.active, email_verified=False)
+    with pytest.raises(project_service.ProjectError):
+        project_service.request_join(db_session, project, user, ["Backend"], "Interested")
+
+
 def test_request_join_blocked_if_project_completed(db_session, make_user, make_project):
     project = make_project()
     admin = make_user(is_admin=True, email="admin@example.com")

@@ -259,7 +259,7 @@ def test_verify_email_token_cannot_be_a_session_token(client, make_user):
 
 
 def test_resend_verification_email(client, make_user, login_as, mock_email):
-    user = make_user()
+    user = make_user(email_verified=False)
     login_as(user)
 
     res = client.post("/auth/send-verification-email")
@@ -268,10 +268,8 @@ def test_resend_verification_email(client, make_user, login_as, mock_email):
     assert mock_email[0]["to"] == user.email
 
 
-def test_resend_verification_email_noops_if_already_verified(client, db_session, make_user, login_as, mock_email):
-    user = make_user()
-    user.email_verified = True
-    db_session.commit()
+def test_resend_verification_email_noops_if_already_verified(client, make_user, login_as, mock_email):
+    user = make_user(email_verified=True)
     login_as(user)
 
     res = client.post("/auth/send-verification-email")

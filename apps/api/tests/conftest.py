@@ -123,11 +123,16 @@ def client(db_session):
 @pytest.fixture
 def make_user(db_session):
     """make_user(email=None, password="pw12345678", is_admin=False,
-    membership_status=MembershipStatus.none) -> User. Wraps the real
-    auth_service.create_user() so Profile+Membership get created the same
-    way production code creates them, then optionally fast-forwards
-    membership status for tests that need an already-active/-expired member
-    without walking the full payment flow."""
+    membership_status=MembershipStatus.none, email_verified=True) -> User.
+    Wraps the real auth_service.create_user() so Profile+Membership get
+    created the same way production code creates them, then optionally
+    fast-forwards membership status for tests that need an already-active/
+    -expired member without walking the full payment flow.
+
+    email_verified defaults to True (unlike create_user() itself, which
+    defaults an email/password signup to False) — most tests using this
+    fixture aren't testing the verify-email gate and shouldn't have to think
+    about it; pass email_verified=False explicitly for tests that are."""
     from datetime import date, timedelta
 
     from app.models.membership import MembershipStatus
@@ -135,10 +140,18 @@ def make_user(db_session):
 
     counter = {"n": 0}
 
-    def _make(*, email=None, password="pw12345678", is_admin=False, membership_status=MembershipStatus.none):
+    def _make(
+        *,
+        email=None,
+        password="pw12345678",
+        is_admin=False,
+        membership_status=MembershipStatus.none,
+        email_verified=True,
+    ):
         counter["n"] += 1
         email = email or f"user{counter['n']}@example.com"
         user = create_user(db_session, email, password)
+        user.email_verified = email_verified
         if is_admin:
             user.is_admin = True
         if membership_status != MembershipStatus.none:

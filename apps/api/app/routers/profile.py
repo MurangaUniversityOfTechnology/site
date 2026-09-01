@@ -25,6 +25,13 @@ def update_my_profile(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Blocks onboarding specifically (this is the endpoint the wizard calls)
+    # for an account that hasn't proven its email is real yet — admins skip
+    # onboarding entirely already (see auth.py's _is_onboarded) so they're
+    # exempt here too, for the same reason.
+    if not user.is_admin and not user.email_verified:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Verify your email before completing your profile")
+
     profile = user.profile
     for field, value in payload.model_dump().items():
         setattr(profile, field, value)

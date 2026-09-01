@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { profileApi, type ExperienceLevel, type ProfileVisibility } from "@/lib/api";
+import { ApiError, authApi, profileApi, type ExperienceLevel, type ProfileVisibility } from "@/lib/api";
 import { experienceLevels, goalOptions, interestOptions, mutCourses, yearsOfStudy } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 
@@ -59,6 +59,8 @@ export default function OnboardingPage() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -75,6 +77,10 @@ export default function OnboardingPage() {
 
   const step1Valid = form.firstName.trim() && form.lastName.trim() && form.preferredName.trim();
   const isLastStep = step === STEPS.length;
+  // Mirrors the backend's own check (PATCH /profile/me 403s for the same
+  // reason) — checked here too so an unverified account never even sees the
+  // wizard, instead of filling in five steps and failing on submit.
+  const needsVerification = !me.is_admin && !me.email_verified;
 
   async function finish() {
     setSubmitting(true);
@@ -97,8 +103,8 @@ export default function OnboardingPage() {
         visibility: form.visibility,
       });
       router.push("/welcome");
-    } catch {
-      setError("Couldn't save your profile — try again.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't save your profile — try again.");
       setSubmitting(false);
     }
   }
@@ -109,6 +115,45 @@ export default function OnboardingPage() {
     } else {
       setStep((s) => s + 1);
     }
+  }
+
+  async function resendVerification() {
+    setSendingVerification(true);
+    try {
+      await authApi.sendVerificationEmail();
+      setVerificationSent(true);
+    } finally {
+      setSendingVerification(false);
+    }
+  }
+
+  if (needsVerification) {
+    return (
+      <main className="flex min-h-[calc(100vh-64px)] flex-col items-center justify-center px-5 py-14 text-center">
+        <div className="max-w-100">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-warn">verify your email</div>
+          <h1 className="mt-3.5 text-[clamp(28px,4vw,40px)] leading-[1.05] tracking-[-0.035em]">
+            Almost there — confirm your email.
+          </h1>
+          <p className="mt-4 text-[15.5px] leading-[1.55] text-[#7a7060]">
+            We sent a link to <span className="text-foreground">{me.email}</span> when you signed up. Click it to
+            unlock onboarding — we&apos;ve had a few members sign up with mistyped or fake addresses, so this step
+            makes sure we can actually reach you.
+          </p>
+          {verificationSent ? (
+            <p className="mt-6 font-mono text-[12px] text-navy">sent — check your inbox</p>
+          ) : (
+            <button
+              onClick={resendVerification}
+              disabled={sendingVerification}
+              className="mt-6 rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
+            >
+              {sendingVerification ? "Sending…" : "Resend verification email"}
+            </button>
+          )}
+        </div>
+      </main>
+    );
   }
 
   return (

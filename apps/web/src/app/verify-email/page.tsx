@@ -27,10 +27,10 @@ export default async function VerifyEmailPage({
             : "That verification link is invalid or has expired — request a fresh one from your dashboard."}
         </p>
         <Link
-          href="/dashboard"
+          href="/onboarding"
           className="mt-6 inline-block rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-navy hover:opacity-90"
         >
-          Go to dashboard
+          Continue
         </Link>
       </div>
     </main>

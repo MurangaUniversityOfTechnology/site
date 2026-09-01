@@ -32,6 +32,13 @@ def activate_membership(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Self-service only — an admin activating membership on someone's behalf
+    # (services/membership.py's admin_add_member, activation="stk_push")
+    # vouches for them directly and goes through start_activation() without
+    # this check, since that user hasn't necessarily verified anything yet.
+    if not user.is_admin and not user.email_verified:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Verify your email before activating your membership")
+
     try:
         payment = membership_service.start_activation(db, user, payload.phone)
     except membership_service.MembershipError as exc:

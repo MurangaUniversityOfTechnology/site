@@ -25,6 +25,12 @@ def test_submit_succeeds_for_admin_without_active_membership(db_session, make_us
     assert content.status == ContentStatus.pending_review
 
 
+def test_submit_requires_verified_email(db_session, make_user):
+    user = make_user(membership_status=MembershipStatus.active, email_verified=False)
+    with pytest.raises(content_service.ContentError):
+        content_service.submit(db_session, user, "Title", "Body", [])
+
+
 def test_publish_from_pending_review(db_session, make_user):
     admin = make_user(is_admin=True, email="admin@example.com")
     author = make_user(membership_status=MembershipStatus.active, email="author@example.com")
