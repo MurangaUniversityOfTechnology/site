@@ -7,9 +7,12 @@ import { useMe } from "@/lib/useMe";
 import SignaturePanel from "@/components/SignaturePanel";
 import ProfilePanel from "@/components/ProfilePanel";
 
+type Category = "account" | "profile" | "signature";
+
 export default function SettingsPage() {
   const router = useRouter();
   const { me, loading } = useMe();
+  const [category, setCategory] = useState<Category>("account");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,64 +48,94 @@ export default function SettingsPage() {
     }
   }
 
+  const categories: { id: Category; label: string }[] = [
+    { id: "account", label: "Account" },
+    { id: "profile", label: "Profile" },
+    { id: "signature", label: "Signature" },
+  ];
+
   return (
     <main className="px-5 py-10 sm:px-8 sm:py-14">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">settings</div>
-      <h1 className="mt-3.5 text-[clamp(28px,4vw,42px)] leading-none tracking-[-0.04em]">Account</h1>
+      <h1 className="mt-3.5 text-[clamp(28px,4vw,42px)] leading-none tracking-[-0.04em]">Settings</h1>
+      <p className="mt-2.5 max-w-120 text-[14px] leading-[1.55] text-muted">
+        Password, profile details, and your signature.
+      </p>
 
-      <div className="mt-8 max-w-105 rounded-xl border border-border bg-surface p-6">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">change password</div>
-        <p className="mt-2.5 text-[14px] leading-[1.55] text-muted">
-          Signed in as <span className="text-foreground">{me.email}</span>. If you were given a one-time password by
-          an admin, set your own here.
-        </p>
+      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-[200px_1fr] md:gap-8">
+        <nav className="flex gap-1.5 overflow-x-auto pb-1 md:flex-col md:gap-0.5 md:overflow-visible md:pb-0">
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setCategory(c.id)}
+              className={`whitespace-nowrap rounded-md px-3 py-2.5 text-left text-sm ${
+                category === c.id ? "bg-navy/8 font-medium text-navy" : "text-muted hover:bg-surface-raised hover:text-foreground"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </nav>
 
-        <form onSubmit={submit} className="mt-5.5 flex flex-col gap-4">
-          <Field label="Current password (leave blank if you don't have one yet)">
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
-            />
-          </Field>
-          <Field label="New password">
-            <input
-              required
-              type="password"
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
-            />
-          </Field>
-          <Field label="Confirm new password">
-            <input
-              required
-              type="password"
-              minLength={8}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
-            />
-          </Field>
+        <div className="min-w-0">
+          {category === "account" && (
+            <div className="max-w-105 rounded-xl border border-border bg-surface p-6">
+              <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">change password</div>
+              <p className="mt-2.5 text-[14px] leading-[1.55] text-muted">
+                Signed in as <span className="text-foreground">{me.email}</span>. If you were given a one-time
+                password by an admin, set your own here.
+              </p>
 
-          {error && <p className="text-sm text-danger">{error}</p>}
-          {success && <p className="text-sm text-navy">Password updated ✓</p>}
+              <form onSubmit={submit} className="mt-5.5 flex flex-col gap-4">
+                <Field label="Current password (leave blank if you don't have one yet)">
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+                  />
+                </Field>
+                <Field label="New password">
+                  <input
+                    required
+                    type="password"
+                    minLength={8}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+                  />
+                </Field>
+                <Field label="Confirm new password">
+                  <input
+                    required
+                    type="password"
+                    minLength={8}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+                  />
+                </Field>
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-1 w-fit rounded-lg bg-accent px-6 py-3 text-[14.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? "Saving…" : "Update password"}
-          </button>
-        </form>
+                {error && <p className="text-sm text-danger">{error}</p>}
+                {success && <p className="text-sm text-navy">Password updated ✓</p>}
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="mt-1 w-fit rounded-lg bg-accent px-6 py-3 text-[14.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
+                >
+                  {busy ? "Saving…" : "Update password"}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {category === "profile" && <ProfilePanel />}
+
+          {category === "signature" && <SignaturePanel />}
+        </div>
       </div>
-
-      <ProfilePanel />
-
-      <SignaturePanel />
     </main>
   );
 }

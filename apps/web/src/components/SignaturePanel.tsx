@@ -107,7 +107,7 @@ export default function SignaturePanel() {
   }
 
   return (
-    <div className="mt-8 max-w-130 rounded-xl border border-border bg-surface p-6">
+    <div className="max-w-130 rounded-xl border border-border bg-surface p-6">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">digital signature</div>
       <p className="mt-2.5 text-[14px] leading-[1.55] text-muted">
         Draw your signature with a mouse, finger, or stylus. It&apos;s encrypted and stored so it can be reused on

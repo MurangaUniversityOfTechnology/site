@@ -97,7 +97,7 @@ export default function ProfilePanel() {
   ];
 
   return (
-    <div className="mt-8 max-w-140 rounded-xl border border-border bg-surface p-6">
+    <div className="max-w-140 rounded-xl border border-border bg-surface p-6">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">profile</div>
       <p className="mt-2.5 text-[14px] leading-[1.55] text-muted">
         This is how the community sees you — update it any time.
