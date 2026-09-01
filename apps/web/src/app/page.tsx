@@ -133,15 +133,16 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Last semester, in numbers — real data from the club's official activity report */}
+      {/* Last semester, in numbers — see semesterSummary in lib/data.ts for what's
+          covered by the official report vs. board-level activity alongside it */}
       <section className="px-5 py-16 sm:px-10 sm:py-20">
         <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">{semesterSummary.period}</div>
         <h2 className="m-0 text-[clamp(28px,4.4vw,44px)] leading-[1.05] tracking-[-0.03em] text-navy">
           Last semester, in numbers.
         </h2>
         <p className="mt-3 max-w-[560px] text-[15.5px] leading-[1.55] text-muted">
-          Two events, real industry access, real turnout — pulled straight from our official activity report to the
-          Dean of Students.
+          Real industry access, real turnout — including events, guest speakers, and partnerships the board ran
+          alongside our official activity report to the Dean of Students.
         </p>
 
         <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-border bg-border sm:grid-cols-4">
@@ -149,7 +150,7 @@ export default async function Home() {
             { value: semesterSummary.eventsHeld, label: "events held" },
             { value: semesterSummary.totalAttendance, label: "total attendance" },
             { value: semesterSummary.guestSpeakers, label: "guest speakers" },
-            { value: semesterSummary.partnerOrgs.length, label: "partner orgs" },
+            { value: semesterSummary.partnerOrgCount, label: "partner orgs" },
           ].map((s) => (
             <div key={s.label} className="bg-surface px-4.5 py-5">
               <div className="font-mono text-[clamp(22px,3vw,30px)] font-bold tracking-[-0.02em] text-navy">

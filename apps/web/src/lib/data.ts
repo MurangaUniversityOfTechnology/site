@@ -101,13 +101,20 @@ export const pastEvents: PastEvent[] = [
   },
 ];
 
+// eventsHeld/guestSpeakers/partnerOrgCount run higher than the two events
+// detailed in pastEvents above and the 2 named orgs in partnerOrgs below —
+// per the Chairperson, the official Dean-of-Students report (ref.
+// MTC/2026/7406) only covers formally submitted events, not board-level
+// ones run alongside it. totalAttendance stays scoped to the two events we
+// have real per-event numbers for, not the wider board-level total.
 export const semesterSummary = {
   period: "Semester 2 2026",
-  eventsHeld: 2,
+  eventsHeld: "10+",
   totalAttendance: 212,
-  guestSpeakers: 8,
-  // "Companies & Sponsors Present" per the official report — Prime Bank was
-  // one guest speaker's employer, not a listed sponsor, so it's excluded here.
+  guestSpeakers: "15+",
+  partnerOrgCount: "5+",
+  // Named partners we have confirmed — the real count above (partnerOrgCount)
+  // includes board-level partnerships not yet individually listed here.
   partnerOrgs: ["OKX", "Microsoft"],
   // Broader than partnerOrgs: every org a speaker came from, for the "trusted by" strip.
   speakerOrgs: ["OKX", "Microsoft", "Prime Bank"],
@@ -325,7 +332,7 @@ export const membershipPerks = [
 ];
 
 export const stats = [
-  { value: "37", label: "builders" },
+  { value: "200+", label: "builders" },
   { value: "6", label: "active projects" },
   { value: "8", label: "upcoming events" },
   { value: "24", label: "challenges done" },
@@ -355,9 +362,9 @@ export const liveTicker = [
 export type TeamMember = { name: string; role: string; meta: string; image?: string };
 
 export const leadership: TeamMember[] = [
-  { name: "John Kagunda", role: "Chairperson", meta: "Reg. No. SC212/3223/2023", image: "/images/JKagunda.png" },
   { name: "Dr. John Ndia", role: "Club Patron", meta: "Dean, School of Computing & IT", image: "/images/J.Ndia.webp" },
   { name: "Dr. Jane Njuki", role: "Head of Innovations", meta: "SCIT", image: "/images/JNjuki.webp" },
+  { name: "John Kagunda", role: "Chairperson", meta: "Reg. No. SC212/3223/2023", image: "/images/JKagunda.png" },
 ];
 
 export const joinSteps = [
