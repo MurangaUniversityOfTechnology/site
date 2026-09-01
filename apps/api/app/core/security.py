@@ -29,19 +29,37 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
-def create_session_token(user_id: str) -> str:
+def create_session_token(user_id: str, session_version: int) -> str:
     payload = {
         "sub": user_id,
+        # A distinct "purpose" claim (see create_email_verification_token's
+        # comment below) — without it, a verification or password-reset
+        # link (which also just carries a signed "sub") could be replayed
+        # as a working session cookie for that account.
+        "purpose": "session",
+        # Bumped on every password change/reset — lets change_password() and
+        # reset_password() invalidate every *other* outstanding session for
+        # the account without a server-side token blocklist.
+        "sver": session_version,
         "exp": datetime.now(UTC) + SESSION_TTL,
         "iat": datetime.now(UTC),
     }
     return jwt.encode(payload, settings.secret_key, algorithm="HS256")
 
 
-def decode_session_token(token: str) -> str | None:
+def decode_session_token(token: str) -> tuple[str, int] | None:
+    """Returns (user_id, session_version) — the caller (get_current_user)
+    still has to compare session_version against the user's current one;
+    this only proves the token itself is a well-formed, unexpired session
+    token, not that it's still the account's live one."""
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-        return payload.get("sub")
+        if payload.get("purpose") != "session":
+            return None
+        sub = payload.get("sub")
+        if not sub:
+            return None
+        return sub, payload.get("sver", 0)
     except jwt.PyJWTError:
         return None
 

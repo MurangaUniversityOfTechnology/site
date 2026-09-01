@@ -54,8 +54,8 @@ GITHUB_USER_URL = "https://api.github.com/user"
 OAUTH_STATE_COOKIE = "oauth_state"
 
 
-def _set_session_cookie(response: Response, user_id: str) -> None:
-    token = create_session_token(str(user_id))
+def _set_session_cookie(response: Response, user: User) -> None:
+    token = create_session_token(str(user.id), user.session_version)
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
@@ -93,7 +93,7 @@ def signup(request: Request, payload: SignupRequest, response: Response, db: Ses
 
     user = auth_service.create_user(db, payload.email, payload.password)
     _send_verification_email(user)
-    _set_session_cookie(response, str(user.id))
+    _set_session_cookie(response, user)
     return _to_me_response(user)
 
 
@@ -158,7 +158,13 @@ def reset_password(request: Request, payload: ResetPasswordRequest, db: Session 
     if not user or not verify_password_reset_token(payload.token, user.password_hash):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "This reset link is invalid or has expired")
 
+    # Bumping session_version invalidates every outstanding session cookie
+    # for this account (including whatever the attacker was using, if the
+    # reset was prompted by a compromise) — see security.py's "sver" claim.
+    # No cookie to reissue here since reset-password isn't authenticated;
+    # the caller signs in fresh from /sign-in afterward.
     user.password_hash = hash_password(payload.new_password)
+    user.session_version += 1
     db.commit()
 
 
@@ -169,7 +175,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
     if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
 
-    _set_session_cookie(response, str(user.id))
+    _set_session_cookie(response, user)
     return _to_me_response(user)
 
 
@@ -179,7 +185,12 @@ def logout(response: Response):
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
-def change_password(payload: ChangePasswordRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def change_password(
+    payload: ChangePasswordRequest,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     # A password-less account (signed up via Google only) has nothing to
     # verify against — anyone else does, including a temp password from an
     # admin-created account.
@@ -189,7 +200,13 @@ def change_password(payload: ChangePasswordRequest, user: User = Depends(get_cur
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
 
     user.password_hash = hash_password(payload.new_password)
+    # Same session-invalidation as reset-password, but this path *is*
+    # authenticated — reissue the caller's own cookie with the bumped
+    # version so they aren't logged out of the request they just made,
+    # while every other outstanding session for the account still dies.
+    user.session_version += 1
     db.commit()
+    _set_session_cookie(response, user)
 
 
 DEV_ADMIN_EMAIL = "dev-admin@mut-tech.local"
@@ -221,7 +238,7 @@ def dev_login(response: Response, db: Session = Depends(get_db)):
         user.membership.period_end = date.today() + timedelta(days=365)  # noqa: DTZ011
     db.commit()
 
-    _set_session_cookie(response, str(user.id))
+    _set_session_cookie(response, user)
     return _to_me_response(user)
 
 
@@ -298,7 +315,7 @@ def google_callback(
 
     destination = "/dashboard" if _is_onboarded(user) else "/onboarding"
     redirect = RedirectResponse(f"{settings.web_origin}{destination}")
-    _set_session_cookie(redirect, str(user.id))
+    _set_session_cookie(redirect, user)
     redirect.delete_cookie(OAUTH_STATE_COOKIE)
     return redirect
 

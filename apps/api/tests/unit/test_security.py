@@ -44,8 +44,13 @@ def test_verify_password_returns_false_not_exception_for_over_72_bytes():
 
 
 def test_session_token_round_trip():
-    token = create_session_token("user-123")
-    assert decode_session_token(token) == "user-123"
+    token = create_session_token("user-123", 0)
+    assert decode_session_token(token) == ("user-123", 0)
+
+
+def test_session_token_round_trip_carries_session_version():
+    token = create_session_token("user-123", 7)
+    assert decode_session_token(token) == ("user-123", 7)
 
 
 def test_decode_session_token_rejects_garbage():
@@ -54,7 +59,7 @@ def test_decode_session_token_rejects_garbage():
 
 def test_decode_session_token_rejects_wrong_secret():
     token = jwt.encode(
-        {"sub": "user-123", "exp": datetime.now(UTC) + timedelta(days=1)},
+        {"sub": "user-123", "purpose": "session", "exp": datetime.now(UTC) + timedelta(days=1)},
         "a-different-secret-that-is-long-enough-to-avoid-hmac-warnings",
         algorithm="HS256",
     )
@@ -63,7 +68,18 @@ def test_decode_session_token_rejects_wrong_secret():
 
 def test_decode_session_token_rejects_expired():
     token = jwt.encode(
-        {"sub": "user-123", "exp": datetime.now(UTC) - timedelta(minutes=1)},
+        {"sub": "user-123", "purpose": "session", "exp": datetime.now(UTC) - timedelta(minutes=1)},
+        settings.secret_key,
+        algorithm="HS256",
+    )
+    assert decode_session_token(token) is None
+
+
+def test_decode_session_token_rejects_wrong_purpose():
+    # Proves an email-verification or password-reset token (same signing key
+    # and shape otherwise) can't be replayed as a session cookie.
+    token = jwt.encode(
+        {"sub": "user-123", "purpose": "verify_email", "exp": datetime.now(UTC) + timedelta(days=1)},
         settings.secret_key,
         algorithm="HS256",
     )

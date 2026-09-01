@@ -1,9 +1,11 @@
+import logging
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
@@ -43,13 +45,17 @@ from app.schemas.project import AddProjectRequest, AdminJoinRequestRow, AdminPro
 from app.schemas.tag import AssignTagRequest, CreateTagRequest, RenameTagRequest, TagRow
 from app.services import audit
 from app.services import content as content_service
+from app.services import email as email_service
 from app.services import event as event_service
 from app.services import github as github_service
 from app.services import membership as membership_service
 from app.services import project as project_service
 from app.services import tags as tag_service
+from app.services.email_templates import render_email
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
+settings = get_settings()
+logger = logging.getLogger(__name__)
 
 STATUS_FILTERS = {
     "active": [MembershipStatus.active],
@@ -390,6 +396,27 @@ def search_users(query: str, db: Session = Depends(get_db)):
     return [_to_admin_row(db, u) for u in users]
 
 
+def _send_admin_granted_email(user: User) -> None:
+    # Promotion is a single click with no confirmation from the target's
+    # side — this is the only way the newly-admin'd member finds out, short
+    # of noticing new links in the nav, so a mistaken or unauthorized grant
+    # doesn't go unnoticed by the one person best placed to flag it.
+    html = render_email(
+        eyebrow="account update",
+        heading="You've been made an admin.",
+        body_html=(
+            "Another admin just granted your MUT Tech Community account admin access. "
+            "If that doesn't sound right, let a fellow admin know."
+        ),
+        cta_label="Open admin panel",
+        cta_url=f"{settings.web_origin}/admin",
+    )
+    try:
+        email_service.send_email(to=user.email, subject="You've been made an admin — MUT Tech Community", html=html)
+    except Exception:
+        logger.warning("Failed to send admin-granted email to %s", user.email, exc_info=True)
+
+
 @router.post("/users/{user_id}/make-admin", status_code=status.HTTP_204_NO_CONTENT)
 def make_admin(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     target = db.get(User, user_id)
@@ -398,6 +425,7 @@ def make_admin(user_id: str, admin: User = Depends(require_admin), db: Session =
     target.is_admin = True
     audit.log(db, admin, "settings", f"Granted admin access to {target.email}")
     db.commit()
+    _send_admin_granted_email(target)
 
 
 @router.post("/users/{user_id}/remove-admin", status_code=status.HTTP_204_NO_CONTENT)

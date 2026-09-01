@@ -80,6 +80,31 @@ def test_change_password_succeeds_and_new_password_works(client, db_session, mak
     assert login_res.status_code == 200
 
 
+def test_change_password_invalidates_other_sessions_but_not_this_one(client, make_user, login_as):
+    # A second, independent client holding an older cookie for the same
+    # account — stands in for e.g. a stolen session the password change is
+    # meant to kick out.
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    user = make_user(email="member@example.com", password="pw12345678")
+    login_as(user)
+    other_client = TestClient(app)
+    other_client.cookies.set("session", client.cookies["session"])
+    assert other_client.get("/auth/me").status_code == 200
+
+    res = client.post(
+        "/auth/change-password", json={"current_password": "pw12345678", "new_password": "brandnewpassword1"}
+    )
+    assert res.status_code == 204
+
+    # The client that made the change keeps working (its cookie was reissued)...
+    assert client.get("/auth/me").status_code == 200
+    # ...but the other one, still holding the pre-change cookie, is logged out.
+    assert other_client.get("/auth/me").status_code == 401
+
+
 def test_change_password_on_google_only_account_needs_no_current_password(client, db_session):
     # A Google-only account has no password_hash, so it can't sign in through
     # /auth/login — set the session cookie directly, the same way the real
@@ -88,7 +113,7 @@ def test_change_password_on_google_only_account_needs_no_current_password(client
     from app.services.auth import create_user
 
     user = create_user(db_session, "googleuser@example.com", password=None, google_sub="google-sub-123")
-    client.cookies.set(SESSION_COOKIE_NAME, create_session_token(str(user.id)))
+    client.cookies.set(SESSION_COOKIE_NAME, create_session_token(str(user.id), user.session_version))
 
     res = client.post("/auth/change-password", json={"new_password": "brandnewpassword1"})
     assert res.status_code == 204
@@ -227,7 +252,7 @@ def test_verify_email_token_cannot_be_a_session_token(client, make_user):
     from app.core.security import create_session_token
 
     user = make_user()
-    session_token = create_session_token(str(user.id))
+    session_token = create_session_token(str(user.id), user.session_version)
 
     res = client.get(f"/auth/verify-email?token={session_token}", follow_redirects=False)
     assert res.headers["location"] == "http://testserver/verify-email?status=invalid"

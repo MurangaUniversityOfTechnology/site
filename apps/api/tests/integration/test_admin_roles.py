@@ -48,6 +48,18 @@ def test_make_admin(client, db_session, make_user, login_as):
     assert db_session.query(AuditLog).filter(AuditLog.actor_id == admin.id).count() == 1
 
 
+def test_make_admin_emails_the_promoted_member(client, make_user, login_as, mock_email):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    target = make_user(email="target@example.com")
+    login_as(admin)
+
+    res = client.post(f"/admin/users/{target.id}/make-admin")
+    assert res.status_code == 204
+    assert len(mock_email) == 1
+    assert mock_email[0]["to"] == "target@example.com"
+    assert "admin" in mock_email[0]["subject"].lower()
+
+
 def test_remove_admin_succeeds_when_another_admin_remains(client, db_session, make_user, login_as):
     admin = make_user(is_admin=True, email="admin1@example.com", membership_status=MembershipStatus.active)
     other_admin = make_user(is_admin=True, email="admin2@example.com")

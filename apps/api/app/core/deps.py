@@ -13,13 +13,18 @@ def get_current_user(
     if not session:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
 
-    user_id = decode_session_token(session)
-    if not user_id:
+    decoded = decode_session_token(session)
+    if not decoded:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session")
+    user_id, session_version = decoded
 
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+    if user.session_version != session_version:
+        # A password change/reset since this cookie was issued — see
+        # create_session_token()'s "sver" claim.
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired session")
     return user
 
 
@@ -35,7 +40,11 @@ def get_current_user_optional(
 ) -> User | None:
     if not session:
         return None
-    user_id = decode_session_token(session)
-    if not user_id:
+    decoded = decode_session_token(session)
+    if not decoded:
         return None
-    return db.get(User, user_id)
+    user_id, session_version = decoded
+    user = db.get(User, user_id)
+    if not user or user.session_version != session_version:
+        return None
+    return user

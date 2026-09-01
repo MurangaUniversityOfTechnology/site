@@ -70,13 +70,18 @@ export default function AdminRolesPage() {
 
   async function toggle() {
     if (!found) return;
-    if (found.is_admin) {
-      const ok = await confirm({
-        title: "Remove admin access?",
-        message: `${found.name} will lose access to the admin panel. They'll keep their membership.`,
-      });
-      if (!ok) return;
-    }
+    const ok = await confirm(
+      found.is_admin
+        ? {
+            title: "Remove admin access?",
+            message: `${found.name} will lose access to the admin panel. They'll keep their membership.`,
+          }
+        : {
+            title: "Make admin?",
+            message: `${found.name} will get full access to the admin panel — members, payments, content, everything. They'll get an email letting them know.`,
+          },
+    );
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {
