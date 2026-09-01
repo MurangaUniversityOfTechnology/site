@@ -156,6 +156,8 @@ export type MembershipApplication = {
   payment_status: string | null;
   membership_status: string;
   is_admin: boolean;
+  goals: string[];
+  experience_level: ExperienceLevel | null;
 };
 
 export type PaymentTotal = { label: string; amount_kes: number; count: number };

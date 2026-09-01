@@ -4,6 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.models.profile import ExperienceLevel
 from app.schemas.tag import TagRow
 
 
@@ -25,6 +26,8 @@ class MembershipApplication(BaseModel):
     payment_status: str | None
     membership_status: str
     is_admin: bool
+    goals: list[str]
+    experience_level: ExperienceLevel | None
 
 
 class PaymentTotal(BaseModel):

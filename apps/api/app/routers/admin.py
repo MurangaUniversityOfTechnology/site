@@ -103,6 +103,8 @@ def list_memberships(status_filter: str = "active", db: Session = Depends(get_db
                 payment_status=payment.status.value if payment else None,
                 membership_status=m.status.value,
                 is_admin=user.is_admin,
+                goals=profile.goals if profile else [],
+                experience_level=profile.experience_level if profile else None,
             )
         )
     return out
