@@ -24,7 +24,11 @@ fi
 
 COMPOSE="docker compose -p mut-tech -f infra/docker-compose.yml -f infra/docker-compose.prod.yml"
 
-$COMPOSE build
+# --no-cache: Compose's build cache doesn't reliably invalidate on a changed
+# --build-arg value (seen firsthand — it reused a layer built before
+# NEXT_PUBLIC_API_URL was wired up, silently baking in an empty value).
+# Deploys aren't frequent enough for the slower rebuild to matter.
+$COMPOSE build --no-cache
 $COMPOSE run --rm api alembic upgrade head
 $COMPOSE up -d
 docker image prune -f
