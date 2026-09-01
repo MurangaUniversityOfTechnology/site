@@ -1,0 +1,21 @@
+# Production-only override: puts Caddy in front of web/api as the sole
+# public entry point (auto-provisions and renews Let's Encrypt certs).
+# Used by infra/deploy.sh; not used for local dev.
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:

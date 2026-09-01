@@ -1,0 +1,11 @@
+mutlabs.tech {
+	reverse_proxy web:3000
+}
+
+www.mutlabs.tech {
+	redir https://mutlabs.tech{uri} permanent
+}
+
+api.mutlabs.tech {
+	reverse_proxy api:8000
+}

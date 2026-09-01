@@ -1,40 +1,17 @@
 services:
-  db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mut}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mut}
-      POSTGRES_DB: ${POSTGRES_DB:-mut}
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    ports:
-      # Bound to loopback only — the native-dev workflow in the README still
-      # needs localhost:5432 from the host, but this must never reach the
-      # public interface (this compose file also backs the VPS deploy).
-      - "127.0.0.1:5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mut}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   api:
     build:
       context: ../apps/api
     restart: unless-stopped
     env_file:
       - ../apps/api/.env
-    environment:
-      # overrides whatever DATABASE_URL is set to in .env (which is meant for
-      # running the API natively against the db container's published port) —
-      # inside the compose network the db must be reached by service name.
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mut}:${POSTGRES_PASSWORD:-mut}@db:5432/${POSTGRES_DB:-mut}
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "8000:8000"
+    extra_hosts:
+      # lets the container reach Postgres running on the host itself —
+      # used in production, where Postgres is not one of these services.
+      - "host.docker.internal:host-gateway"
+    # No published host port here — reached over the internal Docker network
+    # by name (api:8000). docker-compose.local.yml publishes it for direct
+    # local access; docker-compose.prod.yml puts Caddy in front instead.
 
   web:
     build:
@@ -44,8 +21,14 @@ services:
       - ../apps/web/.env.local
     depends_on:
       - api
-    ports:
-      - "3000:3000"
+    # Same as api above — no published port in the base file.
 
-volumes:
-  db_data:
+networks:
+  default:
+    # Pinned (rather than Docker's default dynamic subnet) so the host's
+    # Postgres can allow-list this exact range in pg_hba.conf / bind to
+    # this exact gateway IP in listen_addresses instead of a broad guess.
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
