@@ -5,6 +5,7 @@ import { eventApi } from "@/lib/api";
 import { formatEventDay, formatEventMeta } from "@/lib/eventFormat";
 import {
   challenges,
+  communityMilestones,
   faqs,
   galleryPhotos,
   joinSteps,
@@ -112,6 +113,25 @@ export default async function Home() {
           ))}
         </div>
       </div>
+
+      {/* Cumulative, multi-year totals — distinct from (and above) the single-semester
+          report block below, which stays scoped to what that report actually covers. */}
+      <section className="border-b border-border bg-navy px-5 py-16 text-center sm:px-10 sm:py-20">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-accent">two years running</div>
+        <h2 className="mt-2.5 text-[clamp(28px,4.4vw,44px)] leading-[1.05] tracking-[-0.03em] text-white">
+          Not a one-semester thing.
+        </h2>
+        <div className="mx-auto mt-8 grid max-w-[720px] grid-cols-2 gap-px overflow-hidden rounded-[10px] border border-white/10 bg-white/10 sm:grid-cols-4">
+          {communityMilestones.map((m) => (
+            <div key={m.label} className="bg-navy-2 px-4.5 py-6">
+              <div className="font-mono text-[clamp(24px,3.4vw,34px)] font-bold tracking-[-0.02em] text-accent">
+                {m.value}
+              </div>
+              <div className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-white/60">{m.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Last semester, in numbers — real data from the club's official activity report */}
       <section className="px-5 py-16 sm:px-10 sm:py-20">

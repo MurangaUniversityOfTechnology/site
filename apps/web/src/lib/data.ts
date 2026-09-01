@@ -331,6 +331,17 @@ export const stats = [
   { value: "24", label: "challenges done" },
 ];
 
+// Cumulative totals across the club's history, not just the semester covered
+// by communityMilestones. Keep in sync with the Chairperson's own count —
+// update the figures here, not the semesterSummary block below, which stays
+// scoped to the official per-semester report it's sourced from.
+export const communityMilestones = [
+  { value: "200+", label: "builders" },
+  { value: "20+", label: "events held" },
+  { value: "10+", label: "guest speakers" },
+  { value: "10+", label: "partner organizations" },
+];
+
 export const liveTicker = [
   { text: "Amina started Community Management Tools", color: "green" },
   { text: "Brian completed Challenge #14", color: "green" },
