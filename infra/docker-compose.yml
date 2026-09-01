@@ -6,9 +6,12 @@ services:
     env_file:
       - ../apps/api/.env
     extra_hosts:
-      # lets the container reach Postgres running on the host itself —
-      # used in production, where Postgres is not one of these services.
-      - "host.docker.internal:host-gateway"
+      # lets the container reach Postgres running on the host itself — used
+      # in production, where Postgres is not one of these services. Hardcoded
+      # to the pinned gateway below rather than the "host-gateway" magic
+      # value, which resolves to the default docker0 bridge (172.17.0.1),
+      # not this custom network's gateway.
+      - "host.docker.internal:172.28.0.1"
     # No published host port here — reached over the internal Docker network
     # by name (api:8000). docker-compose.local.yml publishes it for direct
     # local access; docker-compose.prod.yml puts Caddy in front instead.
