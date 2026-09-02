@@ -376,6 +376,10 @@ def github_callback(
         user_res.raise_for_status()
         info = user_res.json()
 
+    existing = auth_service.get_user_by_github_id(db, info["id"])
+    if existing and existing.id != user.id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This GitHub account is already linked to another user")
+
     user.github_id = info["id"]
     user.github_login = info["login"]
     db.commit()

@@ -29,3 +29,7 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 
 def get_user_by_google_sub(db: Session, google_sub: str) -> User | None:
     return db.query(User).filter(User.google_sub == google_sub).first()
+
+
+def get_user_by_github_id(db: Session, github_id: int) -> User | None:
+    return db.query(User).filter(User.github_id == github_id).first()
