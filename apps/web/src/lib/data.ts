@@ -322,6 +322,17 @@ export const learningPath = {
 
 export const membershipFeeKes = 200;
 
+export const donationReasons = [
+  { value: "alumni", label: "Alumni giving back" },
+  { value: "general", label: "General support" },
+  { value: "sponsorship", label: "Event sponsorship" },
+  { value: "scholarship", label: "Scholarship / bursary fund" },
+  { value: "other", label: "Other" },
+] as const;
+
+export const donationPresetAmountsKes = [100, 300, 500, 1000, 2500];
+export const donationMinKes = 20;
+
 export const membershipPerks = [
   "Member events & workshops",
   "Join club projects",

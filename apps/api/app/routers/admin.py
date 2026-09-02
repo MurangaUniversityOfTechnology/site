@@ -10,6 +10,7 @@ from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
 from app.models.content import Content
+from app.models.donation import Donation
 from app.models.event import Event
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
@@ -25,6 +26,8 @@ from app.schemas.admin import (
     AdminOverview,
     AdminRow,
     AuditEntry,
+    DonationRow,
+    DonationsOverview,
     ImportMemberResult,
     ImportMembersRequest,
     ImportMembersResponse,
@@ -137,6 +140,37 @@ def payments_overview(db: Session = Depends(get_db)):
         for p in rows
     ]
     return PaymentsOverview(totals=totals, rows=payment_rows)
+
+
+@router.get("/donations", response_model=DonationsOverview)
+def donations_overview(db: Session = Depends(get_db)):
+    def total_for(*statuses: PaymentStatus) -> PaymentTotal:
+        rows = db.query(Donation).filter(Donation.status.in_(statuses)).all()
+        return PaymentTotal(
+            label=statuses[0].value,
+            amount_kes=float(sum(d.amount for d in rows)),
+            count=len(rows),
+        )
+
+    totals = [
+        total_for(PaymentStatus.completed),
+        total_for(PaymentStatus.pending, PaymentStatus.initiated),
+        total_for(PaymentStatus.failed, PaymentStatus.cancelled),
+    ]
+
+    rows = db.query(Donation).order_by(Donation.created_at.desc()).limit(50).all()
+    donation_rows = [
+        DonationRow(
+            receipt=d.mpesa_receipt,
+            donor="Anonymous" if d.is_anonymous or not d.donor_name else d.donor_name,
+            reason=d.reason.value,
+            amount=float(d.amount),
+            status=d.status.value,
+            created_at=d.created_at,
+        )
+        for d in rows
+    ]
+    return DonationsOverview(totals=totals, rows=donation_rows)
 
 
 @router.get("/audit", response_model=list[AuditEntry])

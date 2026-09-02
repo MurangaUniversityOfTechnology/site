@@ -11,6 +11,7 @@ from app.routers import (
     auth,
     challenges,
     content,
+    donations,
     events,
     members,
     membership,
@@ -49,6 +50,7 @@ app.include_router(members.router)
 app.include_router(notifications.router)
 app.include_router(content.router)
 app.include_router(projects.router)
+app.include_router(donations.router)
 
 
 @app.get("/health")

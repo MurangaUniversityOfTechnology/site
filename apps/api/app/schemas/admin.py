@@ -48,6 +48,20 @@ class PaymentsOverview(BaseModel):
     rows: list[PaymentRow]
 
 
+class DonationRow(BaseModel):
+    receipt: str | None
+    donor: str
+    reason: str
+    amount: float
+    status: str
+    created_at: datetime
+
+
+class DonationsOverview(BaseModel):
+    totals: list[PaymentTotal]
+    rows: list[DonationRow]
+
+
 class AuditEntry(BaseModel):
     at: datetime
     who: str

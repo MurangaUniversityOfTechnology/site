@@ -1,6 +1,7 @@
 from app.models.audit_log import AuditLog
 from app.models.challenge_submission import ChallengeSubmission
 from app.models.content import Content, ContentStatus
+from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import Membership, MembershipStatus
@@ -20,6 +21,8 @@ __all__ = [
     "ChallengeSubmission",
     "Content",
     "ContentStatus",
+    "Donation",
+    "DonationReason",
     "Event",
     "EventAudience",
     "EventRegistration",

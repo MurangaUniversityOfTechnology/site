@@ -42,7 +42,14 @@ def _get_client() -> MpesaClient:
     return _client
 
 
-def initiate_stk_push(*, phone: str, amount: int, account_reference: str, transaction_desc: str) -> dict:
+def initiate_stk_push(
+    *,
+    phone: str,
+    amount: int,
+    account_reference: str,
+    transaction_desc: str,
+    callback_path: str = "/mpesa/callback",
+) -> dict:
     """Returns {"CheckoutRequestID": ..., "MerchantRequestID": ...} on success."""
     if not settings.mpesa_callback_base_url:
         raise MpesaError("MPESA_CALLBACK_BASE_URL is not configured")
@@ -58,7 +65,7 @@ def initiate_stk_push(*, phone: str, amount: int, account_reference: str, transa
             party_a=normalized_phone,
             party_b=settings.mpesa_shortcode,
             phone_number=normalized_phone,
-            callback_url=f"{settings.mpesa_callback_base_url}/mpesa/callback",
+            callback_url=f"{settings.mpesa_callback_base_url}{callback_path}",
             account_reference=account_reference,
             transaction_desc=transaction_desc,
         )

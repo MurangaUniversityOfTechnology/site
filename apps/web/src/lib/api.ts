@@ -138,6 +138,40 @@ export const membershipApi = {
   status: () => apiFetch<MembershipStatusResponse>("/membership/status"),
 };
 
+export type DonationReason = "alumni" | "general" | "sponsorship" | "scholarship" | "other";
+
+export type Donation = {
+  id: string;
+  status: PaymentStatus;
+  amount: number;
+  mpesa_receipt: string | null;
+  reason: DonationReason;
+  donor_name: string | null;
+  message: string | null;
+  created_at: string;
+};
+
+export type DonationWallEntry = {
+  donor_name: string | null;
+  reason: DonationReason;
+  message: string | null;
+  amount: number;
+  created_at: string;
+};
+
+export const donationApi = {
+  create: (payload: {
+    amount: number;
+    phone: string;
+    reason: DonationReason;
+    donor_name: string | null;
+    is_anonymous: boolean;
+    message: string | null;
+  }) => apiFetch<Donation>("/donations", { method: "POST", body: JSON.stringify(payload) }),
+  status: (id: string) => apiFetch<Donation>(`/donations/${id}`),
+  wall: () => apiFetch<DonationWallEntry[]>("/donations/wall"),
+};
+
 export type AdminOverview = {
   total_members: number;
   new_this_week: number;
@@ -163,6 +197,15 @@ export type MembershipApplication = {
 export type PaymentTotal = { label: string; amount_kes: number; count: number };
 export type PaymentRow = { receipt: string | null; member: string; amount: number; status: string };
 export type PaymentsOverview = { totals: PaymentTotal[]; rows: PaymentRow[] };
+export type DonationRow = {
+  receipt: string | null;
+  donor: string;
+  reason: string;
+  amount: number;
+  status: string;
+  created_at: string;
+};
+export type DonationsOverview = { totals: PaymentTotal[]; rows: DonationRow[] };
 export type AuditEntry = { at: string; who: string; what: string; kind: string };
 
 export type RegistrationStatus = "pending" | "approved" | "rejected" | "waitlisted" | "attended" | "cancelled";
@@ -257,6 +300,7 @@ export const adminApi = {
   memberships: (statusFilter: string) =>
     apiFetch<MembershipApplication[]>(`/admin/memberships?status_filter=${statusFilter}`),
   payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
+  donations: () => apiFetch<DonationsOverview>("/admin/donations"),
   audit: () => apiFetch<AuditEntry[]>("/admin/audit"),
   eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),
   approveRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/approve`, { method: "POST" }),

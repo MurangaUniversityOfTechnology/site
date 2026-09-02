@@ -15,6 +15,7 @@ const links = [
   { href: "/learn", label: "Learn" },
   { href: "/community", label: "Community" },
   { href: "/members", label: "People" },
+  { href: "/donate", label: "Donate" },
 ];
 
 export function Nav() {

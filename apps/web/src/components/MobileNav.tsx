@@ -12,9 +12,10 @@ const MORE_LINKS = [
   { href: "/challenges", label: "Challenges" },
   { href: "/learn", label: "Learn" },
   { href: "/members", label: "People" },
+  { href: "/donate", label: "Donate" },
 ];
 
-const MORE_PREFIXES = ["/projects", "/challenges", "/learn", "/members"];
+const MORE_PREFIXES = ["/projects", "/challenges", "/learn", "/members", "/donate"];
 
 const PROFILE_PREFIXES = [
   "/dashboard",

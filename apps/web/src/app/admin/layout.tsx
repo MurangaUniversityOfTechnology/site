@@ -30,7 +30,13 @@ const adminNav: NavGroup[] = [
       { href: "/admin/content", label: "Content" },
     ],
   },
-  { section: "Finance", items: [{ href: "/admin/payments", label: "Payments" }] },
+  {
+    section: "Finance",
+    items: [
+      { href: "/admin/payments", label: "Payments" },
+      { href: "/admin/donations", label: "Donations" },
+    ],
+  },
   { section: "System", items: [{ href: "/admin/audit", label: "Audit log" }] },
 ];
 
