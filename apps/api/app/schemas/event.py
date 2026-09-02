@@ -9,12 +9,26 @@ from app.models.event import EventAudience
 class RegisterRequest(BaseModel):
     guest_name: str | None = None
     guest_email: EmailStr | None = None
+    # Required only when the event has a fee — see event.EventError raised
+    # by services/event.py's register() otherwise.
+    phone: str | None = None
+
+
+class EventPaymentStatusResponse(BaseModel):
+    id: uuid.UUID
+    status: str
+    amount: float
+    mpesa_receipt: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 class RegistrationResponse(BaseModel):
     id: uuid.UUID
     status: str
     created_at: datetime
+    payment: EventPaymentStatusResponse | None = None
 
     model_config = {"from_attributes": True}
 
@@ -25,6 +39,7 @@ class AdminRegistrationRow(BaseModel):
     detail: str
     member: bool
     status: str
+    payment_status: str | None = None
 
 
 class ScheduleItem(BaseModel):

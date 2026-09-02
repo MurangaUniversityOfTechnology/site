@@ -14,6 +14,7 @@ const STATUS_COLOR: Record<string, string> = {
 const SOURCE_LABEL: Record<string, string> = {
   membership: "Membership",
   donation: "Donation",
+  event: "Event fee",
 };
 
 export default function PaymentsPage() {

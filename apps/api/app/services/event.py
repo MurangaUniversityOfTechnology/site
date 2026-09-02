@@ -10,8 +10,9 @@ from app.core.config import get_settings
 from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import MembershipStatus
+from app.models.payment import PaymentStatus
 from app.models.user import User
-from app.services import audit, notification
+from app.services import audit, event_payment, notification
 from app.services import email as email_service
 from app.services.email_templates import render_email
 
@@ -136,6 +137,7 @@ def register(
     user: User | None,
     guest_name: str | None = None,
     guest_email: str | None = None,
+    phone: str | None = None,
 ) -> EventRegistration:
     event = get_event(db, slug)
 
@@ -159,6 +161,9 @@ def register(
         if not guest_name or not guest_email:
             raise EventError("Name and email are required to register as a guest")
 
+    if event.fee_kes > 0 and not phone:
+        raise EventError(f"A phone number is required to pay the KSh {event.fee_kes} event fee")
+
     slots = _open_slots(db, event)
     status = RegistrationStatus.waitlisted if slots is not None and slots <= 0 else RegistrationStatus.pending
 
@@ -170,6 +175,18 @@ def register(
         status=status,
     )
     db.add(registration)
+    db.flush()
+
+    if event.fee_kes > 0:
+        assert phone is not None  # validated above
+        try:
+            event_payment.start_event_payment(db, registration, phone, event.fee_kes)
+        except event_payment.EventPaymentError as exc:
+            # Nothing committed yet — roll back the registration too, rather
+            # than holding a seat behind a payment that never actually sent.
+            db.rollback()
+            raise EventError(str(exc)) from exc
+
     db.commit()
     db.refresh(registration)
     return registration
@@ -256,6 +273,10 @@ def _transition(db: Session, admin: User, registration: EventRegistration, to: R
 
 
 def approve(db: Session, admin: User, registration: EventRegistration) -> None:
+    if registration.event.fee_kes > 0:
+        payment = event_payment.latest_payment_for(db, registration.id)
+        if not payment or payment.status != PaymentStatus.completed:
+            raise EventError("Can't approve — the event fee hasn't been paid yet")
     _transition(db, admin, registration, RegistrationStatus.approved, {RegistrationStatus.pending, RegistrationStatus.waitlisted})
 
 

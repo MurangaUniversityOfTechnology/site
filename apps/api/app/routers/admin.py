@@ -12,6 +12,7 @@ from app.models.audit_log import AuditLog
 from app.models.content import Content
 from app.models.donation import Donation
 from app.models.event import Event
+from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
@@ -115,18 +116,22 @@ def list_memberships(status_filter: str = "active", db: Session = Depends(get_db
 
 @router.get("/payments", response_model=PaymentsOverview)
 def payments_overview(db: Session = Depends(get_db)):
-    """Every M-Pesa STK push the club has sent — membership payments and
-    donations alike — so reconciling against the Safaricom statement means
-    checking one ledger, not two. See /admin/donations for the donation-only
-    view with reason/message, for board-reporting rather than reconciliation."""
+    """Every M-Pesa STK push the club has sent — membership payments,
+    donations, and paid event registration fees alike — so reconciling
+    against the Safaricom statement means checking one ledger, not three.
+    See /admin/donations for the donation-only view with reason/message,
+    for board-reporting rather than reconciliation."""
 
     def total_for(*statuses: PaymentStatus) -> PaymentTotal:
         payments = db.query(Payment).filter(Payment.status.in_(statuses)).all()
         donations = db.query(Donation).filter(Donation.status.in_(statuses)).all()
+        event_fees = db.query(EventPayment).filter(EventPayment.status.in_(statuses)).all()
         return PaymentTotal(
             label=statuses[0].value,
-            amount_kes=float(sum(p.amount for p in payments) + sum(d.amount for d in donations)),
-            count=len(payments) + len(donations),
+            amount_kes=float(
+                sum(p.amount for p in payments) + sum(d.amount for d in donations) + sum(e.amount for e in event_fees)
+            ),
+            count=len(payments) + len(donations) + len(event_fees),
         )
 
     totals = [
@@ -137,27 +142,48 @@ def payments_overview(db: Session = Depends(get_db)):
 
     payments = db.query(Payment).order_by(Payment.created_at.desc()).limit(50).all()
     donations = db.query(Donation).order_by(Donation.created_at.desc()).limit(50).all()
-    rows = [
-        PaymentRow(
-            receipt=p.mpesa_receipt,
-            source="membership",
-            who=p.user.email,
-            amount=float(p.amount),
-            status=p.status.value,
-            created_at=p.created_at,
-        )
-        for p in payments
-    ] + [
-        PaymentRow(
-            receipt=d.mpesa_receipt,
-            source="donation",
-            who="Anonymous" if d.is_anonymous or not d.donor_name else d.donor_name,
-            amount=float(d.amount),
-            status=d.status.value,
-            created_at=d.created_at,
-        )
-        for d in donations
-    ]
+    event_fees = db.query(EventPayment).order_by(EventPayment.created_at.desc()).limit(50).all()
+
+    def _event_payer(e: EventPayment) -> str:
+        reg = e.registration
+        who = reg.user.email if reg.user else (reg.guest_name or "Guest")
+        return f"{who} · {reg.event.title}"
+
+    rows = (
+        [
+            PaymentRow(
+                receipt=p.mpesa_receipt,
+                source="membership",
+                who=p.user.email,
+                amount=float(p.amount),
+                status=p.status.value,
+                created_at=p.created_at,
+            )
+            for p in payments
+        ]
+        + [
+            PaymentRow(
+                receipt=d.mpesa_receipt,
+                source="donation",
+                who="Anonymous" if d.is_anonymous or not d.donor_name else d.donor_name,
+                amount=float(d.amount),
+                status=d.status.value,
+                created_at=d.created_at,
+            )
+            for d in donations
+        ]
+        + [
+            PaymentRow(
+                receipt=e.mpesa_receipt,
+                source="event",
+                who=_event_payer(e),
+                amount=float(e.amount),
+                status=e.status.value,
+                created_at=e.created_at,
+            )
+            for e in event_fees
+        ]
+    )
     rows.sort(key=lambda r: r.created_at, reverse=True)
     return PaymentsOverview(totals=totals, rows=rows[:50])
 
@@ -306,7 +332,17 @@ def list_registrations(slug: str, db: Session = Depends(get_db)):
             name = r.guest_name or "Guest"
             detail = r.guest_email or ""
             member = False
-        rows.append(AdminRegistrationRow(id=r.id, name=name or r.user.email, detail=detail, member=member, status=r.status.value))
+        payment = db.query(EventPayment).filter(EventPayment.registration_id == r.id).first()
+        rows.append(
+            AdminRegistrationRow(
+                id=r.id,
+                name=name or r.user.email,
+                detail=detail,
+                member=member,
+                status=r.status.value,
+                payment_status=payment.status.value if payment else None,
+            )
+        )
     return rows
 
 

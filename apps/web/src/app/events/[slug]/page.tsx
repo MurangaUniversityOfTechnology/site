@@ -8,6 +8,7 @@ import { eventApi, type EventDetail } from "@/lib/api";
 import {
   audienceLabel,
   capacityLabel,
+  feeLabel,
   formatEventDateLong,
   formatEventMeta,
   formatEventTime,
@@ -81,6 +82,10 @@ export default function EventDetailPage() {
             <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">venue</div>
             <div className="mt-1.5 text-[17px] font-semibold">{event.venue}</div>
           </div>
+          <div className="min-w-24 flex-1 bg-surface px-5.5 py-4">
+            <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">fee</div>
+            <div className="mt-1.5 text-[17px] font-semibold capitalize">{feeLabel(event.fee_kes)}</div>
+          </div>
         </div>
 
         <div className="relative mt-7 flex flex-wrap items-center gap-3">
@@ -88,6 +93,7 @@ export default function EventDetailPage() {
             slug={event.slug}
             audience={audienceLabel(event.audience)}
             cta={registerCta(event.capacity, event.seats_left)}
+            feeKes={event.fee_kes}
           />
           <span className="font-mono text-[11px] text-faint">{formatEventMeta(event)}</span>
         </div>

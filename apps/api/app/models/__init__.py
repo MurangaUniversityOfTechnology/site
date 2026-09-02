@@ -3,6 +3,7 @@ from app.models.challenge_submission import ChallengeSubmission
 from app.models.content import Content, ContentStatus
 from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
+from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
@@ -25,6 +26,7 @@ __all__ = [
     "DonationReason",
     "Event",
     "EventAudience",
+    "EventPayment",
     "EventRegistration",
     "ExperienceLevel",
     "GithubOrgInviteStatus",

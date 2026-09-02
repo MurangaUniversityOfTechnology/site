@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { adminApi, type AdminEventRow, type AdminRegistrationRow } from "@/lib/api";
+import { adminApi, ApiError, type AdminEventRow, type AdminRegistrationRow } from "@/lib/api";
 import { formatEventMeta } from "@/lib/eventFormat";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -15,12 +15,21 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: "text-muted border-border-strong",
 };
 
+const PAYMENT_COLOR: Record<string, string> = {
+  completed: "text-navy border-accent-dim",
+  pending: "text-warn border-[#f0dfb8]",
+  initiated: "text-warn border-[#f0dfb8]",
+  failed: "text-danger border-[#f6d9d6]",
+  cancelled: "text-danger border-[#f6d9d6]",
+};
+
 export default function AdminEventRegistrationsPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const [event, setEvent] = useState<AdminEventRow | null>(null);
   const [rows, setRows] = useState<AdminRegistrationRow[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     adminApi.eventRegistrations(slug).then(setRows);
@@ -41,6 +50,7 @@ export default function AdminEventRegistrationsPage() {
 
   async function act(id: string, action: "approve" | "reject" | "waitlist" | "attend") {
     setBusy(id);
+    setError(null);
     try {
       await {
         approve: adminApi.approveRegistration,
@@ -49,6 +59,8 @@ export default function AdminEventRegistrationsPage() {
         attend: adminApi.attendRegistration,
       }[action](id);
       load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "That action failed — try again.");
     } finally {
       setBusy(null);
     }
@@ -81,6 +93,8 @@ export default function AdminEventRegistrationsPage() {
         </span>
       </div>
 
+      {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+
       <div className="mt-6 overflow-hidden rounded-[11px] border border-border bg-surface">
         {rows?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">No registrations yet.</div>}
         {rows?.map((r) => (
@@ -101,6 +115,13 @@ export default function AdminEventRegistrationsPage() {
             >
               {r.member ? "member" : "guest"}
             </span>
+            {r.payment_status && (
+              <span
+                className={`rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${PAYMENT_COLOR[r.payment_status] ?? "text-muted border-border-strong"}`}
+              >
+                {r.payment_status === "completed" ? "paid" : r.payment_status}
+              </span>
+            )}
             <div className="flex gap-1.5">
               {(r.status === "pending" || r.status === "waitlisted") && (
                 <>

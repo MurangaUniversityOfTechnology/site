@@ -195,7 +195,7 @@ export type MembershipApplication = {
 };
 
 export type PaymentTotal = { label: string; amount_kes: number; count: number };
-export type PaymentSource = "membership" | "donation";
+export type PaymentSource = "membership" | "donation" | "event";
 export type PaymentRow = {
   receipt: string | null;
   source: PaymentSource;
@@ -218,10 +218,19 @@ export type AuditEntry = { at: string; who: string; what: string; kind: string }
 
 export type RegistrationStatus = "pending" | "approved" | "rejected" | "waitlisted" | "attended" | "cancelled";
 
+export type EventPaymentStatus = {
+  id: string;
+  status: PaymentStatus;
+  amount: number;
+  mpesa_receipt: string | null;
+  created_at: string;
+};
+
 export type Registration = {
   id: string;
   status: RegistrationStatus;
   created_at: string;
+  payment: EventPaymentStatus | null;
 };
 
 export type AdminRegistrationRow = {
@@ -230,6 +239,7 @@ export type AdminRegistrationRow = {
   detail: string;
   member: boolean;
   status: RegistrationStatus;
+  payment_status: string | null;
 };
 
 export type EventAudience = "open_to_all" | "members_only";
@@ -298,9 +308,10 @@ export const eventApi = {
   list: () => apiFetch<EventSummary[]>("/events"),
   archived: () => apiFetch<EventSummary[]>("/events/archived"),
   get: (slug: string) => apiFetch<EventDetail>(`/events/${slug}`),
-  register: (slug: string, guest?: { guest_name: string; guest_email: string }) =>
-    apiFetch<Registration>(`/events/${slug}/register`, { method: "POST", body: JSON.stringify(guest ?? {}) }),
+  register: (slug: string, payload?: { guest_name?: string; guest_email?: string; phone?: string }) =>
+    apiFetch<Registration>(`/events/${slug}/register`, { method: "POST", body: JSON.stringify(payload ?? {}) }),
   myRegistration: (slug: string) => apiFetch<Registration | null>(`/events/${slug}/registration`),
+  registrationStatus: (id: string) => apiFetch<Registration>(`/events/registrations/${id}`),
 };
 
 export const adminApi = {
