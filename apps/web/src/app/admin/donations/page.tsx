@@ -37,29 +37,31 @@ export default function DonationsPage() {
         </div>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-[11px] border border-border bg-surface">
-        <div className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.8fr] gap-3.5 border-b border-[#ddd6c4] bg-[#f5f0e3] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
-          <span>receipt</span>
-          <span>donor</span>
-          <span>reason</span>
-          <span>amount</span>
-          <span>status</span>
-        </div>
-        {data?.rows.length === 0 && (
-          <div className="px-4.5 py-8 text-center text-sm text-muted">No donations yet.</div>
-        )}
-        {data?.rows.map((r, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.8fr] items-center gap-3.5 border-b border-[#e8e1d2] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
-          >
-            <span className="truncate text-[#33302b]">{r.receipt ?? "—"}</span>
-            <span className="truncate text-muted">{r.donor}</span>
-            <span className="truncate text-muted">{r.reason}</span>
-            <span className="text-foreground">KSh {r.amount.toFixed(0)}</span>
-            <span className={`uppercase ${STATUS_COLOR[r.status] ?? "text-muted"}`}>{r.status}</span>
+      <div className="mt-6 overflow-x-auto rounded-[11px] border border-border bg-surface">
+        <div className="min-w-135">
+          <div className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.8fr] gap-3.5 border-b border-[#ddd6c4] bg-[#f5f0e3] px-4.5 py-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">
+            <span>receipt</span>
+            <span>donor</span>
+            <span>reason</span>
+            <span>amount</span>
+            <span>status</span>
           </div>
-        ))}
+          {data?.rows.length === 0 && (
+            <div className="px-4.5 py-8 text-center text-sm text-muted">No donations yet.</div>
+          )}
+          {data?.rows.map((r, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-[1fr_1.2fr_1fr_0.8fr_0.8fr] items-center gap-3.5 border-b border-[#e8e1d2] px-4.5 py-3.5 font-mono text-[11.5px] last:border-0"
+            >
+              <span className="truncate text-[#33302b]">{r.receipt ?? "—"}</span>
+              <span className="truncate text-muted">{r.donor}</span>
+              <span className="truncate text-muted">{r.reason}</span>
+              <span className="text-foreground">KSh {r.amount.toFixed(0)}</span>
+              <span className={`uppercase ${STATUS_COLOR[r.status] ?? "text-muted"}`}>{r.status}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-5 max-w-160 rounded-lg border border-dashed border-[#f0dfb8] bg-warn/[0.04] p-4.5">

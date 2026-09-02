@@ -195,7 +195,15 @@ export type MembershipApplication = {
 };
 
 export type PaymentTotal = { label: string; amount_kes: number; count: number };
-export type PaymentRow = { receipt: string | null; member: string; amount: number; status: string };
+export type PaymentSource = "membership" | "donation";
+export type PaymentRow = {
+  receipt: string | null;
+  source: PaymentSource;
+  who: string;
+  amount: number;
+  status: string;
+  created_at: string;
+};
 export type PaymentsOverview = { totals: PaymentTotal[]; rows: PaymentRow[] };
 export type DonationRow = {
   receipt: string | null;

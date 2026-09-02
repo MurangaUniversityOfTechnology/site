@@ -38,9 +38,11 @@ class PaymentTotal(BaseModel):
 
 class PaymentRow(BaseModel):
     receipt: str | None
-    member: str
+    source: str  # "membership" | "donation" — every M-Pesa STK push, not just membership
+    who: str
     amount: float
     status: str
+    created_at: datetime
 
 
 class PaymentsOverview(BaseModel):

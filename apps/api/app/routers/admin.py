@@ -115,12 +115,18 @@ def list_memberships(status_filter: str = "active", db: Session = Depends(get_db
 
 @router.get("/payments", response_model=PaymentsOverview)
 def payments_overview(db: Session = Depends(get_db)):
+    """Every M-Pesa STK push the club has sent — membership payments and
+    donations alike — so reconciling against the Safaricom statement means
+    checking one ledger, not two. See /admin/donations for the donation-only
+    view with reason/message, for board-reporting rather than reconciliation."""
+
     def total_for(*statuses: PaymentStatus) -> PaymentTotal:
-        rows = db.query(Payment).filter(Payment.status.in_(statuses)).all()
+        payments = db.query(Payment).filter(Payment.status.in_(statuses)).all()
+        donations = db.query(Donation).filter(Donation.status.in_(statuses)).all()
         return PaymentTotal(
             label=statuses[0].value,
-            amount_kes=float(sum(p.amount for p in rows)),
-            count=len(rows),
+            amount_kes=float(sum(p.amount for p in payments) + sum(d.amount for d in donations)),
+            count=len(payments) + len(donations),
         )
 
     totals = [
@@ -129,17 +135,31 @@ def payments_overview(db: Session = Depends(get_db)):
         total_for(PaymentStatus.failed, PaymentStatus.cancelled),
     ]
 
-    rows = db.query(Payment).order_by(Payment.created_at.desc()).limit(50).all()
-    payment_rows = [
+    payments = db.query(Payment).order_by(Payment.created_at.desc()).limit(50).all()
+    donations = db.query(Donation).order_by(Donation.created_at.desc()).limit(50).all()
+    rows = [
         PaymentRow(
             receipt=p.mpesa_receipt,
-            member=p.user.email,
+            source="membership",
+            who=p.user.email,
             amount=float(p.amount),
             status=p.status.value,
+            created_at=p.created_at,
         )
-        for p in rows
+        for p in payments
+    ] + [
+        PaymentRow(
+            receipt=d.mpesa_receipt,
+            source="donation",
+            who="Anonymous" if d.is_anonymous or not d.donor_name else d.donor_name,
+            amount=float(d.amount),
+            status=d.status.value,
+            created_at=d.created_at,
+        )
+        for d in donations
     ]
-    return PaymentsOverview(totals=totals, rows=payment_rows)
+    rows.sort(key=lambda r: r.created_at, reverse=True)
+    return PaymentsOverview(totals=totals, rows=rows[:50])
 
 
 @router.get("/donations", response_model=DonationsOverview)
