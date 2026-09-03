@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { CourseBadge } from "@/components/CourseBadge";
 import { ApiError, memberApi, type MemberProfile } from "@/lib/api";
 
 const EXPERIENCE_LABEL: Record<string, string> = {
@@ -97,6 +99,20 @@ export default function MemberProfilePage() {
         <div className="mt-6 rounded-xl border border-border bg-surface p-6">
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">about</div>
           <p className="mt-3 text-[15.5px] leading-[1.6] text-[#33302b]">{profile.bio}</p>
+        </div>
+      )}
+
+      {profile.completed_courses.length > 0 && (
+        <div className="mt-6 rounded-xl border border-border bg-surface p-6">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">badges earned</div>
+          <div className="mt-4 flex flex-wrap gap-4">
+            {profile.completed_courses.map((c) => (
+              <Link key={c.slug} href={`/courses/${c.slug}`} className="flex flex-col items-center gap-2 text-center">
+                <CourseBadge slug={c.slug} title={c.title} size="lg" />
+                <span className="max-w-20 text-[11px] leading-tight text-muted">{c.title}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

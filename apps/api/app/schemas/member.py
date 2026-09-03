@@ -14,6 +14,11 @@ class MemberSummary(BaseModel):
     experience_level: ExperienceLevel | None
 
 
+class CourseBadge(BaseModel):
+    slug: str
+    title: str
+
+
 class MemberProfile(BaseModel):
     """Full public profile — registration_number and email are never included."""
 
@@ -26,3 +31,4 @@ class MemberProfile(BaseModel):
     github_url: str | None
     linkedin_url: str | None
     photo_url: str | None
+    completed_courses: list[CourseBadge]

@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { authApi, eventApi, githubApi, projectApi, type EventSummary, type GithubStatus } from "@/lib/api";
+import { CourseBadge } from "@/components/CourseBadge";
+import {
+  authApi,
+  courseApi,
+  eventApi,
+  githubApi,
+  projectApi,
+  type CourseEnrollmentSummary,
+  type EventSummary,
+  type GithubStatus,
+} from "@/lib/api";
 import { challenges, membershipFeeKes, membershipPerks } from "@/lib/data";
 import { formatEventDay } from "@/lib/eventFormat";
 import { useMe } from "@/lib/useMe";
@@ -33,6 +43,7 @@ export default function DashboardPage() {
   const signOut = useSignOut();
   const [projectCount, setProjectCount] = useState<number | null>(null);
   const [events, setEvents] = useState<EventSummary[] | null>(null);
+  const [enrollments, setEnrollments] = useState<CourseEnrollmentSummary[] | null>(null);
   const [githubStatus, setGithubStatus] = useState<GithubStatus | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
@@ -60,12 +71,18 @@ export default function DashboardPage() {
     githubApi.status().then((result) => {
       if (active) setGithubStatus(result);
     });
+    courseApi.myEnrollments().then((result) => {
+      if (active) setEnrollments(result);
+    });
     return () => {
       active = false;
     };
   }, [me]);
 
   if (loading || !me) return null;
+
+  const continuingCourse = enrollments?.find((e) => !e.completed_at) ?? null;
+  const earnedBadges = enrollments?.filter((e) => e.completed_at) ?? [];
 
   const status = me.membership_status;
   // Admins get full access regardless of payment status (see the backend
@@ -177,6 +194,22 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {continuingCourse && (
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">continue your course</div>
+              <h2 className="mt-3 text-[19px] font-medium tracking-[-0.02em]">{continuingCourse.title}</h2>
+              <p className="mt-1.5 text-[13.5px] text-muted">
+                {continuingCourse.modules_completed} of {continuingCourse.modules_total} modules complete
+              </p>
+              <Link
+                href={`/courses/${continuingCourse.slug}/learn`}
+                className="mt-4 inline-block rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-[#1a2744] hover:opacity-90"
+              >
+                Continue
+              </Link>
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-surface p-6">
             <div className="flex items-baseline gap-3">
               <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">up next</div>
@@ -237,12 +270,26 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {earnedBadges.length > 0 && (
+            <div className="rounded-xl border border-border bg-surface p-5.5">
+              <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">badges earned</div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {earnedBadges.map((c) => (
+                  <Link key={c.slug} href={`/courses/${c.slug}`} title={c.title}>
+                    <CourseBadge slug={c.slug} title={c.title} size="sm" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-surface p-5.5">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">explore</div>
             <div className="mt-3.5 flex flex-col">
               <ExploreRow href="/projects" label="Projects" count={projectCount} />
               <ExploreRow href="/events" label="Events" count={events?.length ?? null} />
               <ExploreRow href="/challenges" label="Challenges" count={challenges.length} />
+              <ExploreRow href="/courses" label="Courses" count={enrollments?.length ?? null} />
               <ExploreRow href="/learn" label="Learning Paths" count={null} />
               <ExploreRow href="/community" label="Community" count={null} />
               <ExploreRow href="/github" label="GitHub" count={null} />

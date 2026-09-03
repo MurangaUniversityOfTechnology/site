@@ -6,9 +6,11 @@ from app.models.course import Course
 from app.models.course_arm import CourseArm
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
+from app.models.course_lesson_completion import CourseLessonCompletion
 from app.models.course_module import CourseModule
 from app.models.course_payment import CoursePayment
 from app.models.course_quiz import CourseQuiz, QuizKind
+from app.models.course_quiz_attempt import CourseQuizAttempt
 from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
@@ -37,9 +39,11 @@ __all__ = [
     "CourseArm",
     "CourseEnrollment",
     "CourseLesson",
+    "CourseLessonCompletion",
     "CourseModule",
     "CoursePayment",
     "CourseQuiz",
+    "CourseQuizAttempt",
     "CourseQuizQuestion",
     "Donation",
     "DonationReason",

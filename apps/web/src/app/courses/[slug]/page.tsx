@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { CourseBadge } from "@/components/CourseBadge";
 import { CourseEnrollPanel } from "@/components/CourseEnrollPanel";
 import { courseApi, type CourseDetail } from "@/lib/api";
 
@@ -84,6 +85,16 @@ export default function CourseDetailPage() {
         <div className="relative mt-7 flex flex-wrap items-center gap-3">
           <CourseEnrollPanel slug={course.slug} priceKes={course.price_kes} />
         </div>
+
+        {course.completed && (
+          <div className="relative mt-6 flex items-center gap-3.5 rounded-lg border border-accent-dim bg-accent/[0.05] px-4.5 py-3.5">
+            <CourseBadge slug={course.slug} title={course.title} />
+            <div>
+              <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-navy">badge earned</div>
+              <div className="text-[13.5px] text-muted">You completed this course.</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="px-5 py-12 sm:px-10">

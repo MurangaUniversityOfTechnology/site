@@ -325,6 +325,7 @@ export type CourseModuleOutline = {
 export type CourseDetail = CourseSummary & {
   description: string;
   enrolled: boolean;
+  completed: boolean;
   modules: CourseModuleOutline[];
 };
 
@@ -342,6 +343,89 @@ export type CourseEnrollment = {
   enrolled_at: string;
   completed_at: string | null;
   payment: CoursePaymentStatus | null;
+};
+
+export type LessonPublic = {
+  id: string;
+  title: string;
+  position: number;
+  locked: boolean;
+  completed: boolean;
+};
+
+export type ModulePublic = {
+  id: string;
+  title: string;
+  summary: string | null;
+  position: number;
+  locked: boolean;
+  quiz_passed: boolean;
+  lessons: LessonPublic[];
+};
+
+export type LessonDetail = {
+  id: string;
+  title: string;
+  body: string;
+  video_url: string | null;
+  completed: boolean;
+};
+
+export type QuizQuestionPublic = { id: string; prompt: string; choices: ChoiceItem[] };
+
+export type QuizForAttempt = {
+  quiz_id: string;
+  pass_threshold_pct: number;
+  questions: QuizQuestionPublic[];
+};
+
+export type FinalExamIntro = {
+  intro_text: string | null;
+  question_count: number;
+  pass_threshold_pct: number;
+};
+
+export type AnswerItem = { question_id: string; choice_id: string };
+
+export type GradedAnswer = {
+  question_id: string;
+  prompt: string;
+  choices: ChoiceItem[];
+  submitted_choice_id: string | null;
+  correct_choice_id: string;
+  explanation: string | null;
+  correct: boolean;
+};
+
+export type QuizAttemptResult = {
+  score_pct: number;
+  passed: boolean;
+  answers: GradedAnswer[];
+};
+
+export type CourseProgressModule = {
+  id: string;
+  title: string;
+  locked: boolean;
+  quiz_passed: boolean;
+  lessons_completed: number;
+  lessons_total: number;
+};
+
+export type CourseProgress = {
+  modules: CourseProgressModule[];
+  capstone_status: string | null;
+  final_exam_passed: boolean;
+  completed_at: string | null;
+};
+
+export type CourseEnrollmentSummary = {
+  slug: string;
+  title: string;
+  cover_image_url: string | null;
+  completed_at: string | null;
+  modules_total: number;
+  modules_completed: number;
 };
 
 export type CourseWritePayload = {
@@ -416,6 +500,25 @@ export const courseApi = {
   enroll: (slug: string, phone?: string) =>
     apiFetch<CourseEnrollment>(`/courses/${slug}/enroll`, { method: "POST", body: JSON.stringify({ phone }) }),
   myEnrollment: (slug: string) => apiFetch<CourseEnrollment | null>(`/courses/${slug}/my-enrollment`),
+  myEnrollments: () => apiFetch<CourseEnrollmentSummary[]>("/courses/my-enrollments"),
+  modules: (slug: string) => apiFetch<ModulePublic[]>(`/courses/${slug}/modules`),
+  lesson: (slug: string, lessonId: string) => apiFetch<LessonDetail>(`/courses/${slug}/lessons/${lessonId}`),
+  completeLesson: (slug: string, lessonId: string) =>
+    apiFetch<LessonPublic>(`/courses/${slug}/lessons/${lessonId}/complete`, { method: "POST" }),
+  moduleQuiz: (slug: string, moduleId: string) => apiFetch<QuizForAttempt>(`/courses/${slug}/modules/${moduleId}/quiz`),
+  attemptModuleQuiz: (slug: string, moduleId: string, answers: AnswerItem[]) =>
+    apiFetch<QuizAttemptResult>(`/courses/${slug}/modules/${moduleId}/quiz/attempt`, {
+      method: "POST",
+      body: JSON.stringify({ answers }),
+    }),
+  finalExamIntro: (slug: string) => apiFetch<FinalExamIntro>(`/courses/${slug}/final-exam`),
+  finalExamQuestions: (slug: string) => apiFetch<QuizForAttempt>(`/courses/${slug}/final-exam/questions`),
+  attemptFinalExam: (slug: string, answers: AnswerItem[]) =>
+    apiFetch<QuizAttemptResult>(`/courses/${slug}/final-exam/attempt`, {
+      method: "POST",
+      body: JSON.stringify({ answers }),
+    }),
+  progress: (slug: string) => apiFetch<CourseProgress>(`/courses/${slug}/progress`),
 };
 
 export type SignatureStatus = { has_signature: boolean; updated_at: string | null };
@@ -612,6 +715,8 @@ export type MemberSummary = {
   experience_level: ExperienceLevel | null;
 };
 
+export type CourseBadge = { slug: string; title: string };
+
 export type MemberProfile = {
   user_id: string;
   display_name: string;
@@ -622,6 +727,7 @@ export type MemberProfile = {
   github_url: string | null;
   linkedin_url: string | null;
   photo_url: string | null;
+  completed_courses: CourseBadge[];
 };
 
 export const memberApi = {

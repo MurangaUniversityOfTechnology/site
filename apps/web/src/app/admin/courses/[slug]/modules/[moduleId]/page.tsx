@@ -22,7 +22,6 @@ export default function ManageModulePage() {
 
   const [quiz, setQuiz] = useState<AdminQuizRow | null | undefined>(undefined);
   const [quizTitle, setQuizTitle] = useState("Module Quiz");
-  const [quizThreshold, setQuizThreshold] = useState("80");
   const [quizBusy, setQuizBusy] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
 
@@ -41,10 +40,7 @@ export default function ManageModulePage() {
     adminApi.getModuleQuiz(moduleId).then((q) => {
       if (!active) return;
       setQuiz(q);
-      if (q) {
-        setQuizTitle(q.title);
-        setQuizThreshold(String(q.pass_threshold_pct));
-      }
+      if (q) setQuizTitle(q.title);
     });
     return () => {
       active = false;
@@ -110,16 +106,16 @@ export default function ManageModulePage() {
     setQuizError(null);
     try {
       if (quiz) {
-        const updated = await adminApi.updateQuiz(quiz.id, {
-          title: quizTitle.trim(),
-          pass_threshold_pct: Number(quizThreshold) || 80,
-        });
+        const updated = await adminApi.updateQuiz(quiz.id, { title: quizTitle.trim() });
         setQuiz(updated);
       } else {
+        // pass_threshold_pct is meaningless for module quizzes — grading
+        // always requires a perfect score regardless of this column — so
+        // it's sent as a constant rather than exposed as an input here.
         const created = await adminApi.createModuleQuiz(moduleId, {
           title: quizTitle.trim(),
           intro_text: null,
-          pass_threshold_pct: Number(quizThreshold) || 80,
+          pass_threshold_pct: 100,
         });
         setQuiz(created);
       }
@@ -202,7 +198,10 @@ export default function ManageModulePage() {
 
       <div className="mt-6 rounded-xl border border-border bg-surface p-6">
         <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">module quiz</div>
-        <p className="mt-2 text-[13.5px] text-muted">Short, auto-graded — passing this unlocks the next module.</p>
+        <p className="mt-2 text-[13.5px] text-muted">
+          Short, auto-graded — passing this unlocks the next module. A perfect score is required; there&apos;s no
+          partial-credit threshold for module quizzes.
+        </p>
 
         <form onSubmit={saveQuiz} className="mt-4.5 flex flex-col gap-3.5">
           <input
@@ -211,17 +210,6 @@ export default function ManageModulePage() {
             placeholder="Title"
             className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
           />
-          <label className="block">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">Pass threshold (%)</div>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={quizThreshold}
-              onChange={(e) => setQuizThreshold(e.target.value)}
-              className="mt-2 w-32 rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
-            />
-          </label>
           {quizError && <p className="text-sm text-danger">{quizError}</p>}
           <button
             type="submit"

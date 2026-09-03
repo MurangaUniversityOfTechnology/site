@@ -55,6 +55,7 @@ class CourseModuleOutline(BaseModel):
 class CourseDetail(CourseSummary):
     description: str
     enrolled: bool
+    completed: bool
     modules: list[CourseModuleOutline]
 
 

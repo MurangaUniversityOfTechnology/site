@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import func
@@ -8,17 +9,25 @@ from app.models.course import Course
 from app.models.course_arm import CourseArm
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
+from app.models.course_lesson_completion import CourseLessonCompletion
 from app.models.course_module import CourseModule
 from app.models.course_quiz import CourseQuiz, QuizKind
+from app.models.course_quiz_attempt import CourseQuizAttempt
 from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.payment import PaymentStatus
 from app.models.user import User
-from app.services import audit, course_payment
+from app.services import audit, course_payment, notification
 from app.services.membership_access import is_active_member
 
 
 class CourseError(Exception):
     pass
+
+
+class CourseAccessDenied(CourseError):
+    """Raised where a plain CourseError would 404 — this maps to 403
+    instead, since the course/lesson/quiz genuinely exists, the caller
+    just isn't allowed to read or attempt it right now."""
 
 
 # ── courses ──────────────────────────────────────────────────────────────
@@ -449,3 +458,248 @@ def enroll(db: Session, slug: str, user: User, phone: str | None) -> CourseEnrol
     db.commit()
     db.refresh(enrollment)
     return enrollment
+
+
+# ── learner access (lessons / quizzes / progress) ───────────────────────
+
+
+def require_access(db: Session, user: User, course: Course) -> None:
+    if not has_course_access(db, user, course):
+        raise CourseAccessDenied("You don't have access to this course")
+
+
+def get_enrollment_for_access(db: Session, course: Course, user: User) -> CourseEnrollment | None:
+    """Read-path gate: raises if access is denied, but returns None (not
+    an error) when the caller is an admin QA-ing content without ever
+    enrolling — module-lock and completion logic below already treat a
+    None enrollment as "show everything unlocked, nothing completed"."""
+    require_access(db, user, course)
+    return get_enrollment(db, course, user)
+
+
+def require_enrollment(db: Session, course: Course, user: User) -> CourseEnrollment:
+    """Write-path gate for lesson-complete / quiz-attempt — those need a
+    real enrollment row to attach to, so even an admin must actually
+    enroll (like anyone else) to submit an attempt."""
+    require_access(db, user, course)
+    enrollment = get_enrollment(db, course, user)
+    if not enrollment:
+        raise CourseAccessDenied("Enroll in this course first")
+    return enrollment
+
+
+def get_module_in_course(db: Session, course: Course, module_id) -> CourseModule:
+    module = get_module(db, module_id)
+    if module.course_id != course.id:
+        raise CourseError("Unknown module")
+    return module
+
+
+def get_lesson_in_course(db: Session, course: Course, lesson_id) -> CourseLesson:
+    lesson = get_lesson(db, lesson_id)
+    if lesson.module.course_id != course.id:
+        raise CourseError("Unknown lesson")
+    return lesson
+
+
+def has_passed_quiz(db: Session, quiz: CourseQuiz, enrollment: CourseEnrollment | None) -> bool:
+    if not enrollment:
+        return False
+    return (
+        db.query(CourseQuizAttempt)
+        .filter(
+            CourseQuizAttempt.enrollment_id == enrollment.id,
+            CourseQuizAttempt.quiz_id == quiz.id,
+            CourseQuizAttempt.passed.is_(True),
+        )
+        .first()
+        is not None
+    )
+
+
+def compute_module_lock_states(
+    db: Session, course: Course, enrollment: CourseEnrollment | None
+) -> dict[uuid.UUID, bool]:
+    """A module is locked until every earlier module's quiz has been
+    passed — sequential, computed fresh on every read rather than stored,
+    so it can never drift from the attempts table. enrollment=None (admin
+    QA, never enrolled) sees every module unlocked."""
+    states: dict[uuid.UUID, bool] = {}
+    unlocked_so_far = True
+    for module in list_modules(db, course):
+        states[module.id] = not unlocked_so_far
+        if not enrollment:
+            continue
+        quiz = get_module_quiz(db, module)
+        unlocked_so_far = unlocked_so_far and bool(quiz and has_passed_quiz(db, quiz, enrollment))
+    return states
+
+
+def is_module_locked(db: Session, course: Course, module: CourseModule, enrollment: CourseEnrollment | None) -> bool:
+    return compute_module_lock_states(db, course, enrollment)[module.id]
+
+
+def all_module_quizzes_passed(db: Session, course: Course, enrollment: CourseEnrollment | None) -> bool:
+    if not enrollment:
+        return True
+    for module in list_modules(db, course):
+        quiz = get_module_quiz(db, module)
+        if not quiz or not has_passed_quiz(db, quiz, enrollment):
+            return False
+    return True
+
+
+def is_lesson_completed(db: Session, enrollment: CourseEnrollment | None, lesson: CourseLesson) -> bool:
+    if not enrollment:
+        return False
+    return (
+        db.query(CourseLessonCompletion)
+        .filter(CourseLessonCompletion.enrollment_id == enrollment.id, CourseLessonCompletion.lesson_id == lesson.id)
+        .first()
+        is not None
+    )
+
+
+def mark_lesson_complete(db: Session, enrollment: CourseEnrollment, lesson: CourseLesson) -> None:
+    if is_lesson_completed(db, enrollment, lesson):
+        return
+    db.add(CourseLessonCompletion(enrollment_id=enrollment.id, lesson_id=lesson.id))
+    db.commit()
+
+
+def grade_quiz_attempt(
+    db: Session, enrollment: CourseEnrollment, quiz: CourseQuiz, answers: list[dict]
+) -> CourseQuizAttempt:
+    """Module quizzes require a perfect score to pass — pass_threshold_pct
+    is ignored entirely for that kind, and only ever applies to the final
+    exam. Unknown question_ids in the payload are ignored and a missing or
+    invalid choice_id just counts as wrong, so a malformed submission never
+    500s. Every submission is stored as a new row (append-only history) so
+    an admin later editing pass_threshold_pct can't retroactively flip a
+    result that already happened."""
+    questions = list_questions(db, quiz)
+    submitted = {a["question_id"]: a.get("choice_id") for a in answers}
+
+    graded: list[dict] = []
+    correct_count = 0
+    for question in questions:
+        submitted_choice_id = submitted.get(question.id)
+        correct = submitted_choice_id is not None and submitted_choice_id == question.correct_choice_id
+        correct_count += int(correct)
+        graded.append(
+            {
+                "question_id": str(question.id),
+                "prompt": question.prompt,
+                "choices": question.choices,
+                "submitted_choice_id": submitted_choice_id,
+                "correct_choice_id": question.correct_choice_id,
+                "explanation": question.explanation,
+                "correct": correct,
+            }
+        )
+
+    score_pct = (100 * correct_count / len(questions)) if questions else 0.0
+    passed = score_pct == 100 if quiz.kind == QuizKind.module_quiz else score_pct >= quiz.pass_threshold_pct
+
+    attempt = CourseQuizAttempt(
+        enrollment_id=enrollment.id, quiz_id=quiz.id, score_pct=score_pct, passed=passed, answers=graded
+    )
+    db.add(attempt)
+    db.commit()
+    db.refresh(attempt)
+    return attempt
+
+
+def attempt_final_exam(
+    db: Session, course: Course, enrollment: CourseEnrollment, answers: list[dict]
+) -> CourseQuizAttempt:
+    quiz = get_final_exam(db, course)
+    if not quiz:
+        raise CourseError("This course has no final exam")
+    attempt = grade_quiz_attempt(db, enrollment, quiz, answers)
+    if attempt.passed:
+        complete_course(db, enrollment)
+    return attempt
+
+
+def complete_course(db: Session, enrollment: CourseEnrollment) -> None:
+    """Idempotent — only ever fires the notification once, on the first
+    final-exam pass."""
+    if enrollment.completed_at:
+        return
+    enrollment.completed_at = datetime.now(UTC)
+    notification.notify(
+        db,
+        enrollment.user,
+        "course",
+        f"You completed {enrollment.course.title} \U0001f393",
+        "Nice work — your certificate is ready.",
+    )
+    db.commit()
+
+
+def build_course_progress(db: Session, course: Course, enrollment: CourseEnrollment) -> dict:
+    lock_states = compute_module_lock_states(db, course, enrollment)
+    module_rows = []
+    for module in list_modules(db, course):
+        quiz = get_module_quiz(db, module)
+        lessons = list_lessons(db, module)
+        module_rows.append(
+            {
+                "id": module.id,
+                "title": module.title,
+                "locked": lock_states[module.id],
+                "quiz_passed": bool(quiz and has_passed_quiz(db, quiz, enrollment)),
+                "lessons_completed": sum(1 for lesson in lessons if is_lesson_completed(db, enrollment, lesson)),
+                "lessons_total": len(lessons),
+            }
+        )
+    final_exam = get_final_exam(db, course)
+    return {
+        "modules": module_rows,
+        "capstone_status": None,
+        "final_exam_passed": bool(final_exam and has_passed_quiz(db, final_exam, enrollment)),
+        "completed_at": enrollment.completed_at,
+    }
+
+
+def list_completed_courses(db: Session, user_id) -> list[Course]:
+    """Badge shelf on the public member profile — anyone whose profile
+    visibility already lets a viewer see it gets to see which courses they
+    finished too; this doesn't add its own visibility check."""
+    return (
+        db.query(Course)
+        .join(CourseEnrollment, CourseEnrollment.course_id == Course.id)
+        .filter(CourseEnrollment.user_id == user_id, CourseEnrollment.completed_at.isnot(None))
+        .order_by(CourseEnrollment.completed_at.desc())
+        .all()
+    )
+
+
+def list_my_enrollments_summary(db: Session, user: User) -> list[dict]:
+    enrollments = (
+        db.query(CourseEnrollment)
+        .filter(CourseEnrollment.user_id == user.id)
+        .order_by(CourseEnrollment.enrolled_at.desc())
+        .all()
+    )
+    rows = []
+    for enrollment in enrollments:
+        course = enrollment.course
+        modules = list_modules(db, course)
+        modules_completed = sum(
+            1
+            for module in modules
+            if (quiz := get_module_quiz(db, module)) and has_passed_quiz(db, quiz, enrollment)
+        )
+        rows.append(
+            {
+                "slug": course.slug,
+                "title": course.title,
+                "cover_image_url": course.cover_image_url,
+                "completed_at": enrollment.completed_at,
+                "modules_total": len(modules),
+                "modules_completed": modules_completed,
+            }
+        )
+    return rows

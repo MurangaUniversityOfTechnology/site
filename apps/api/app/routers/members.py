@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import get_current_user_optional
 from app.models.user import User
-from app.schemas.member import MemberProfile, MemberSummary
+from app.schemas.member import CourseBadge, MemberProfile, MemberSummary
+from app.services import course as course_service
 from app.services import member as member_service
 
 router = APIRouter(prefix="/members", tags=["members"])
@@ -41,4 +42,7 @@ def get_member(user_id: str, viewer: User | None = Depends(get_current_user_opti
         github_url=profile.github_url,
         linkedin_url=profile.linkedin_url,
         photo_url=profile.photo_url,
+        completed_courses=[
+            CourseBadge(slug=c.slug, title=c.title) for c in course_service.list_completed_courses(db, user_id)
+        ],
     )
