@@ -25,6 +25,7 @@ const adminNav: NavGroup[] = [
     section: "Programs",
     items: [
       { href: "/admin/events", label: "Events" },
+      { href: "/admin/courses", label: "Courses" },
       { href: "/admin/projects", label: "Projects" },
       { href: "/admin/github", label: "GitHub" },
       { href: "/admin/content", label: "Content" },

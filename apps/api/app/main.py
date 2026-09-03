@@ -8,9 +8,11 @@ from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.routers import (
     admin,
+    admin_courses,
     auth,
     challenges,
     content,
+    courses,
     donations,
     events,
     members,
@@ -44,6 +46,7 @@ app.include_router(auth.router)
 app.include_router(membership.router)
 app.include_router(profile.router)
 app.include_router(admin.router)
+app.include_router(admin_courses.router)
 app.include_router(events.router)
 app.include_router(challenges.router)
 app.include_router(members.router)
@@ -51,6 +54,7 @@ app.include_router(notifications.router)
 app.include_router(content.router)
 app.include_router(projects.router)
 app.include_router(donations.router)
+app.include_router(courses.router)
 
 
 @app.get("/health")

@@ -12,6 +12,7 @@ const links = [
   { href: "/projects", label: "Projects" },
   { href: "/events", label: "Events" },
   { href: "/challenges", label: "Challenges" },
+  { href: "/courses", label: "Courses" },
   { href: "/learn", label: "Learn" },
   { href: "/community", label: "Community" },
   { href: "/members", label: "People" },

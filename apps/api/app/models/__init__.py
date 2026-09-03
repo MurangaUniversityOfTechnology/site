@@ -1,6 +1,13 @@
 from app.models.audit_log import AuditLog
 from app.models.challenge_submission import ChallengeSubmission
 from app.models.content import Content, ContentStatus
+from app.models.course import Course
+from app.models.course_enrollment import CourseAccessType, CourseEnrollment
+from app.models.course_lesson import CourseLesson
+from app.models.course_module import CourseModule
+from app.models.course_payment import CoursePayment
+from app.models.course_quiz import CourseQuiz, QuizKind
+from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
 from app.models.event_payment import EventPayment
@@ -22,6 +29,14 @@ __all__ = [
     "ChallengeSubmission",
     "Content",
     "ContentStatus",
+    "Course",
+    "CourseAccessType",
+    "CourseEnrollment",
+    "CourseLesson",
+    "CourseModule",
+    "CoursePayment",
+    "CourseQuiz",
+    "CourseQuizQuestion",
     "Donation",
     "DonationReason",
     "Event",
@@ -41,6 +56,7 @@ __all__ = [
     "Project",
     "ProjectJoinRequest",
     "ProjectMember",
+    "QuizKind",
     "RegistrationStatus",
     "Signature",
     "Tag",

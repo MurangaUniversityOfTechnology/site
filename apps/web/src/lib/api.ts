@@ -296,6 +296,123 @@ export type EventWritePayload = {
   who_should_attend: string | null;
 };
 
+// ── courses ──────────────────────────────────────────────────────────────
+
+export type QuizKind = "module_quiz" | "final_exam";
+
+export type ChoiceItem = { id: string; text: string };
+
+export type CourseSummary = {
+  slug: string;
+  title: string;
+  short_description: string;
+  cover_image_url: string | null;
+  price_kes: number;
+  module_count: number;
+};
+
+export type CourseModuleOutline = {
+  id: string;
+  title: string;
+  summary: string | null;
+  position: number;
+  lesson_count: number;
+};
+
+export type CourseDetail = CourseSummary & {
+  description: string;
+  enrolled: boolean;
+  modules: CourseModuleOutline[];
+};
+
+export type CoursePaymentStatus = {
+  id: string;
+  status: string;
+  amount: number;
+  mpesa_receipt: string | null;
+  created_at: string;
+};
+
+export type CourseEnrollment = {
+  id: string;
+  access: "free_member" | "paid";
+  enrolled_at: string;
+  completed_at: string | null;
+  payment: CoursePaymentStatus | null;
+};
+
+export type CourseWritePayload = {
+  slug: string;
+  title: string;
+  short_description: string;
+  description: string;
+  cover_image_url: string | null;
+  price_kes: number;
+};
+
+export type AdminCourseRow = {
+  id: string;
+  slug: string;
+  title: string;
+  short_description: string;
+  description: string;
+  cover_image_url: string | null;
+  price_kes: number;
+  published_at: string | null;
+  archived_at: string | null;
+  module_count: number;
+  enrollment_count: number;
+  created_by: string;
+};
+
+export type AdminModuleRow = {
+  id: string;
+  course_id: string;
+  title: string;
+  summary: string | null;
+  position: number;
+  lesson_count: number;
+  has_quiz: boolean;
+};
+
+export type AdminLessonRow = {
+  id: string;
+  module_id: string;
+  title: string;
+  body: string;
+  video_url: string | null;
+  position: number;
+};
+
+export type AdminQuizRow = {
+  id: string;
+  kind: QuizKind;
+  course_id: string;
+  module_id: string | null;
+  title: string;
+  intro_text: string | null;
+  pass_threshold_pct: number;
+  question_count: number;
+};
+
+export type AdminQuestionRow = {
+  id: string;
+  quiz_id: string;
+  prompt: string;
+  choices: ChoiceItem[];
+  correct_choice_id: string;
+  explanation: string | null;
+  position: number;
+};
+
+export const courseApi = {
+  list: () => apiFetch<CourseSummary[]>("/courses"),
+  get: (slug: string) => apiFetch<CourseDetail>(`/courses/${slug}`),
+  enroll: (slug: string, phone?: string) =>
+    apiFetch<CourseEnrollment>(`/courses/${slug}/enroll`, { method: "POST", body: JSON.stringify({ phone }) }),
+  myEnrollment: (slug: string) => apiFetch<CourseEnrollment | null>(`/courses/${slug}/my-enrollment`),
+};
+
 export type SignatureStatus = { has_signature: boolean; updated_at: string | null };
 export type SignatureImage = { image_base64: string; updated_at: string };
 
@@ -384,6 +501,54 @@ export const adminApi = {
   deleteEvent: (slug: string) => apiFetch<void>(`/admin/events/${slug}`, { method: "DELETE" }),
   archiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/archive`, { method: "POST" }),
   unarchiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/unarchive`, { method: "POST" }),
+  // Courses
+  listCourses: (archived = false) => apiFetch<AdminCourseRow[]>(`/admin/courses?archived=${archived}`),
+  createCourse: (payload: CourseWritePayload) =>
+    apiFetch<AdminCourseRow>("/admin/courses", { method: "POST", body: JSON.stringify(payload) }),
+  updateCourse: (slug: string, payload: Partial<CourseWritePayload>) =>
+    apiFetch<AdminCourseRow>(`/admin/courses/${slug}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteCourse: (slug: string) => apiFetch<void>(`/admin/courses/${slug}`, { method: "DELETE" }),
+  publishCourse: (slug: string) => apiFetch<AdminCourseRow>(`/admin/courses/${slug}/publish`, { method: "POST" }),
+  unpublishCourse: (slug: string) => apiFetch<AdminCourseRow>(`/admin/courses/${slug}/unpublish`, { method: "POST" }),
+  archiveCourse: (slug: string) => apiFetch<AdminCourseRow>(`/admin/courses/${slug}/archive`, { method: "POST" }),
+  unarchiveCourse: (slug: string) => apiFetch<AdminCourseRow>(`/admin/courses/${slug}/unarchive`, { method: "POST" }),
+  listModules: (slug: string) => apiFetch<AdminModuleRow[]>(`/admin/courses/${slug}/modules`),
+  createModule: (slug: string, payload: { title: string; summary: string | null }) =>
+    apiFetch<AdminModuleRow>(`/admin/courses/${slug}/modules`, { method: "POST", body: JSON.stringify(payload) }),
+  updateModule: (moduleId: string, payload: { title?: string; summary?: string | null }) =>
+    apiFetch<AdminModuleRow>(`/admin/modules/${moduleId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteModule: (moduleId: string) => apiFetch<void>(`/admin/modules/${moduleId}`, { method: "DELETE" }),
+  reorderModule: (moduleId: string, direction: "up" | "down") =>
+    apiFetch<AdminModuleRow>(`/admin/modules/${moduleId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
+  listLessons: (moduleId: string) => apiFetch<AdminLessonRow[]>(`/admin/modules/${moduleId}/lessons`),
+  createLesson: (moduleId: string, payload: { title: string; body: string; video_url: string | null }) =>
+    apiFetch<AdminLessonRow>(`/admin/modules/${moduleId}/lessons`, { method: "POST", body: JSON.stringify(payload) }),
+  updateLesson: (lessonId: string, payload: { title?: string; body?: string; video_url?: string | null }) =>
+    apiFetch<AdminLessonRow>(`/admin/lessons/${lessonId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteLesson: (lessonId: string) => apiFetch<void>(`/admin/lessons/${lessonId}`, { method: "DELETE" }),
+  reorderLesson: (lessonId: string, direction: "up" | "down") =>
+    apiFetch<AdminLessonRow>(`/admin/lessons/${lessonId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
+  getModuleQuiz: (moduleId: string) => apiFetch<AdminQuizRow | null>(`/admin/modules/${moduleId}/quiz`),
+  createModuleQuiz: (moduleId: string, payload: { title: string; intro_text: string | null; pass_threshold_pct: number }) =>
+    apiFetch<AdminQuizRow>(`/admin/modules/${moduleId}/quiz`, { method: "POST", body: JSON.stringify(payload) }),
+  getFinalExam: (slug: string) => apiFetch<AdminQuizRow | null>(`/admin/courses/${slug}/final-exam`),
+  createFinalExam: (slug: string, payload: { title: string; intro_text: string | null; pass_threshold_pct: number }) =>
+    apiFetch<AdminQuizRow>(`/admin/courses/${slug}/final-exam`, { method: "POST", body: JSON.stringify(payload) }),
+  updateQuiz: (quizId: string, payload: { title?: string; intro_text?: string | null; pass_threshold_pct?: number }) =>
+    apiFetch<AdminQuizRow>(`/admin/quizzes/${quizId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteQuiz: (quizId: string) => apiFetch<void>(`/admin/quizzes/${quizId}`, { method: "DELETE" }),
+  listQuestions: (quizId: string) => apiFetch<AdminQuestionRow[]>(`/admin/quizzes/${quizId}/questions`),
+  createQuestion: (
+    quizId: string,
+    payload: { prompt: string; choices: ChoiceItem[]; correct_choice_id: string; explanation: string | null }
+  ) => apiFetch<AdminQuestionRow>(`/admin/quizzes/${quizId}/questions`, { method: "POST", body: JSON.stringify(payload) }),
+  updateQuestion: (
+    questionId: string,
+    payload: Partial<{ prompt: string; choices: ChoiceItem[]; correct_choice_id: string; explanation: string | null }>
+  ) => apiFetch<AdminQuestionRow>(`/admin/questions/${questionId}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  deleteQuestion: (questionId: string) => apiFetch<void>(`/admin/questions/${questionId}`, { method: "DELETE" }),
+  reorderQuestion: (questionId: string, direction: "up" | "down") =>
+    apiFetch<AdminQuestionRow>(`/admin/questions/${questionId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
   roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
   refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
   resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),

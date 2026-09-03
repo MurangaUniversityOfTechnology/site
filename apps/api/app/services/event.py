@@ -9,12 +9,12 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.event import Event, EventAudience
 from app.models.event_registration import EventRegistration, RegistrationStatus
-from app.models.membership import MembershipStatus
 from app.models.payment import PaymentStatus
 from app.models.user import User
 from app.services import audit, event_payment, notification
 from app.services import email as email_service
 from app.services.email_templates import render_email
+from app.services.membership_access import is_active_member
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def register(
             raise EventError("Sign in with an active membership to register for this event")
         if not user.is_admin and not user.email_verified:
             raise EventError("Verify your email before registering for this event")
-        if not user.is_admin and user.membership.status != MembershipStatus.active:
+        if not is_active_member(user):
             raise EventError("Active club membership is required for this event")
 
     if user:

@@ -1,21 +1,17 @@
 from sqlalchemy.orm import Session
 
-from app.models.membership import MembershipStatus
 from app.models.profile import Profile, ProfileVisibility
 from app.models.user import User
+from app.services.membership_access import is_active_member
 
 
 class MemberError(Exception):
     pass
 
 
-def _viewer_is_active_member(viewer: User | None) -> bool:
-    return bool(viewer and (viewer.is_admin or viewer.membership.status == MembershipStatus.active))
-
-
 def directory(db: Session, viewer: User | None) -> list[Profile]:
     visible = [ProfileVisibility.public]
-    if _viewer_is_active_member(viewer):
+    if is_active_member(viewer):
         visible.append(ProfileVisibility.members)
 
     return (
@@ -37,7 +33,7 @@ def get_profile(db: Session, user_id: str, viewer: User | None) -> Profile:
 
     if profile.visibility == ProfileVisibility.private:
         raise MemberError("This profile is private")
-    if profile.visibility == ProfileVisibility.members and not _viewer_is_active_member(viewer):
+    if profile.visibility == ProfileVisibility.members and not is_active_member(viewer):
         raise MemberError("Sign in with an active membership to view this profile")
 
     return profile

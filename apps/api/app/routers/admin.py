@@ -10,6 +10,7 @@ from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
 from app.models.content import Content
+from app.models.course_payment import CoursePayment
 from app.models.donation import Donation
 from app.models.event import Event
 from app.models.event_payment import EventPayment
@@ -126,12 +127,16 @@ def payments_overview(db: Session = Depends(get_db)):
         payments = db.query(Payment).filter(Payment.status.in_(statuses)).all()
         donations = db.query(Donation).filter(Donation.status.in_(statuses)).all()
         event_fees = db.query(EventPayment).filter(EventPayment.status.in_(statuses)).all()
+        course_fees = db.query(CoursePayment).filter(CoursePayment.status.in_(statuses)).all()
         return PaymentTotal(
             label=statuses[0].value,
             amount_kes=float(
-                sum(p.amount for p in payments) + sum(d.amount for d in donations) + sum(e.amount for e in event_fees)
+                sum(p.amount for p in payments)
+                + sum(d.amount for d in donations)
+                + sum(e.amount for e in event_fees)
+                + sum(c.amount for c in course_fees)
             ),
-            count=len(payments) + len(donations) + len(event_fees),
+            count=len(payments) + len(donations) + len(event_fees) + len(course_fees),
         )
 
     totals = [
@@ -143,11 +148,15 @@ def payments_overview(db: Session = Depends(get_db)):
     payments = db.query(Payment).order_by(Payment.created_at.desc()).limit(50).all()
     donations = db.query(Donation).order_by(Donation.created_at.desc()).limit(50).all()
     event_fees = db.query(EventPayment).order_by(EventPayment.created_at.desc()).limit(50).all()
+    course_fees = db.query(CoursePayment).order_by(CoursePayment.created_at.desc()).limit(50).all()
 
     def _event_payer(e: EventPayment) -> str:
         reg = e.registration
         who = reg.user.email if reg.user else (reg.guest_name or "Guest")
         return f"{who} · {reg.event.title}"
+
+    def _course_payer(c: CoursePayment) -> str:
+        return f"{c.enrollment.user.email} · {c.enrollment.course.title}"
 
     rows = (
         [
@@ -182,6 +191,17 @@ def payments_overview(db: Session = Depends(get_db)):
                 created_at=e.created_at,
             )
             for e in event_fees
+        ]
+        + [
+            PaymentRow(
+                receipt=c.mpesa_receipt,
+                source="course",
+                who=_course_payer(c),
+                amount=float(c.amount),
+                status=c.status.value,
+                created_at=c.created_at,
+            )
+            for c in course_fees
         ]
     )
     rows.sort(key=lambda r: r.created_at, reverse=True)
