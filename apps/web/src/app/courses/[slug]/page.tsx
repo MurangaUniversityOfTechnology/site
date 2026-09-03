@@ -26,6 +26,10 @@ export default function CourseDetailPage() {
     };
   }, [params.slug]);
 
+  function refreshAfterEnroll() {
+    courseApi.get(params.slug).then(setCourse);
+  }
+
   if (course === undefined) return null;
 
   if (!course) {
@@ -83,7 +87,7 @@ export default function CourseDetailPage() {
         )}
 
         <div className="relative mt-7 flex flex-wrap items-center gap-3">
-          <CourseEnrollPanel slug={course.slug} priceKes={course.price_kes} />
+          <CourseEnrollPanel slug={course.slug} priceKes={course.price_kes} onEnrolled={refreshAfterEnroll} />
           {course.enrolled && (
             <Link
               href={`/courses/${course.slug}/learn`}

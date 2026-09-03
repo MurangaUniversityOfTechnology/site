@@ -7,7 +7,15 @@ import { useMe } from "@/lib/useMe";
 
 const POLL_INTERVAL_MS = 3000;
 
-export function CourseEnrollPanel({ slug, priceKes }: { slug: string; priceKes: number }) {
+export function CourseEnrollPanel({
+  slug,
+  priceKes,
+  onEnrolled,
+}: {
+  slug: string;
+  priceKes: number;
+  onEnrolled?: () => void;
+}) {
   const { me, loading } = useMe();
   const [enrollment, setEnrollment] = useState<CourseEnrollment | null | undefined>(undefined);
   const [phone, setPhone] = useState("");
@@ -93,6 +101,7 @@ export function CourseEnrollPanel({ slug, priceKes }: { slug: string; priceKes: 
     try {
       const result = await courseApi.enroll(slug, requiresPayment ? `254${digits}` : undefined);
       setEnrollment(result);
+      onEnrolled?.();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't enroll — try again.");
     } finally {
