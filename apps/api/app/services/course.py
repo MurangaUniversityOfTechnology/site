@@ -849,3 +849,31 @@ def review_capstone(db: Session, admin: User, submission: CourseCapstoneSubmissi
     if approve:
         complete_course(db, submission.enrollment)
     return submission
+
+
+# ── admin reporting ──────────────────────────────────────────────────────
+
+
+def list_course_enrollments(db: Session, course: Course) -> list[CourseEnrollment]:
+    return (
+        db.query(CourseEnrollment)
+        .filter(CourseEnrollment.course_id == course.id)
+        .order_by(CourseEnrollment.enrolled_at.desc())
+        .all()
+    )
+
+
+def get_enrollment_by_id(db: Session, enrollment_id: uuid.UUID) -> CourseEnrollment:
+    enrollment = db.query(CourseEnrollment).filter(CourseEnrollment.id == enrollment_id).first()
+    if not enrollment:
+        raise CourseError("Unknown enrollment")
+    return enrollment
+
+
+def list_enrollment_quiz_attempts(db: Session, enrollment: CourseEnrollment) -> list[CourseQuizAttempt]:
+    return (
+        db.query(CourseQuizAttempt)
+        .filter(CourseQuizAttempt.enrollment_id == enrollment.id)
+        .order_by(CourseQuizAttempt.created_at.desc())
+        .all()
+    )

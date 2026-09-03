@@ -18,13 +18,17 @@ from app.schemas.course import (
     AdminCapstoneAssignmentRow,
     AdminCapstoneRow,
     AdminCourseRow,
+    AdminEnrollmentDetail,
+    AdminEnrollmentRow,
     AdminLessonRow,
     AdminModuleRow,
     AdminQuestionRow,
+    AdminQuizAttemptRow,
     AdminQuizRow,
     CapstoneReviewRequest,
     CapstoneUpdateRequest,
     CapstoneWriteRequest,
+    CourseProgressModule,
     CourseUpdateRequest,
     CourseWriteRequest,
     LessonUpdateRequest,
@@ -188,6 +192,28 @@ def _get_submission_or_404(db: Session, submission_id: uuid.UUID):
         return course_service.get_submission_by_id(db, submission_id)
     except course_service.CourseError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+def _get_enrollment_or_404(db: Session, enrollment_id: uuid.UUID) -> CourseEnrollment:
+    try:
+        return course_service.get_enrollment_by_id(db, enrollment_id)
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+def _admin_enrollment_row(enrollment: CourseEnrollment, progress: dict) -> AdminEnrollmentRow:
+    return AdminEnrollmentRow(
+        id=enrollment.id,
+        who=_display_name(enrollment.user),
+        email=enrollment.user.email,
+        access=enrollment.access.value,
+        enrolled_at=enrollment.enrolled_at,
+        modules_completed=sum(1 for m in progress["modules"] if m["quiz_passed"]),
+        modules_total=len(progress["modules"]),
+        final_exam_passed=progress["final_exam_passed"],
+        capstone_status=progress["capstone_status"],
+        completed_at=progress["completed_at"],
+    )
 
 
 # ── courses ──────────────────────────────────────────────────────────────
@@ -548,6 +574,33 @@ def review_capstone_submission(
     submission = _get_submission_or_404(db, submission_id)
     submission = course_service.review_capstone(db, admin, submission, payload.approve)
     return _admin_capstone_submission_row(submission)
+
+
+@router.get("/courses/{slug}/enrollments", response_model=list[AdminEnrollmentRow])
+def list_enrollments(slug: str, db: Session = Depends(get_db)):
+    course = _get_course_or_404(db, slug)
+    return [
+        _admin_enrollment_row(e, course_service.build_course_progress(db, course, e))
+        for e in course_service.list_course_enrollments(db, course)
+    ]
+
+
+@router.get("/enrollments/{enrollment_id}", response_model=AdminEnrollmentDetail)
+def get_enrollment_detail(enrollment_id: uuid.UUID, db: Session = Depends(get_db)):
+    enrollment = _get_enrollment_or_404(db, enrollment_id)
+    progress = course_service.build_course_progress(db, enrollment.course, enrollment)
+    row = _admin_enrollment_row(enrollment, progress)
+    attempts = course_service.list_enrollment_quiz_attempts(db, enrollment)
+    return AdminEnrollmentDetail(
+        **row.model_dump(),
+        modules=[CourseProgressModule(**m) for m in progress["modules"]],
+        attempts=[
+            AdminQuizAttemptRow(
+                quiz_title=a.quiz.title, kind=a.quiz.kind.value, score_pct=a.score_pct, passed=a.passed, created_at=a.created_at
+            )
+            for a in attempts
+        ],
+    )
 
 
 # ── arms ─────────────────────────────────────────────────────────────────

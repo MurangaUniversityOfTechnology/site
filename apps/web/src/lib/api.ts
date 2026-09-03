@@ -538,6 +538,32 @@ export type AdminCapstoneRow = {
   created_at: string;
 };
 
+export type AdminQuizAttemptRow = {
+  quiz_title: string;
+  kind: "module_quiz" | "final_exam";
+  score_pct: number;
+  passed: boolean;
+  created_at: string;
+};
+
+export type AdminEnrollmentRow = {
+  id: string;
+  who: string;
+  email: string;
+  access: "free_member" | "paid";
+  enrolled_at: string;
+  modules_completed: number;
+  modules_total: number;
+  final_exam_passed: boolean;
+  capstone_status: string | null;
+  completed_at: string | null;
+};
+
+export type AdminEnrollmentDetail = AdminEnrollmentRow & {
+  modules: CourseProgressModule[];
+  attempts: AdminQuizAttemptRow[];
+};
+
 export const courseApi = {
   list: (armSlug?: string) => apiFetch<CourseSummary[]>(`/courses${armSlug ? `?arm=${armSlug}` : ""}`),
   arms: () => apiFetch<Arm[]>("/courses/arms"),
@@ -725,6 +751,9 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ approve }),
     }),
+  listEnrollments: (slug: string) => apiFetch<AdminEnrollmentRow[]>(`/admin/courses/${slug}/enrollments`),
+  getEnrollmentDetail: (enrollmentId: string) =>
+    apiFetch<AdminEnrollmentDetail>(`/admin/enrollments/${enrollmentId}`),
   // Arms
   listArms: () => apiFetch<Arm[]>("/admin/arms"),
   createArm: (name: string) => apiFetch<Arm>("/admin/arms", { method: "POST", body: JSON.stringify({ name }) }),

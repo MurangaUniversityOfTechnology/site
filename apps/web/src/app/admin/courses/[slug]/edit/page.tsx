@@ -7,6 +7,7 @@ import { CourseForm, type CourseFormValues, valuesToPayload } from "@/components
 import { QuizQuestionBuilder } from "@/components/QuizQuestionBuilder";
 import { CourseAiImportPanel } from "@/components/CourseAiImportPanel";
 import { CourseArmsPanel } from "@/components/CourseArmsPanel";
+import { CourseEnrollmentsPanel } from "@/components/CourseEnrollmentsPanel";
 import { useConfirm } from "@/components/ConfirmDialog";
 import {
   ApiError,
@@ -462,6 +463,8 @@ export default function EditCoursePage() {
           </div>
         </form>
       </div>
+
+      <CourseEnrollmentsPanel slug={slug} />
     </div>
   );
 }

@@ -227,3 +227,66 @@ def test_question_correct_choice_must_match_a_choice(client, make_course, login_
         },
     )
     assert res.status_code == 422
+
+
+# ── enrollment reporting ─────────────────────────────────────────────────
+
+
+def test_list_enrollments_reports_progress(client, db_session, make_course, make_user, login_as):
+    course, admin = make_course()
+    _fully_structure(db_session, admin, course)
+    course_service.publish_course(db_session, admin, course)
+    student = make_user(email="student@example.com")
+    course_service.enroll(db_session, course.slug, student, None)
+
+    login_as(admin)
+    res = client.get(f"/admin/courses/{course.slug}/enrollments")
+    assert res.status_code == 200
+    rows = res.json()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["email"] == "student@example.com"
+    assert row["modules_total"] == 1
+    assert row["modules_completed"] == 0
+    assert row["final_exam_passed"] is False
+    assert row["completed_at"] is None
+
+
+def test_list_enrollments_requires_admin(client, make_course, make_user, login_as):
+    course, _admin = make_course()
+    other = make_user()
+    login_as(other)
+    res = client.get(f"/admin/courses/{course.slug}/enrollments")
+    assert res.status_code == 403
+
+
+def test_enrollment_detail_includes_modules_and_attempts(client, db_session, make_course, make_user, login_as):
+    course, admin = make_course()
+    _module, quiz, _final_exam = _fully_structure(db_session, admin, course)
+    course_service.publish_course(db_session, admin, course)
+    student = make_user(email="student2@example.com")
+    enrollment = course_service.enroll(db_session, course.slug, student, None)
+
+    question = course_service.list_questions(db_session, quiz)[0]
+    course_service.grade_quiz_attempt(db_session, enrollment, quiz, [{"question_id": question.id, "choice_ids": ["b"]}])
+
+    login_as(admin)
+    list_res = client.get(f"/admin/courses/{course.slug}/enrollments")
+    enrollment_id = list_res.json()[0]["id"]
+
+    res = client.get(f"/admin/enrollments/{enrollment_id}")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["email"] == "student2@example.com"
+    assert len(body["modules"]) == 1
+    assert body["modules"][0]["quiz_passed"] is True
+    assert len(body["attempts"]) == 1
+    assert body["attempts"][0]["kind"] == "module_quiz"
+    assert body["attempts"][0]["passed"] is True
+
+
+def test_enrollment_detail_unknown_id_404s(client, make_course, login_as):
+    _course, admin = make_course()
+    login_as(admin)
+    res = client.get("/admin/enrollments/00000000-0000-0000-0000-000000000000")
+    assert res.status_code == 404

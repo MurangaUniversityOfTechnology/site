@@ -276,6 +276,32 @@ class AdminCapstoneRow(BaseModel):
     created_at: datetime
 
 
+class AdminQuizAttemptRow(BaseModel):
+    quiz_title: str
+    kind: str
+    score_pct: float
+    passed: bool
+    created_at: datetime
+
+
+class AdminEnrollmentRow(BaseModel):
+    id: uuid.UUID
+    who: str
+    email: str
+    access: str
+    enrolled_at: datetime
+    modules_completed: int
+    modules_total: int
+    final_exam_passed: bool
+    capstone_status: str | None
+    completed_at: datetime | None
+
+
+class AdminEnrollmentDetail(AdminEnrollmentRow):
+    modules: list[CourseProgressModule]
+    attempts: list[AdminQuizAttemptRow]
+
+
 class LessonWriteRequest(BaseModel):
     title: str
     body: str = ""
