@@ -4,6 +4,7 @@ import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
+import PasswordInput from "@/components/PasswordInput";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -58,24 +59,22 @@ function ResetPasswordForm() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <label className="flex flex-col gap-2">
               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">New password</span>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
+                className="w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
               />
             </label>
             <label className="flex flex-col gap-2">
               <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Confirm password</span>
-              <input
-                type="password"
+              <PasswordInput
                 required
                 minLength={8}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
+                className="w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
               />
             </label>
 

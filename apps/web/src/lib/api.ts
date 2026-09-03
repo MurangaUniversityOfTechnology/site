@@ -27,7 +27,13 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(res.status, body.detail ?? "Request failed");
+    // FastAPI's own validation errors (422) shape `detail` as an array of
+    // {msg, loc, ...} objects rather than a string — render that as text
+    // instead of handing React a non-string child that blows up the page.
+    const detail = Array.isArray(body.detail)
+      ? body.detail.map((e: { msg?: string }) => e.msg).join(", ")
+      : body.detail;
+    throw new ApiError(res.status, detail || "Request failed");
   }
 
   if (res.status === 204) return undefined as T;

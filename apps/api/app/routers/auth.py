@@ -172,8 +172,17 @@ def reset_password(request: Request, payload: ResetPasswordRequest, db: Session 
 @limiter.limit("5/minute")
 def login(request: Request, payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = auth_service.get_user_by_email(db, payload.email)
-    if not user or not user.password_hash or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No account found with that email — sign up first")
+
+    # A password-less account only exists via Google sign-in — there's no
+    # password to compare against, so point them at the flow that actually
+    # works instead of a generic "incorrect password".
+    if not user.password_hash:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "This account signs in with Google — use that instead")
+
+    if not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect password")
 
     _set_session_cookie(response, user)
     return _to_me_response(user)

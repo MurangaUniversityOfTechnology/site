@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -58,6 +59,25 @@ class Settings(BaseSettings):
     github_redirect_uri: str = ""
     github_sync_token: str = ""
     github_org: str = ""
+
+    @model_validator(mode="after")
+    def _no_localhost_links_in_production(self) -> "Settings":
+        # web_origin feeds CORS too, so a wrong value there usually breaks
+        # the whole frontend immediately and gets noticed. api_base_url only
+        # feeds the link embedded in verification emails — nothing else
+        # touches it — so a missing/default value here fails silently: the
+        # app runs fine, emails send fine, and every "verify email" link
+        # just points at the deploy server's own localhost instead of the
+        # public site. Catch it at startup instead of after users report
+        # broken links.
+        if self.environment == "production":
+            for field in ("web_origin", "api_base_url"):
+                if "localhost" in getattr(self, field):
+                    raise ValueError(
+                        f"{field.upper()} is still set to a localhost URL while ENVIRONMENT=production "
+                        f"— set it to the real public URL in apps/api/.env"
+                    )
+        return self
 
 
 @lru_cache

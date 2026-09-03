@@ -6,6 +6,7 @@ import { ApiError, authApi } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import SignaturePanel from "@/components/SignaturePanel";
 import ProfilePanel from "@/components/ProfilePanel";
+import PasswordInput from "@/components/PasswordInput";
 
 type Category = "account" | "profile" | "signature";
 
@@ -89,17 +90,15 @@ export default function SettingsPage() {
 
               <form onSubmit={submit} className="mt-5.5 flex flex-col gap-4">
                 <Field label="Current password (leave blank if you don't have one yet)">
-                  <input
-                    type="password"
+                  <PasswordInput
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
                   />
                 </Field>
                 <Field label="New password">
-                  <input
+                  <PasswordInput
                     required
-                    type="password"
                     minLength={8}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -107,9 +106,8 @@ export default function SettingsPage() {
                   />
                 </Field>
                 <Field label="Confirm new password">
-                  <input
+                  <PasswordInput
                     required
-                    type="password"
                     minLength={8}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}

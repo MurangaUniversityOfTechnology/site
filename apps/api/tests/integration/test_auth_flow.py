@@ -121,17 +121,23 @@ def test_change_password_on_google_only_account_needs_no_current_password(client
 
 def test_login_nonexistent_email(client):
     res = client.post("/auth/login", json={"email": "nobody@example.com", "password": "whatever1"})
-    assert res.status_code == 401
+    assert res.status_code == 404
 
 
-def test_login_google_only_account_returns_401_not_500(client, db_session):
+def test_login_whitespace_and_case_insensitive_email(client, make_user):
+    make_user(email="member@example.com", password="pw12345678")
+    res = client.post("/auth/login", json={"email": "  Member@Example.com  ", "password": "pw12345678"})
+    assert res.status_code == 200
+
+
+def test_login_google_only_account_returns_400_not_500(client, db_session):
     from app.services.auth import create_user
 
     create_user(db_session, "google-only@example.com", password=None, google_sub="google-sub-123")
     db_session.commit()
 
     res = client.post("/auth/login", json={"email": "google-only@example.com", "password": "anything1"})
-    assert res.status_code == 401
+    assert res.status_code == 400
 
 
 def test_me_without_cookie(client):

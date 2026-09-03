@@ -39,3 +39,24 @@ export function BellIcon({ className = "h-4 w-4" }: IconProps) {
     </svg>
   );
 }
+
+export function EyeIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function EyeOffIcon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+      <path
+        d="M3 3l18 18M10.6 5.2A11 11 0 0 1 12 5c7 0 10.5 7 10.5 7a13.9 13.9 0 0 1-3.16 4.02M6.6 6.6C3.9 8.3 1.5 12 1.5 12s3.5 7 10.5 7a10.4 10.4 0 0 0 4.4-.95M9.9 9.9a3 3 0 0 0 4.24 4.24"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

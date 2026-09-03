@@ -8,7 +8,7 @@ from app.models.user import User
 
 def create_user(db: Session, email: str, password: str | None, google_sub: str | None = None) -> User:
     user = User(
-        email=email.lower(),
+        email=email.strip().lower(),
         password_hash=hash_password(password) if password else None,
         google_sub=google_sub,
         email_verified=google_sub is not None,
@@ -24,7 +24,7 @@ def create_user(db: Session, email: str, password: str | None, google_sub: str |
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-    return db.query(User).filter(User.email == email.lower()).first()
+    return db.query(User).filter(User.email == email.strip().lower()).first()
 
 
 def get_user_by_google_sub(db: Session, google_sub: str) -> User | None:

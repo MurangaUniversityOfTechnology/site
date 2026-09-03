@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import { GoogleIcon } from "@/components/icons";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function SignUpPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await authApi.signup(email, password);
+      await authApi.signup(email.trim(), password);
       await refresh();
       router.push("/onboarding");
     } catch (err) {
@@ -73,14 +74,13 @@ export default function SignUpPage() {
           </label>
           <label className="flex flex-col gap-2">
             <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-faint">Password</span>
-            <input
-              type="password"
+            <PasswordInput
               required
               minLength={8}
               maxLength={72}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
+              className="w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
             />
           </label>
 

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import { GoogleIcon } from "@/components/icons";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [noAccount, setNoAccount] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -24,13 +26,18 @@ export default function SignInPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNoAccount(false);
     setSubmitting(true);
     try {
-      const me = await authApi.login(email, password);
+      const me = await authApi.login(email.trim(), password);
       await refresh();
       router.push(me.onboarded ? "/dashboard" : "/onboarding");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong");
+      if (err instanceof ApiError && err.status === 404) {
+        setNoAccount(true);
+      } else {
+        setError(err instanceof ApiError ? err.message : "Something went wrong");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -89,16 +96,23 @@ export default function SignInPage() {
                 Forgot password?
               </Link>
             </div>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
+              className="w-full rounded-md border border-border-strong bg-surface px-3 py-2.5 text-sm outline-none focus:border-accent"
             />
           </label>
 
           {error && <p className="text-sm text-danger">{error}</p>}
+          {noAccount && (
+            <p className="text-sm text-danger">
+              We couldn&apos;t find an account for that email.{" "}
+              <Link href="/sign-up" className="underline hover:opacity-80">
+                Create one?
+              </Link>
+            </p>
+          )}
 
           <button
             type="submit"

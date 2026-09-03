@@ -1,15 +1,23 @@
 import uuid
+from typing import Annotated
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field
+
+# Users routinely copy-paste emails out of another app (or their phone
+# autocorrects a leading capital), picking up stray leading/trailing
+# whitespace along the way. Strip it before EmailStr ever sees it so a pasted
+# " Foo@Example.com " signs up/in exactly like "Foo@Example.com" instead of
+# bouncing with a validation error or silently mismatching a stored account.
+StrippedEmail = Annotated[EmailStr, BeforeValidator(lambda v: v.strip() if isinstance(v, str) else v)]
 
 
 class SignupRequest(BaseModel):
-    email: EmailStr
+    email: StrippedEmail
     password: str = Field(min_length=8, max_length=72)
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: StrippedEmail
     password: str
 
 
@@ -19,7 +27,7 @@ class ChangePasswordRequest(BaseModel):
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: EmailStr
+    email: StrippedEmail
 
 
 class ResetPasswordRequest(BaseModel):
