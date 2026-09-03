@@ -4,6 +4,11 @@ from app.models.challenge_submission import ChallengeSubmission
 from app.models.content import Content, ContentStatus
 from app.models.course import Course
 from app.models.course_arm import CourseArm
+from app.models.course_capstone import CourseCapstone
+from app.models.course_capstone_submission import (
+    CapstoneReviewStatus,
+    CourseCapstoneSubmission,
+)
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
 from app.models.course_lesson_completion import CourseLessonCompletion
@@ -31,12 +36,15 @@ from app.models.user_tag import UserTag
 __all__ = [
     "Arm",
     "AuditLog",
+    "CapstoneReviewStatus",
     "ChallengeSubmission",
     "Content",
     "ContentStatus",
     "Course",
     "CourseAccessType",
     "CourseArm",
+    "CourseCapstone",
+    "CourseCapstoneSubmission",
     "CourseEnrollment",
     "CourseLesson",
     "CourseLessonCompletion",

@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useMe } from "@/lib/useMe";
 import { courseApi, type Arm, type CourseSummary } from "@/lib/api";
 
 export default function CoursesPage() {
+  const { me } = useMe();
   const [arms, setArms] = useState<Arm[] | null>(null);
   const [selectedArm, setSelectedArm] = useState<string | null>(null);
   const [courses, setCourses] = useState<CourseSummary[] | null>(null);
+  const [enrolledSlugs, setEnrolledSlugs] = useState<Set<string> | null>(null);
+  const [onlyEnrolled, setOnlyEnrolled] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,6 +33,20 @@ export default function CoursesPage() {
     };
   }, [selectedArm]);
 
+  useEffect(() => {
+    if (!me) return;
+    let active = true;
+    courseApi.myEnrollments().then((result) => {
+      if (active) setEnrolledSlugs(new Set(result.map((e) => e.slug)));
+    });
+    return () => {
+      active = false;
+    };
+  }, [me]);
+
+  const visibleCourses =
+    onlyEnrolled && enrolledSlugs ? (courses ?? []).filter((c) => enrolledSlugs.has(c.slug)) : courses;
+
   return (
     <main className="px-5 py-12 sm:px-10 sm:py-14">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">learn by building</div>
@@ -38,43 +56,60 @@ export default function CoursesPage() {
         elaborate final exam to prove it stuck.
       </p>
 
-      {arms && arms.length > 0 && (
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedArm(null)}
-            className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
-              selectedArm === null ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
-            }`}
-          >
-            All
-          </button>
-          {arms.map((a) => (
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {arms && arms.length > 0 && (
+          <div className="flex flex-wrap gap-2">
             <button
-              key={a.id}
-              onClick={() => setSelectedArm(a.slug)}
+              onClick={() => setSelectedArm(null)}
               className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
-                selectedArm === a.slug ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+                selectedArm === null ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
               }`}
             >
-              {a.name}
+              All
             </button>
-          ))}
-        </div>
-      )}
+            {arms.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => setSelectedArm(a.slug)}
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
+                  selectedArm === a.slug ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+                }`}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
 
-      {courses?.length === 0 && (
+        {enrolledSlugs && enrolledSlugs.size > 0 && (
+          <button
+            onClick={() => setOnlyEnrolled((v) => !v)}
+            className={`rounded-full border px-3.5 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.06em] ${
+              onlyEnrolled ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+            }`}
+          >
+            My courses
+          </button>
+        )}
+      </div>
+
+      {visibleCourses?.length === 0 && (
         <div className="mt-8 rounded-2xl border border-border bg-surface p-8 text-center">
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">
-            {selectedArm ? "nothing here yet" : "coming soon"}
+            {onlyEnrolled ? "nothing here" : selectedArm ? "nothing here yet" : "coming soon"}
           </div>
           <p className="mt-3 text-[15.5px] text-muted">
-            {selectedArm ? "No courses in this arm yet — check back soon." : "No courses published yet — check back soon."}
+            {onlyEnrolled
+              ? "You haven't enrolled in any courses in this view yet."
+              : selectedArm
+                ? "No courses in this arm yet — check back soon."
+                : "No courses published yet — check back soon."}
           </p>
         </div>
       )}
 
       <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {courses?.map((c) => (
+        {visibleCourses?.map((c) => (
           <Link
             key={c.slug}
             href={`/courses/${c.slug}`}

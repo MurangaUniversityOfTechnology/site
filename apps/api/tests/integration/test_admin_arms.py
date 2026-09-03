@@ -275,7 +275,7 @@ def test_published_course_detail_includes_arms(client, db_session, make_course, 
         db_session,
         admin,
         quiz,
-        {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_id": "a", "explanation": None},
+        {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_ids": ["a"], "explanation": None},
     )
     final_exam = course_service.create_final_exam(
         db_session, admin, course, {"title": "Final", "intro_text": None, "pass_threshold_pct": 70}
@@ -284,7 +284,7 @@ def test_published_course_detail_includes_arms(client, db_session, make_course, 
         db_session,
         admin,
         final_exam,
-        {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_id": "a", "explanation": None},
+        {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_ids": ["a"], "explanation": None},
     )
     course_service.publish_course(db_session, admin, course)
 

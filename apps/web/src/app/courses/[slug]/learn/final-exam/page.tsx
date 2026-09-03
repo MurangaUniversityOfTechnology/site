@@ -4,14 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AntiCopyPasteNotice } from "@/components/AntiCopyPasteNotice";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { ApiError, courseApi, type FinalExamIntro } from "@/lib/api";
 
 export default function FinalExamIntroPage() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
+  const confirm = useConfirm();
   const [intro, setIntro] = useState<FinalExamIntro | null | undefined>(undefined);
   const [denied, setDenied] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [alreadyPassed, setAlreadyPassed] = useState(false);
+  const [retaking, setRetaking] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -29,10 +33,28 @@ export default function FinalExamIntroPage() {
             : "This course has no final exam."
         );
       });
+    courseApi
+      .progress(slug)
+      .then((result) => {
+        if (active) setAlreadyPassed(result.final_exam_passed);
+      })
+      .catch(() => {
+        // already surfaced via the intro fetch above if this is an access problem
+      });
     return () => {
       active = false;
     };
   }, [slug]);
+
+  async function retake() {
+    const ok = await confirm({
+      title: "Retake the final exam?",
+      message: "You've already passed this exam, and that stays on record either way — this just lets you attempt it again.",
+      confirmLabel: "Retake exam",
+      danger: false,
+    });
+    if (ok) setRetaking(true);
+  }
 
   if (intro === undefined) return null;
 
@@ -45,6 +67,37 @@ export default function FinalExamIntroPage() {
           <Link href={`/courses/${slug}/learn`} className="mt-3 inline-block text-navy hover:underline">
             Back to course
           </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (alreadyPassed && !retaking) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-12 sm:px-10">
+        <Link href={`/courses/${slug}/learn`} className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint hover:text-foreground">
+          ← back to modules
+        </Link>
+        <h1 className="mt-4 text-[clamp(24px,3.6vw,36px)] tracking-[-0.03em]">Final exam</h1>
+
+        <div className="mt-6 rounded-lg border border-border-strong bg-navy/[0.04] px-5 py-4">
+          <div className="font-mono text-[13px] font-semibold uppercase tracking-[0.08em] text-navy">Passed ✓</div>
+          <div className="mt-1 text-sm text-muted">You&apos;ve already passed this exam — your progress is saved.</div>
+        </div>
+
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Link
+            href={`/courses/${slug}/learn`}
+            className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
+          >
+            Continue course
+          </Link>
+          <button
+            onClick={retake}
+            className="rounded-lg border border-border-strong px-6.5 py-3.5 text-[15px] font-semibold text-muted hover:border-accent-dim hover:text-navy"
+          >
+            Retake exam
+          </button>
         </div>
       </main>
     );
@@ -79,7 +132,7 @@ export default function FinalExamIntroPage() {
         disabled={!ready}
         className="mt-7 rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
       >
-        Begin final exam
+        {retaking ? "Retake final exam" : "Begin final exam"}
       </button>
     </main>
   );

@@ -10,6 +10,19 @@ export default function FinalExamTakePage() {
   const { slug } = useParams<{ slug: string }>();
   const [quiz, setQuiz] = useState<QuizForAttempt | null | undefined>(undefined);
   const [passed, setPassed] = useState(false);
+  const [capstonePending, setCapstonePending] = useState(false);
+
+  function handlePassed() {
+    setPassed(true);
+    courseApi
+      .progress(slug)
+      .then((result) => {
+        setCapstonePending(Boolean(result.capstone_status && result.capstone_status !== "approved"));
+      })
+      .catch(() => {
+        // no capstone info available — the congratulations state below still applies
+      });
+  }
 
   useEffect(() => {
     let active = true;
@@ -50,17 +63,30 @@ export default function FinalExamTakePage() {
           quiz={quiz}
           variant="final"
           onSubmit={(answers) => courseApi.attemptFinalExam(slug, answers)}
-          onPassed={() => setPassed(true)}
+          onPassed={handlePassed}
         />
       </div>
 
-      {passed && (
+      {passed && capstonePending && (
         <Link
-          href={`/courses/${slug}/certificate`}
+          href={`/courses/${slug}/learn/capstone`}
           className="mt-7 inline-block rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
         >
-          View certificate
+          Submit capstone project
         </Link>
+      )}
+
+      {passed && !capstonePending && (
+        <div className="mt-7 rounded-lg border border-border-strong bg-navy/[0.04] px-5 py-4">
+          <div className="font-mono text-[13px] font-semibold uppercase tracking-[0.08em] text-navy">Congratulations ✓</div>
+          <div className="mt-1 text-sm text-muted">You&apos;ve passed the final exam and finished the course.</div>
+          <Link
+            href={`/courses/${slug}/learn`}
+            className="mt-4 inline-block rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
+          >
+            Back to course
+          </Link>
+        </div>
       )}
     </main>
   );

@@ -10,12 +10,13 @@ import { useSignOut } from "@/lib/useSignOut";
 const MORE_LINKS = [
   { href: "/projects", label: "Projects" },
   { href: "/challenges", label: "Challenges" },
+  { href: "/courses", label: "Courses" },
   { href: "/learn", label: "Learn" },
   { href: "/members", label: "People" },
   { href: "/donate", label: "Donate" },
 ];
 
-const MORE_PREFIXES = ["/projects", "/challenges", "/learn", "/members", "/donate"];
+const MORE_PREFIXES = ["/projects", "/challenges", "/courses", "/learn", "/members", "/donate"];
 
 const PROFILE_PREFIXES = [
   "/dashboard",

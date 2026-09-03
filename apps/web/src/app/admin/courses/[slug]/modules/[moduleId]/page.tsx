@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Markdown } from "@/components/Markdown";
 import { QuizQuestionBuilder } from "@/components/QuizQuestionBuilder";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ApiError, adminApi, type AdminLessonRow, type AdminModuleRow, type AdminQuizRow } from "@/lib/api";
@@ -19,6 +20,12 @@ export default function ManageModulePage() {
   const [newBody, setNewBody] = useState("");
   const [newVideoUrl, setNewVideoUrl] = useState("");
   const [lessonBusy, setLessonBusy] = useState(false);
+  const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
+  const [uploading, setUploading] = useState<"image" | "attachment" | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
 
   const [quiz, setQuiz] = useState<AdminQuizRow | null | undefined>(undefined);
   const [quizTitle, setQuizTitle] = useState("Module Quiz");
@@ -59,6 +66,36 @@ export default function ManageModulePage() {
     setNewTitle("");
     setNewBody("");
     setNewVideoUrl("");
+    setBodyTab("write");
+  }
+
+  function insertAtCursor(text: string) {
+    const el = bodyRef.current;
+    if (!el) {
+      setNewBody((b) => b + text);
+      return;
+    }
+    const start = el.selectionStart ?? newBody.length;
+    const end = el.selectionEnd ?? newBody.length;
+    const updated = newBody.slice(0, start) + text + newBody.slice(end);
+    setNewBody(updated);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + text.length;
+    });
+  }
+
+  async function handleUpload(kind: "image" | "attachment", file: File) {
+    setUploading(kind);
+    setUploadError(null);
+    try {
+      const { url } = await adminApi.uploadFile(file);
+      insertAtCursor(kind === "image" ? `![${file.name}](${url})` : `[${file.name}](${url})`);
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : "Couldn't upload file.");
+    } finally {
+      setUploading(null);
+    }
   }
 
   async function saveLesson(e: React.FormEvent) {
@@ -129,7 +166,7 @@ export default function ManageModulePage() {
   if (!module || lessons === null || quiz === undefined) return null;
 
   return (
-    <div className="max-w-160">
+    <div className="max-w-5xl">
       <Link href={`/admin/courses/${slug}/edit`} className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted hover:text-navy">
         ← back to course
       </Link>
@@ -165,13 +202,92 @@ export default function ManageModulePage() {
             placeholder="Lesson title"
             className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
           />
-          <textarea
-            value={newBody}
-            onChange={(e) => setNewBody(e.target.value)}
-            placeholder="Lesson content (plain text / markdown)"
-            rows={5}
-            className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
-          />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex gap-1.5 lg:hidden">
+                <button
+                  type="button"
+                  onClick={() => setBodyTab("write")}
+                  className={`rounded-md border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+                    bodyTab === "write" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+                  }`}
+                >
+                  write
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBodyTab("preview")}
+                  className={`rounded-md border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+                    bodyTab === "preview" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+                  }`}
+                >
+                  preview
+                </button>
+              </div>
+              <div className="hidden font-mono text-[10px] uppercase tracking-[0.12em] text-faint lg:block">write · live preview</div>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={uploading !== null}
+                  className="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted disabled:opacity-50"
+                >
+                  {uploading === "image" ? "uploading…" : "+ image"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => attachmentInputRef.current?.click()}
+                  disabled={uploading !== null}
+                  className="rounded-md border border-border-strong px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted disabled:opacity-50"
+                >
+                  {uploading === "attachment" ? "uploading…" : "+ attachment"}
+                </button>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) handleUpload("image", file);
+                  }}
+                />
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  accept=".pdf,.zip,.txt,.docx"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) handleUpload("attachment", file);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="lg:grid lg:grid-cols-2 lg:gap-4">
+              <textarea
+                ref={bodyRef}
+                value={newBody}
+                onChange={(e) => setNewBody(e.target.value)}
+                placeholder="Lesson content — markdown supported (headings, lists, images, ```mermaid fences for diagrams)"
+                rows={14}
+                className={`w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent lg:block ${
+                  bodyTab === "write" ? "block" : "hidden"
+                }`}
+              />
+              <div
+                className={`mt-2 min-h-40 w-full overflow-y-auto rounded-md border border-border-strong bg-background px-4 py-3 lg:mt-0 lg:block lg:min-h-[23rem] ${
+                  bodyTab === "preview" ? "block" : "hidden"
+                }`}
+              >
+                {newBody.trim() ? <Markdown>{newBody}</Markdown> : <p className="text-sm text-muted">Nothing to preview yet.</p>}
+              </div>
+            </div>
+            {uploadError && <p className="text-sm text-danger">{uploadError}</p>}
+          </div>
           <input
             value={newVideoUrl}
             onChange={(e) => setNewVideoUrl(e.target.value)}

@@ -42,7 +42,7 @@ def make_course(db_session, make_user):
             {
                 "prompt": "2 + 2?",
                 "choices": [{"id": "a", "text": "3"}, {"id": "b", "text": "4"}],
-                "correct_choice_id": "b",
+                "correct_choice_ids": ["b"],
                 "explanation": None,
             },
         )
@@ -56,7 +56,7 @@ def make_course(db_session, make_user):
             {
                 "prompt": "3 + 3?",
                 "choices": [{"id": "a", "text": "6"}, {"id": "b", "text": "5"}],
-                "correct_choice_id": "a",
+                "correct_choice_ids": ["a"],
                 "explanation": None,
             },
         )

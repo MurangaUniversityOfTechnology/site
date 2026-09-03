@@ -15,16 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-  });
-
+async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     // FastAPI's own validation errors (422) shape `detail` as an array of
@@ -38,6 +29,28 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+  });
+  return handleResponse<T>(res);
+}
+
+// No Content-Type header here — the browser sets its own
+// multipart/form-data boundary for a FormData body, and forcing
+// application/json (like apiFetch does) would break the upload.
+async function apiUpload<T>(path: string, file: File): Promise<T> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", credentials: "include", body: formData });
+  return handleResponse<T>(res);
 }
 
 export type Me = {
@@ -371,7 +384,7 @@ export type LessonDetail = {
   completed: boolean;
 };
 
-export type QuizQuestionPublic = { id: string; prompt: string; choices: ChoiceItem[] };
+export type QuizQuestionPublic = { id: string; prompt: string; choices: ChoiceItem[]; multi_select: boolean };
 
 export type QuizForAttempt = {
   quiz_id: string;
@@ -385,14 +398,14 @@ export type FinalExamIntro = {
   pass_threshold_pct: number;
 };
 
-export type AnswerItem = { question_id: string; choice_id: string };
+export type AnswerItem = { question_id: string; choice_ids: string[] };
 
 export type GradedAnswer = {
   question_id: string;
   prompt: string;
   choices: ChoiceItem[];
-  submitted_choice_id: string | null;
-  correct_choice_id: string;
+  submitted_choice_ids: string[];
+  correct_choice_ids: string[];
   explanation: string | null;
   correct: boolean;
 };
@@ -488,9 +501,41 @@ export type AdminQuestionRow = {
   quiz_id: string;
   prompt: string;
   choices: ChoiceItem[];
-  correct_choice_id: string;
+  correct_choice_ids: string[];
   explanation: string | null;
   position: number;
+};
+
+export type CapstoneSubmission = {
+  id: string;
+  github_url: string;
+  what_built: string;
+  review_status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
+export type CapstoneAssignment = {
+  title: string;
+  instructions: string;
+  submission: CapstoneSubmission | null;
+};
+
+export type AdminCapstoneAssignmentRow = {
+  id: string;
+  course_id: string;
+  title: string;
+  instructions: string;
+  submission_count: number;
+};
+
+export type AdminCapstoneRow = {
+  id: string;
+  who: string;
+  github_url: string;
+  what_built: string;
+  review_status: "pending" | "approved" | "rejected";
+  reviewed_by: string | null;
+  created_at: string;
 };
 
 export const courseApi = {
@@ -519,6 +564,9 @@ export const courseApi = {
       body: JSON.stringify({ answers }),
     }),
   progress: (slug: string) => apiFetch<CourseProgress>(`/courses/${slug}/progress`),
+  capstone: (slug: string) => apiFetch<CapstoneAssignment>(`/courses/${slug}/capstone`),
+  submitCapstone: (slug: string, payload: { github_url: string; what_built: string }) =>
+    apiFetch<CapstoneSubmission>(`/courses/${slug}/capstone/submit`, { method: "POST", body: JSON.stringify(payload) }),
 };
 
 export type SignatureStatus = { has_signature: boolean; updated_at: string | null };
@@ -609,6 +657,7 @@ export const adminApi = {
   deleteEvent: (slug: string) => apiFetch<void>(`/admin/events/${slug}`, { method: "DELETE" }),
   archiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/archive`, { method: "POST" }),
   unarchiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/unarchive`, { method: "POST" }),
+  uploadFile: (file: File) => apiUpload<{ url: string }>("/admin/uploads", file),
   // Courses
   listCourses: (archived = false) => apiFetch<AdminCourseRow[]>(`/admin/courses?archived=${archived}`),
   createCourse: (payload: CourseWritePayload) =>
@@ -648,15 +697,34 @@ export const adminApi = {
   listQuestions: (quizId: string) => apiFetch<AdminQuestionRow[]>(`/admin/quizzes/${quizId}/questions`),
   createQuestion: (
     quizId: string,
-    payload: { prompt: string; choices: ChoiceItem[]; correct_choice_id: string; explanation: string | null }
+    payload: { prompt: string; choices: ChoiceItem[]; correct_choice_ids: string[]; explanation: string | null }
   ) => apiFetch<AdminQuestionRow>(`/admin/quizzes/${quizId}/questions`, { method: "POST", body: JSON.stringify(payload) }),
   updateQuestion: (
     questionId: string,
-    payload: Partial<{ prompt: string; choices: ChoiceItem[]; correct_choice_id: string; explanation: string | null }>
+    payload: Partial<{ prompt: string; choices: ChoiceItem[]; correct_choice_ids: string[]; explanation: string | null }>
   ) => apiFetch<AdminQuestionRow>(`/admin/questions/${questionId}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteQuestion: (questionId: string) => apiFetch<void>(`/admin/questions/${questionId}`, { method: "DELETE" }),
   reorderQuestion: (questionId: string, direction: "up" | "down") =>
     apiFetch<AdminQuestionRow>(`/admin/questions/${questionId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
+  getCapstone: (slug: string) => apiFetch<AdminCapstoneAssignmentRow | null>(`/admin/courses/${slug}/capstone`),
+  createCapstone: (slug: string, payload: { title: string; instructions: string }) =>
+    apiFetch<AdminCapstoneAssignmentRow>(`/admin/courses/${slug}/capstone`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateCapstone: (capstoneId: string, payload: Partial<{ title: string; instructions: string }>) =>
+    apiFetch<AdminCapstoneAssignmentRow>(`/admin/capstones/${capstoneId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteCapstone: (capstoneId: string) => apiFetch<void>(`/admin/capstones/${capstoneId}`, { method: "DELETE" }),
+  listCapstoneSubmissions: (slug: string) =>
+    apiFetch<AdminCapstoneRow[]>(`/admin/courses/${slug}/capstone-submissions`),
+  reviewCapstoneSubmission: (submissionId: string, approve: boolean) =>
+    apiFetch<AdminCapstoneRow>(`/admin/capstone-submissions/${submissionId}/review`, {
+      method: "POST",
+      body: JSON.stringify({ approve }),
+    }),
   // Arms
   listArms: () => apiFetch<Arm[]>("/admin/arms"),
   createArm: (name: string) => apiFetch<Arm>("/admin/arms", { method: "POST", body: JSON.stringify({ name }) }),

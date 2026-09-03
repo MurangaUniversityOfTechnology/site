@@ -26,7 +26,7 @@ export function QuizQuestionBuilder({ quizId }: { quizId: string }) {
           { id: "a", text: "" },
           { id: "b", text: "" },
         ],
-        correct_choice_id: "a",
+        correct_choice_ids: ["a"],
         explanation: null,
       });
       await refresh();
@@ -92,7 +92,7 @@ function QuestionEditor({
 }) {
   const [prompt, setPrompt] = useState(question.prompt);
   const [choices, setChoices] = useState<ChoiceItem[]>(question.choices);
-  const [correctChoiceId, setCorrectChoiceId] = useState(question.correct_choice_id);
+  const [correctChoiceIds, setCorrectChoiceIds] = useState<string[]>(question.correct_choice_ids);
   const [explanation, setExplanation] = useState(question.explanation ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,7 +115,18 @@ function QuestionEditor({
     const removed = choices[i];
     const next = choices.filter((_, idx) => idx !== i);
     setChoices(next);
-    if (correctChoiceId === removed.id) setCorrectChoiceId(next[0].id);
+    setCorrectChoiceIds((ids) => {
+      const remaining = ids.filter((id) => id !== removed.id);
+      return remaining.length > 0 ? remaining : [next[0].id];
+    });
+    setSaved(false);
+  }
+
+  function toggleCorrect(id: string) {
+    setCorrectChoiceIds((ids) => {
+      const next = ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id];
+      return next.length > 0 ? next : ids; // at least one must stay correct
+    });
     setSaved(false);
   }
 
@@ -127,7 +138,7 @@ function QuestionEditor({
       await adminApi.updateQuestion(question.id, {
         prompt: prompt.trim(),
         choices,
-        correct_choice_id: correctChoiceId,
+        correct_choice_ids: correctChoiceIds,
         explanation: explanation.trim() || null,
       });
       setSaved(true);
@@ -175,17 +186,15 @@ function QuestionEditor({
       </div>
 
       <div className="mt-3 flex flex-col gap-2">
-        <div className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-faint">select the correct choice</div>
+        <div className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-faint">
+          select the correct choice(s)
+        </div>
         {choices.map((c, i) => (
           <div key={c.id} className="flex items-center gap-2">
             <input
-              type="radio"
-              name={`correct-${question.id}`}
-              checked={correctChoiceId === c.id}
-              onChange={() => {
-                setCorrectChoiceId(c.id);
-                setSaved(false);
-              }}
+              type="checkbox"
+              checked={correctChoiceIds.includes(c.id)}
+              onChange={() => toggleCorrect(c.id)}
               className="accent-accent"
             />
             <input

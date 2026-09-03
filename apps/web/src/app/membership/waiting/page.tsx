@@ -11,7 +11,7 @@ const UNKNOWN_AFTER_MS = 60_000;
 
 export default function WaitingPage() {
   const router = useRouter();
-  const { me, loading } = useMe();
+  const { me, loading, refresh } = useMe();
   const [elapsed, setElapsed] = useState(0);
   const [unknown, setUnknown] = useState(false);
   const startedAt = useRef<number | null>(null);
@@ -21,6 +21,7 @@ export default function WaitingPage() {
       const { latest_payment } = await membershipApi.status();
       if (!latest_payment) return;
       if (latest_payment.status === "completed") {
+        await refresh();
         router.push("/membership/success");
       } else if (latest_payment.status === "failed" || latest_payment.status === "cancelled") {
         router.push("/membership/failed");
@@ -28,7 +29,7 @@ export default function WaitingPage() {
     } catch {
       // transient network error — next poll tick will retry
     }
-  }, [router]);
+  }, [router, refresh]);
 
   useEffect(() => {
     if (!me) return;

@@ -84,6 +84,14 @@ export default function CourseDetailPage() {
 
         <div className="relative mt-7 flex flex-wrap items-center gap-3">
           <CourseEnrollPanel slug={course.slug} priceKes={course.price_kes} />
+          {course.enrolled && (
+            <Link
+              href={`/courses/${course.slug}/learn`}
+              className="rounded-lg border border-accent-dim px-6.5 py-3.5 text-[15px] font-semibold text-navy hover:bg-accent/10"
+            >
+              {course.completed ? "Review course" : "Continue learning"}
+            </Link>
+          )}
         </div>
 
         {course.completed && (

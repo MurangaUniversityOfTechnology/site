@@ -49,7 +49,7 @@ Return ONLY a single JSON object, no markdown code fence, no commentary before o
           {
             "prompt": "string",
             "choices": [ { "id": "a", "text": "string" }, { "id": "b", "text": "string" } ],
-            "correct_choice_id": "a",
+            "correct_choice_ids": ["a"],
             "explanation": "string"
           }
         ]

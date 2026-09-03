@@ -15,11 +15,16 @@ from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.user import User
 from app.schemas.arm import ArmRow, AssignArmRequest, CreateArmRequest, RenameArmRequest
 from app.schemas.course import (
+    AdminCapstoneAssignmentRow,
+    AdminCapstoneRow,
     AdminCourseRow,
     AdminLessonRow,
     AdminModuleRow,
     AdminQuestionRow,
     AdminQuizRow,
+    CapstoneReviewRequest,
+    CapstoneUpdateRequest,
+    CapstoneWriteRequest,
     CourseUpdateRequest,
     CourseWriteRequest,
     LessonUpdateRequest,
@@ -105,9 +110,31 @@ def _admin_question_row(question: CourseQuizQuestion) -> AdminQuestionRow:
         quiz_id=question.quiz_id,
         prompt=question.prompt,
         choices=question.choices,
-        correct_choice_id=question.correct_choice_id,
+        correct_choice_ids=question.correct_choice_ids,
         explanation=question.explanation,
         position=question.position,
+    )
+
+
+def _admin_capstone_assignment_row(db: Session, capstone) -> AdminCapstoneAssignmentRow:
+    return AdminCapstoneAssignmentRow(
+        id=capstone.id,
+        course_id=capstone.course_id,
+        title=capstone.title,
+        instructions=capstone.instructions,
+        submission_count=len(course_service.list_capstone_submissions(db, capstone.course)),
+    )
+
+
+def _admin_capstone_submission_row(submission) -> AdminCapstoneRow:
+    return AdminCapstoneRow(
+        id=submission.id,
+        who=_display_name(submission.enrollment.user),
+        github_url=submission.github_url,
+        what_built=submission.what_built,
+        review_status=submission.review_status.value,
+        reviewed_by=_display_name(submission.reviewed_by) if submission.reviewed_by else None,
+        created_at=submission.created_at,
     )
 
 
@@ -147,6 +174,20 @@ def _get_quiz_or_404(db: Session, quiz_id: uuid.UUID) -> CourseQuiz:
     if not quiz:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown quiz")
     return quiz
+
+
+def _get_capstone_or_404(db: Session, capstone_id: uuid.UUID):
+    try:
+        return course_service.get_capstone_by_id(db, capstone_id)
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+def _get_submission_or_404(db: Session, submission_id: uuid.UUID):
+    try:
+        return course_service.get_submission_by_id(db, submission_id)
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
 
 
 # ── courses ──────────────────────────────────────────────────────────────
@@ -446,6 +487,69 @@ def reorder_question(
     except course_service.CourseError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return _admin_question_row(question)
+
+
+# ── capstone ─────────────────────────────────────────────────────────────
+
+
+@router.get("/courses/{slug}/capstone", response_model=AdminCapstoneAssignmentRow | None)
+def get_capstone(slug: str, db: Session = Depends(get_db)):
+    course = _get_course_or_404(db, slug)
+    capstone = course_service.get_capstone(db, course)
+    return _admin_capstone_assignment_row(db, capstone) if capstone else None
+
+
+@router.post("/courses/{slug}/capstone", response_model=AdminCapstoneAssignmentRow, status_code=status.HTTP_201_CREATED)
+def create_capstone(
+    slug: str, payload: CapstoneWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    course = _get_course_or_404(db, slug)
+    try:
+        capstone = course_service.create_capstone(db, admin, course, payload.model_dump())
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _admin_capstone_assignment_row(db, capstone)
+
+
+@router.patch("/capstones/{capstone_id}", response_model=AdminCapstoneAssignmentRow)
+def update_capstone(
+    capstone_id: uuid.UUID,
+    payload: CapstoneUpdateRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    capstone = _get_capstone_or_404(db, capstone_id)
+    capstone = course_service.update_capstone(db, admin, capstone, payload.model_dump(exclude_unset=True))
+    return _admin_capstone_assignment_row(db, capstone)
+
+
+@router.delete("/capstones/{capstone_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_capstone(capstone_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    capstone = _get_capstone_or_404(db, capstone_id)
+    try:
+        course_service.delete_capstone(db, admin, capstone)
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.get("/courses/{slug}/capstone-submissions", response_model=list[AdminCapstoneRow])
+def list_capstone_submissions(slug: str, db: Session = Depends(get_db)):
+    course = _get_course_or_404(db, slug)
+    return [_admin_capstone_submission_row(s) for s in course_service.list_capstone_submissions(db, course)]
+
+
+@router.post("/capstone-submissions/{submission_id}/review", response_model=AdminCapstoneRow)
+def review_capstone_submission(
+    submission_id: uuid.UUID,
+    payload: CapstoneReviewRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    submission = _get_submission_or_404(db, submission_id)
+    submission = course_service.review_capstone(db, admin, submission, payload.approve)
+    return _admin_capstone_submission_row(submission)
+
+
 # ── arms ─────────────────────────────────────────────────────────────────
 
 

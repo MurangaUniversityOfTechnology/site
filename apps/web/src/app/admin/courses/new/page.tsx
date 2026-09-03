@@ -26,7 +26,7 @@ export default function NewCoursePage() {
   }
 
   return (
-    <div className="max-w-140">
+    <div className="max-w-2xl">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">courses</div>
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">New course</h1>
 

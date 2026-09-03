@@ -7,7 +7,7 @@ import { useMe } from "@/lib/useMe";
 
 export default function SuccessPage() {
   const router = useRouter();
-  const { me, loading } = useMe();
+  const { me, loading, refresh } = useMe();
   const [payment, setPayment] = useState<Payment | null>(null);
 
   useEffect(() => {
@@ -17,7 +17,11 @@ export default function SuccessPage() {
   useEffect(() => {
     if (!me) return;
     membershipApi.status().then(({ latest_payment }) => setPayment(latest_payment));
-  }, [me]);
+    // Membership just activated server-side (this is the success page) — the
+    // shared `me` context was fetched once at app load and won't otherwise
+    // pick up the new membership_status until a hard reload.
+    refresh();
+  }, [me, refresh]);
 
   if (loading || !me) return null;
 

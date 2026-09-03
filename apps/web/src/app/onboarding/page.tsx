@@ -54,7 +54,7 @@ function toggle<T>(list: T[], value: T): T[] {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { me, loading: authLoading } = useMe();
+  const { me, loading: authLoading, refresh } = useMe();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
@@ -102,6 +102,7 @@ export default function OnboardingPage() {
         linkedin_url: form.linkedin.trim() || null,
         visibility: form.visibility,
       });
+      await refresh();
       router.push("/welcome");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't save your profile — try again.");

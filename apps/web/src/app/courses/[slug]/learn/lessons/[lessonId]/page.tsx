@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Markdown } from "@/components/Markdown";
 import { ApiError, courseApi, type LessonDetail, type ModulePublic } from "@/lib/api";
 
 function youtubeEmbedUrl(url: string): string {
@@ -55,10 +56,21 @@ export default function LessonPage() {
     );
   }
 
-  const allLessons = modules?.flatMap((m) => m.lessons) ?? [];
-  const idx = allLessons.findIndex((l) => l.id === lessonId);
-  const prev = idx > 0 ? allLessons[idx - 1] : null;
-  const next = idx >= 0 && idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
+  // Prev/next stay within the current module — the next module's lessons
+  // are locked until this module's quiz is passed, so jumping straight
+  // into them from "next" would just dead-end on a locked page. Once
+  // you're on the last lesson of a module, "next" points at that
+  // module's quiz instead of into the (locked) next module.
+  const currentModule = modules?.find((m) => m.lessons.some((l) => l.id === lessonId));
+  const lessonsInModule = currentModule?.lessons ?? [];
+  const idx = lessonsInModule.findIndex((l) => l.id === lessonId);
+  const prev = idx > 0 ? { href: `/courses/${slug}/learn/lessons/${lessonsInModule[idx - 1].id}`, label: lessonsInModule[idx - 1].title } : null;
+  const next =
+    idx >= 0 && idx < lessonsInModule.length - 1
+      ? { href: `/courses/${slug}/learn/lessons/${lessonsInModule[idx + 1].id}`, label: lessonsInModule[idx + 1].title }
+      : currentModule
+        ? { href: `/courses/${slug}/learn/modules/${currentModule.id}/quiz`, label: "Take module quiz" }
+        : null;
 
   return (
     <main className="mx-auto max-w-2xl px-5 py-12 sm:px-10">
@@ -73,19 +85,21 @@ export default function LessonPage() {
         </div>
       )}
 
-      <p className="mt-6 whitespace-pre-wrap text-[15px] leading-[1.7] text-foreground">{lesson.body}</p>
+      <div className="mt-6">
+        <Markdown>{lesson.body}</Markdown>
+      </div>
 
       <div className="mt-10 flex items-center justify-between border-t border-border pt-5">
         {prev ? (
-          <Link href={`/courses/${slug}/learn/lessons/${prev.id}`} className="font-mono text-[12px] text-muted hover:text-navy">
-            ← {prev.title}
+          <Link href={prev.href} className="font-mono text-[12px] text-muted hover:text-navy">
+            ← {prev.label}
           </Link>
         ) : (
           <span />
         )}
         {next ? (
-          <Link href={`/courses/${slug}/learn/lessons/${next.id}`} className="font-mono text-[12px] text-muted hover:text-navy">
-            {next.title} →
+          <Link href={next.href} className="font-mono text-[12px] text-muted hover:text-navy">
+            {next.label} →
           </Link>
         ) : (
           <span />

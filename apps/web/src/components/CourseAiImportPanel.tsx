@@ -7,7 +7,7 @@ import { buildCourseAiPrompt } from "@/lib/aiCoursePrompt";
 type AiQuestion = {
   prompt: string;
   choices: ChoiceItem[];
-  correct_choice_id: string;
+  correct_choice_ids: string[];
   explanation?: string | null;
 };
 
@@ -90,7 +90,7 @@ export function CourseAiImportPanel({
             await adminApi.createQuestion(quiz.id, {
               prompt: q.prompt,
               choices: q.choices,
-              correct_choice_id: q.correct_choice_id,
+              correct_choice_ids: q.correct_choice_ids,
               explanation: q.explanation ?? null,
             });
           }
@@ -109,7 +109,7 @@ export function CourseAiImportPanel({
           await adminApi.createQuestion(exam.id, {
             prompt: q.prompt,
             choices: q.choices,
-            correct_choice_id: q.correct_choice_id,
+            correct_choice_ids: q.correct_choice_ids,
             explanation: q.explanation ?? null,
           });
         }

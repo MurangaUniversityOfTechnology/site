@@ -44,7 +44,7 @@ def _fully_structure(db_session, admin, course):
         {
             "prompt": "2 + 2?",
             "choices": [{"id": "a", "text": "3"}, {"id": "b", "text": "4"}],
-            "correct_choice_id": "b",
+            "correct_choice_ids": ["b"],
             "explanation": None,
         },
     )
@@ -58,7 +58,7 @@ def _fully_structure(db_session, admin, course):
         {
             "prompt": "3 + 3?",
             "choices": [{"id": "a", "text": "6"}, {"id": "b", "text": "5"}],
-            "correct_choice_id": "a",
+            "correct_choice_ids": ["a"],
             "explanation": None,
         },
     )
@@ -132,7 +132,7 @@ def test_publish_requires_final_exam(db_session, make_course):
         db_session, admin, module, {"title": "Quiz", "intro_text": None, "pass_threshold_pct": 80}
     )
     course_service.create_question(
-        db_session, admin, quiz, {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_id": "a", "explanation": None}
+        db_session, admin, quiz, {"prompt": "?", "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}], "correct_choice_ids": ["a"], "explanation": None}
     )
     with pytest.raises(course_service.CourseError, match="final exam"):
         course_service.publish_course(db_session, admin, course)
@@ -223,7 +223,7 @@ def test_question_correct_choice_must_match_a_choice(client, make_course, login_
         json={
             "prompt": "?",
             "choices": [{"id": "a", "text": "x"}, {"id": "b", "text": "y"}],
-            "correct_choice_id": "z",
+            "correct_choice_ids": ["z"],
         },
     )
     assert res.status_code == 422

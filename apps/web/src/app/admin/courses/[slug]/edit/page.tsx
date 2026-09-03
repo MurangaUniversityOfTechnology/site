@@ -8,7 +8,14 @@ import { QuizQuestionBuilder } from "@/components/QuizQuestionBuilder";
 import { CourseAiImportPanel } from "@/components/CourseAiImportPanel";
 import { CourseArmsPanel } from "@/components/CourseArmsPanel";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ApiError, adminApi, type AdminCourseRow, type AdminModuleRow, type AdminQuizRow } from "@/lib/api";
+import {
+  ApiError,
+  adminApi,
+  type AdminCapstoneAssignmentRow,
+  type AdminCourseRow,
+  type AdminModuleRow,
+  type AdminQuizRow,
+} from "@/lib/api";
 
 export default function EditCoursePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -32,6 +39,12 @@ export default function EditCoursePage() {
   const [examThreshold, setExamThreshold] = useState("70");
   const [examBusy, setExamBusy] = useState(false);
   const [examError, setExamError] = useState<string | null>(null);
+
+  const [capstone, setCapstone] = useState<AdminCapstoneAssignmentRow | null | undefined>(undefined);
+  const [capstoneTitle, setCapstoneTitle] = useState("Capstone Project");
+  const [capstoneInstructions, setCapstoneInstructions] = useState("");
+  const [capstoneBusy, setCapstoneBusy] = useState(false);
+  const [capstoneError, setCapstoneError] = useState<string | null>(null);
 
   async function loadCourse() {
     const rows = await adminApi.listCourses(false);
@@ -97,10 +110,43 @@ export default function EditCoursePage() {
         setExamThreshold(String(exam.pass_threshold_pct));
       }
     });
+    adminApi.getCapstone(slug).then((c) => {
+      if (!active) return;
+      setCapstone(c);
+      if (c) {
+        setCapstoneTitle(c.title);
+        setCapstoneInstructions(c.instructions);
+      }
+    });
     return () => {
       active = false;
     };
   }, [slug]);
+
+  async function saveCapstone(e: React.FormEvent) {
+    e.preventDefault();
+    setCapstoneBusy(true);
+    setCapstoneError(null);
+    try {
+      if (capstone) {
+        const updated = await adminApi.updateCapstone(capstone.id, {
+          title: capstoneTitle.trim(),
+          instructions: capstoneInstructions,
+        });
+        setCapstone(updated);
+      } else {
+        const created = await adminApi.createCapstone(slug, {
+          title: capstoneTitle.trim(),
+          instructions: capstoneInstructions,
+        });
+        setCapstone(created);
+      }
+    } catch (err) {
+      setCapstoneError(err instanceof ApiError ? err.message : "Couldn't save capstone.");
+    } finally {
+      setCapstoneBusy(false);
+    }
+  }
 
   async function saveCourse(e: React.FormEvent) {
     e.preventDefault();
@@ -196,10 +242,10 @@ export default function EditCoursePage() {
     }
   }
 
-  if (!course || !values || modules === null || finalExam === undefined) return null;
+  if (!course || !values || modules === null || finalExam === undefined || capstone === undefined) return null;
 
   return (
-    <div className="max-w-160">
+    <div className="max-w-5xl">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">courses</div>
       <div className="mt-3.5 flex flex-wrap items-center gap-3">
         <h1 className="text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">{course.title}</h1>
@@ -212,26 +258,28 @@ export default function EditCoursePage() {
         </span>
       </div>
 
-      <div className="mt-6.5 rounded-xl border border-border bg-surface p-6">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">details</div>
-        <form onSubmit={saveCourse} className="mt-4.5">
-          <CourseForm values={values} onChange={setValues} slugEditable={false} />
-          {saveError && <p className="mt-4 text-sm text-danger">{saveError}</p>}
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-5 w-fit rounded-lg bg-accent px-6 py-3 text-[14.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : saved ? "Saved ✓" : "Save details"}
-          </button>
-        </form>
-      </div>
+      <div className="mt-6.5 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">details</div>
+          <form onSubmit={saveCourse} className="mt-4.5">
+            <CourseForm values={values} onChange={setValues} slugEditable={false} />
+            {saveError && <p className="mt-4 text-sm text-danger">{saveError}</p>}
+            <button
+              type="submit"
+              disabled={saving}
+              className="mt-5 w-fit rounded-lg bg-accent px-6 py-3 text-[14.5px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : saved ? "Saved ✓" : "Save details"}
+            </button>
+          </form>
+        </div>
 
-      <CourseArmsPanel
-        slug={slug}
-        assignedArms={course.arms}
-        onChange={(arms) => setCourse((c) => (c ? { ...c, arms } : c))}
-      />
+        <CourseArmsPanel
+          slug={slug}
+          assignedArms={course.arms}
+          onChange={(arms) => setCourse((c) => (c ? { ...c, arms } : c))}
+        />
+      </div>
 
       <CourseAiImportPanel
         slug={slug}
@@ -338,7 +386,7 @@ export default function EditCoursePage() {
             value={examIntro}
             onChange={(e) => setExamIntro(e.target.value)}
             placeholder="Intro / warning shown before the student starts"
-            rows={2}
+            rows={3}
             className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
           />
           <label className="block">
@@ -370,6 +418,49 @@ export default function EditCoursePage() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="mt-6 rounded-xl border border-border bg-surface p-6">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">capstone</div>
+        <p className="mt-2 text-[13.5px] text-muted">
+          Optional — a project a student submits after passing the final exam. If set, admin approval becomes the
+          last step before the course counts as completed. Leave unset to keep completing the course right after
+          the final exam, like today.
+        </p>
+
+        <form onSubmit={saveCapstone} className="mt-4.5 flex flex-col gap-3.5">
+          <input
+            value={capstoneTitle}
+            onChange={(e) => setCapstoneTitle(e.target.value)}
+            placeholder="Title"
+            className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+          />
+          <textarea
+            value={capstoneInstructions}
+            onChange={(e) => setCapstoneInstructions(e.target.value)}
+            placeholder="What should the student build and submit?"
+            rows={6}
+            className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+          />
+          {capstoneError && <p className="text-sm text-danger">{capstoneError}</p>}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="submit"
+              disabled={capstoneBusy}
+              className="w-fit rounded-md bg-accent px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#1a2744] disabled:opacity-50"
+            >
+              {capstoneBusy ? "Saving…" : capstone ? "Save capstone details" : "Add capstone"}
+            </button>
+            {capstone && (
+              <Link
+                href={`/admin/courses/${slug}/capstone-submissions`}
+                className="w-fit rounded-md border border-border-strong px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted"
+              >
+                review submissions ({capstone.submission_count})
+              </Link>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

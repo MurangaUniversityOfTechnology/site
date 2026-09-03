@@ -7,6 +7,11 @@ from sqlalchemy.orm import Session
 from app.models.arm import Arm
 from app.models.course import Course
 from app.models.course_arm import CourseArm
+from app.models.course_capstone import CourseCapstone
+from app.models.course_capstone_submission import (
+    CapstoneReviewStatus,
+    CourseCapstoneSubmission,
+)
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
 from app.models.course_lesson_completion import CourseLessonCompletion
@@ -573,26 +578,29 @@ def grade_quiz_attempt(
     """Module quizzes require a perfect score to pass — pass_threshold_pct
     is ignored entirely for that kind, and only ever applies to the final
     exam. Unknown question_ids in the payload are ignored and a missing or
-    invalid choice_id just counts as wrong, so a malformed submission never
-    500s. Every submission is stored as a new row (append-only history) so
-    an admin later editing pass_threshold_pct can't retroactively flip a
-    result that already happened."""
+    invalid choice_ids just counts as wrong, so a malformed submission never
+    500s. A question is correct only if the submitted set of choice ids
+    exactly matches the correct set — no partial credit for a multi-select
+    question with some but not all correct choices picked. Every submission
+    is stored as a new row (append-only history) so an admin later editing
+    pass_threshold_pct can't retroactively flip a result that already
+    happened."""
     questions = list_questions(db, quiz)
-    submitted = {a["question_id"]: a.get("choice_id") for a in answers}
+    submitted = {a["question_id"]: set(a.get("choice_ids") or []) for a in answers}
 
     graded: list[dict] = []
     correct_count = 0
     for question in questions:
-        submitted_choice_id = submitted.get(question.id)
-        correct = submitted_choice_id is not None and submitted_choice_id == question.correct_choice_id
+        submitted_choice_ids = submitted.get(question.id, set())
+        correct = submitted_choice_ids == set(question.correct_choice_ids)
         correct_count += int(correct)
         graded.append(
             {
                 "question_id": str(question.id),
                 "prompt": question.prompt,
                 "choices": question.choices,
-                "submitted_choice_id": submitted_choice_id,
-                "correct_choice_id": question.correct_choice_id,
+                "submitted_choice_ids": sorted(submitted_choice_ids),
+                "correct_choice_ids": question.correct_choice_ids,
                 "explanation": question.explanation,
                 "correct": correct,
             }
@@ -618,13 +626,26 @@ def attempt_final_exam(
         raise CourseError("This course has no final exam")
     attempt = grade_quiz_attempt(db, enrollment, quiz, answers)
     if attempt.passed:
-        complete_course(db, enrollment)
+        # A course with no capstone assignment completes immediately, same
+        # as before capstones existed. One with a capstone waits for it to
+        # be submitted and approved (see review_capstone below).
+        if not get_capstone(db, course):
+            complete_course(db, enrollment)
+        else:
+            notification.notify(
+                db,
+                enrollment.user,
+                "course",
+                f"You passed the final exam for {course.title}",
+                "Submit your capstone project to finish the course.",
+            )
+            db.commit()
     return attempt
 
 
 def complete_course(db: Session, enrollment: CourseEnrollment) -> None:
     """Idempotent — only ever fires the notification once, on the first
-    final-exam pass."""
+    final-exam pass (or, for a course with a capstone, the first approval)."""
     if enrollment.completed_at:
         return
     enrollment.completed_at = datetime.now(UTC)
@@ -633,7 +654,7 @@ def complete_course(db: Session, enrollment: CourseEnrollment) -> None:
         enrollment.user,
         "course",
         f"You completed {enrollment.course.title} \U0001f393",
-        "Nice work — your certificate is ready.",
+        "Nice work — you've earned your badge for this course.",
     )
     db.commit()
 
@@ -655,9 +676,15 @@ def build_course_progress(db: Session, course: Course, enrollment: CourseEnrollm
             }
         )
     final_exam = get_final_exam(db, course)
+    capstone = get_capstone(db, course)
+    if not capstone:
+        capstone_status = None
+    else:
+        submission = get_capstone_submission(db, enrollment)
+        capstone_status = submission.review_status.value if submission else "not_submitted"
     return {
         "modules": module_rows,
-        "capstone_status": None,
+        "capstone_status": capstone_status,
         "final_exam_passed": bool(final_exam and has_passed_quiz(db, final_exam, enrollment)),
         "completed_at": enrollment.completed_at,
     }
@@ -703,3 +730,122 @@ def list_my_enrollments_summary(db: Session, user: User) -> list[dict]:
             }
         )
     return rows
+
+
+# ── capstone ─────────────────────────────────────────────────────────────
+
+
+def get_capstone(db: Session, course: Course) -> CourseCapstone | None:
+    return db.query(CourseCapstone).filter(CourseCapstone.course_id == course.id).first()
+
+
+def get_capstone_by_id(db: Session, capstone_id) -> CourseCapstone:
+    capstone = db.get(CourseCapstone, capstone_id)
+    if not capstone:
+        raise CourseError("Unknown capstone")
+    return capstone
+
+
+def create_capstone(db: Session, admin: User, course: Course, fields: dict) -> CourseCapstone:
+    if get_capstone(db, course):
+        raise CourseError(f"'{course.title}' already has a capstone assignment")
+    capstone = CourseCapstone(course_id=course.id, **fields)
+    db.add(capstone)
+    audit.log(db, admin, "course", f"Added a capstone assignment to {course.title}")
+    db.commit()
+    db.refresh(capstone)
+    return capstone
+
+
+def update_capstone(db: Session, admin: User, capstone: CourseCapstone, fields: dict) -> CourseCapstone:
+    for key, value in fields.items():
+        setattr(capstone, key, value)
+    audit.log(db, admin, "course", f"Updated the capstone assignment for {capstone.course.title}")
+    db.commit()
+    db.refresh(capstone)
+    return capstone
+
+
+def delete_capstone(db: Session, admin: User, capstone: CourseCapstone) -> None:
+    if capstone.course.published_at is not None:
+        raise CourseError("Unpublish the course before deleting its capstone assignment")
+    audit.log(db, admin, "course", f"Deleted the capstone assignment for {capstone.course.title}")
+    db.delete(capstone)
+    db.commit()
+
+
+def get_capstone_submission(db: Session, enrollment: CourseEnrollment) -> CourseCapstoneSubmission | None:
+    return (
+        db.query(CourseCapstoneSubmission)
+        .filter(CourseCapstoneSubmission.enrollment_id == enrollment.id)
+        .first()
+    )
+
+
+def get_submission_by_id(db: Session, submission_id) -> CourseCapstoneSubmission:
+    submission = db.get(CourseCapstoneSubmission, submission_id)
+    if not submission:
+        raise CourseError("Unknown capstone submission")
+    return submission
+
+
+def submit_capstone(
+    db: Session, course: Course, enrollment: CourseEnrollment, github_url: str, what_built: str
+) -> CourseCapstoneSubmission:
+    """Gated on having passed the final exam — mirrors the module-quiz
+    unlock pattern one level up the chain. Resubmitting (after a rejection,
+    or just to fix a typo) overwrites the existing row and resets it to
+    pending rather than creating a new one — see CourseCapstoneSubmission's
+    docstring for why there's no attempt history here."""
+    final_exam = get_final_exam(db, course)
+    if not final_exam or not has_passed_quiz(db, final_exam, enrollment):
+        raise CourseAccessDenied("Pass the final exam before submitting your capstone")
+    capstone = get_capstone(db, course)
+    if not capstone:
+        raise CourseError("This course has no capstone assignment")
+
+    submission = get_capstone_submission(db, enrollment)
+    if submission:
+        submission.github_url = github_url
+        submission.what_built = what_built
+        submission.review_status = CapstoneReviewStatus.pending
+        submission.reviewed_by_id = None
+        submission.reviewed_at = None
+    else:
+        submission = CourseCapstoneSubmission(
+            enrollment_id=enrollment.id, github_url=github_url, what_built=what_built
+        )
+        db.add(submission)
+    db.commit()
+    db.refresh(submission)
+    return submission
+
+
+def list_capstone_submissions(db: Session, course: Course) -> list[CourseCapstoneSubmission]:
+    return (
+        db.query(CourseCapstoneSubmission)
+        .join(CourseEnrollment, CourseEnrollment.id == CourseCapstoneSubmission.enrollment_id)
+        .filter(CourseEnrollment.course_id == course.id)
+        .order_by(
+            (CourseCapstoneSubmission.review_status != CapstoneReviewStatus.pending),
+            CourseCapstoneSubmission.created_at.desc(),
+        )
+        .all()
+    )
+
+
+def review_capstone(db: Session, admin: User, submission: CourseCapstoneSubmission, approve: bool) -> CourseCapstoneSubmission:
+    submission.review_status = CapstoneReviewStatus.approved if approve else CapstoneReviewStatus.rejected
+    submission.reviewed_by_id = admin.id
+    submission.reviewed_at = datetime.now(UTC)
+    audit.log(
+        db,
+        admin,
+        "course",
+        f"{'Approved' if approve else 'Rejected'} a capstone submission from {submission.enrollment.user.email}",
+    )
+    db.commit()
+    db.refresh(submission)
+    if approve:
+        complete_course(db, submission.enrollment)
+    return submission

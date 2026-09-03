@@ -19,6 +19,7 @@ dependencies = [
     "mpesakit>=2.2.0",
     "qrcode[pil]>=8.0",
     "cryptography>=43.0",
+    "cloudinary>=1.41",
 ]
 
 [project.optional-dependencies]
@@ -57,4 +58,4 @@ extend-exclude = ["migrations/versions"]
 # built entirely around calling Depends()/Cookie() as a parameter default —
 # that's not a bug, it's the framework's documented pattern. Every FastAPI
 # project using ruff configures this same allowlist.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Cookie"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Cookie", "fastapi.File"]

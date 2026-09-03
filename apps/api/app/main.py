@@ -9,6 +9,7 @@ from app.core.rate_limit import limiter
 from app.routers import (
     admin,
     admin_courses,
+    admin_uploads,
     auth,
     challenges,
     content,
@@ -47,6 +48,7 @@ app.include_router(membership.router)
 app.include_router(profile.router)
 app.include_router(admin.router)
 app.include_router(admin_courses.router)
+app.include_router(admin_uploads.router)
 app.include_router(events.router)
 app.include_router(challenges.router)
 app.include_router(members.router)

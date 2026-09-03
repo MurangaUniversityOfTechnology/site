@@ -73,12 +73,15 @@ class ChoiceItem(BaseModel):
 
 
 class QuizQuestionPublic(BaseModel):
-    """Never carries correct_choice_id/explanation — those are only
-    revealed in the grading result, after submit."""
+    """Never carries correct_choice_ids/explanation — those are only
+    revealed in the grading result, after submit. multi_select doesn't leak
+    which choices are correct, only how many — so the frontend knows to
+    render checkboxes instead of radio buttons before the student answers."""
 
     id: uuid.UUID
     prompt: str
     choices: list[ChoiceItem]
+    multi_select: bool
 
 
 class QuizForAttempt(BaseModel):
@@ -95,7 +98,7 @@ class FinalExamIntro(BaseModel):
 
 class AnswerItem(BaseModel):
     question_id: uuid.UUID
-    choice_id: str
+    choice_ids: list[str] = Field(default_factory=list)
 
 
 class QuizAttemptRequest(BaseModel):
@@ -106,8 +109,8 @@ class GradedAnswer(BaseModel):
     question_id: uuid.UUID
     prompt: str
     choices: list[ChoiceItem]
-    submitted_choice_id: str | None
-    correct_choice_id: str
+    submitted_choice_ids: list[str]
+    correct_choice_ids: list[str]
     explanation: str | None
     correct: bool
 
@@ -178,16 +181,14 @@ class CapstoneSubmissionResponse(BaseModel):
     created_at: datetime
 
 
-class ReviewableCapstoneRow(BaseModel):
-    id: uuid.UUID
-    who: str
-    github_url: str
-    what_built: str
-    created_at: datetime
-
-
 class CapstoneReviewRequest(BaseModel):
     approve: bool
+
+
+class CapstoneAssignment(BaseModel):
+    title: str
+    instructions: str
+    submission: CapstoneSubmissionResponse | None
 
 
 # ── admin ────────────────────────────────────────────────────────────────
@@ -247,6 +248,34 @@ class AdminModuleRow(BaseModel):
     has_quiz: bool
 
 
+class CapstoneWriteRequest(BaseModel):
+    title: str
+    instructions: str = ""
+
+
+class CapstoneUpdateRequest(BaseModel):
+    title: str | None = None
+    instructions: str | None = None
+
+
+class AdminCapstoneAssignmentRow(BaseModel):
+    id: uuid.UUID
+    course_id: uuid.UUID
+    title: str
+    instructions: str
+    submission_count: int
+
+
+class AdminCapstoneRow(BaseModel):
+    id: uuid.UUID
+    who: str
+    github_url: str
+    what_built: str
+    review_status: str
+    reviewed_by: str | None
+    created_at: datetime
+
+
 class LessonWriteRequest(BaseModel):
     title: str
     body: str = ""
@@ -298,30 +327,30 @@ class AdminQuizRow(BaseModel):
 class QuestionWriteRequest(BaseModel):
     prompt: str
     choices: list[ChoiceItem] = Field(min_length=2, max_length=5)
-    correct_choice_id: str
+    correct_choice_ids: list[str] = Field(min_length=1)
     explanation: str | None = None
 
     @model_validator(mode="after")
-    def _correct_choice_must_exist(self) -> "QuestionWriteRequest":
-        if self.correct_choice_id not in {c.id for c in self.choices}:
-            raise ValueError("correct_choice_id must match one of the given choices")
+    def _correct_choices_must_exist(self) -> "QuestionWriteRequest":
+        if not set(self.correct_choice_ids) <= {c.id for c in self.choices}:
+            raise ValueError("correct_choice_ids must match given choices")
         return self
 
 
 class QuestionUpdateRequest(BaseModel):
     prompt: str | None = None
     choices: list[ChoiceItem] | None = Field(default=None, min_length=2, max_length=5)
-    correct_choice_id: str | None = None
+    correct_choice_ids: list[str] | None = Field(default=None, min_length=1)
     explanation: str | None = None
 
     @model_validator(mode="after")
-    def _correct_choice_must_exist(self) -> "QuestionUpdateRequest":
+    def _correct_choices_must_exist(self) -> "QuestionUpdateRequest":
         if (
             self.choices is not None
-            and self.correct_choice_id is not None
-            and self.correct_choice_id not in {c.id for c in self.choices}
+            and self.correct_choice_ids is not None
+            and not set(self.correct_choice_ids) <= {c.id for c in self.choices}
         ):
-            raise ValueError("correct_choice_id must match one of the given choices")
+            raise ValueError("correct_choice_ids must match given choices")
         return self
 
 
@@ -330,16 +359,6 @@ class AdminQuestionRow(BaseModel):
     quiz_id: uuid.UUID
     prompt: str
     choices: list[ChoiceItem]
-    correct_choice_id: str
+    correct_choice_ids: list[str]
     explanation: str | None
     position: int
-
-
-class AdminCapstoneRow(BaseModel):
-    id: uuid.UUID
-    who: str
-    github_url: str
-    what_built: str
-    review_status: str
-    reviewed_by: str | None
-    created_at: datetime

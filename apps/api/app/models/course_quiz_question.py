@@ -7,7 +7,6 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    String,
     Text,
     UniqueConstraint,
     func,
@@ -26,8 +25,12 @@ class CourseQuizQuestion(Base):
     choices is a JSON blob ([{"id","text"}, 2-5 entries]), not a child
     table — same precedent as Event.schedule: small, bounded, always
     read/written as a unit, never queried or filtered individually across
-    questions. correct_choice_id is validated against choices in the admin
-    service (must match one of choices[].id), not a DB constraint.
+    questions. correct_choice_ids is validated against choices in the admin
+    schema layer (every id must match one of choices[].id), not a DB
+    constraint. A question is multi-select purely by having more than one
+    correct id — there's no separate flag, so grading never forks into two
+    code paths (a single-select question is just the len()==1 case of the
+    same exact-set-match check).
     """
 
     __tablename__ = "course_quiz_questions"
@@ -39,7 +42,7 @@ class CourseQuizQuestion(Base):
     )
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     choices: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
-    correct_choice_id: Mapped[str] = mapped_column(String, nullable=False)
+    correct_choice_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     # Shown after grading — cheap add, real value for retrieval practice.
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)

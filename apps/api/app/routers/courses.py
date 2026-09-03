@@ -11,6 +11,9 @@ from app.models.course_quiz import CourseQuiz, QuizKind
 from app.models.user import User
 from app.schemas.arm import ArmRow
 from app.schemas.course import (
+    CapstoneAssignment,
+    CapstoneSubmissionResponse,
+    CapstoneSubmitRequest,
     ChoiceItem,
     CourseDetail,
     CourseEnrollmentSummary,
@@ -192,7 +195,12 @@ def _quiz_for_attempt(quiz: CourseQuiz, questions: list) -> QuizForAttempt:
         quiz_id=quiz.id,
         pass_threshold_pct=threshold,
         questions=[
-            QuizQuestionPublic(id=q.id, prompt=q.prompt, choices=[ChoiceItem(**c) for c in q.choices])
+            QuizQuestionPublic(
+                id=q.id,
+                prompt=q.prompt,
+                choices=[ChoiceItem(**c) for c in q.choices],
+                multi_select=len(q.correct_choice_ids) > 1,
+            )
             for q in questions
         ],
     )
@@ -361,3 +369,52 @@ def get_progress(slug: str, user: User = Depends(get_current_user), db: Session 
     except course_service.CourseAccessDenied as exc:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     return CourseProgress(**course_service.build_course_progress(db, course, enrollment))
+
+
+# ── capstone ─────────────────────────────────────────────────────────────
+
+
+def _capstone_submission_response(submission) -> CapstoneSubmissionResponse:
+    return CapstoneSubmissionResponse(
+        id=submission.id,
+        github_url=submission.github_url,
+        what_built=submission.what_built,
+        review_status=submission.review_status.value,
+        created_at=submission.created_at,
+    )
+
+
+@router.get("/{slug}/capstone", response_model=CapstoneAssignment)
+def get_capstone(slug: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    course = _get_course_or_404(db, slug)
+    try:
+        enrollment = course_service.require_enrollment(db, course, user)
+    except course_service.CourseAccessDenied as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
+    final_exam = course_service.get_final_exam(db, course)
+    if not final_exam or not course_service.has_passed_quiz(db, final_exam, enrollment):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Pass the final exam before submitting your capstone")
+    capstone = course_service.get_capstone(db, course)
+    if not capstone:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "This course has no capstone assignment")
+    submission = course_service.get_capstone_submission(db, enrollment)
+    return CapstoneAssignment(
+        title=capstone.title,
+        instructions=capstone.instructions,
+        submission=_capstone_submission_response(submission) if submission else None,
+    )
+
+
+@router.post("/{slug}/capstone/submit", response_model=CapstoneSubmissionResponse)
+def submit_capstone(
+    slug: str, payload: CapstoneSubmitRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    course = _get_course_or_404(db, slug)
+    try:
+        enrollment = course_service.require_enrollment(db, course, user)
+        submission = course_service.submit_capstone(db, course, enrollment, payload.github_url, payload.what_built)
+    except course_service.CourseAccessDenied as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
+    except course_service.CourseError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    return _capstone_submission_response(submission)

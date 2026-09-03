@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     github_sync_token: str = ""
     github_org: str = ""
 
+    # Cloudinary (image uploads — course cover images for now)
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
+
     @model_validator(mode="after")
     def _no_localhost_links_in_production(self) -> "Settings":
         # web_origin feeds CORS too, so a wrong value there usually breaks

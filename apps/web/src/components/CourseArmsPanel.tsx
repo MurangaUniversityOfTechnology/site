@@ -36,7 +36,7 @@ export function CourseArmsPanel({
   if (!allArms) return null;
 
   return (
-    <div className="mt-6 rounded-xl border border-border bg-surface p-6">
+    <div className="rounded-xl border border-border bg-surface p-6">
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">arms</div>
       <p className="mt-2 text-[13.5px] text-muted">
         Which tracks this course belongs to — a course can sit in more than one.
