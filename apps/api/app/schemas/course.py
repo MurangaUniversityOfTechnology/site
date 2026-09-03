@@ -5,6 +5,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.course_quiz import QuizKind
+from app.schemas.arm import ArmRow
 
 # ── public / member ─────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ class CourseSummary(BaseModel):
     cover_image_url: str | None
     price_kes: int
     module_count: int
+    arms: list[ArmRow]
 
     model_config = {"from_attributes": True}
 
@@ -221,6 +223,7 @@ class AdminCourseRow(BaseModel):
     module_count: int
     enrollment_count: int
     created_by: str
+    arms: list[ArmRow]
 
 
 class ModuleWriteRequest(BaseModel):

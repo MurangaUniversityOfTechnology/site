@@ -7,6 +7,7 @@ from app.core.rate_limit import limiter
 from app.models.course import Course
 from app.models.course_enrollment import CourseEnrollment
 from app.models.user import User
+from app.schemas.arm import ArmRow
 from app.schemas.course import (
     CourseDetail,
     CourseModuleOutline,
@@ -15,6 +16,7 @@ from app.schemas.course import (
     EnrollmentResponse,
     EnrollRequest,
 )
+from app.services import arms as arms_service
 from app.services import course as course_service
 from app.services import course_payment
 
@@ -29,6 +31,7 @@ def _summary(db: Session, course: Course) -> CourseSummary:
         cover_image_url=course.cover_image_url,
         price_kes=course.price_kes,
         module_count=len(course_service.list_modules(db, course)),
+        arms=[ArmRow.model_validate(a) for a in arms_service.list_course_arms(db, course)],
     )
 
 
@@ -66,8 +69,15 @@ def _enrollment_response(db: Session, enrollment: CourseEnrollment) -> Enrollmen
 
 
 @router.get("", response_model=list[CourseSummary])
-def list_courses(db: Session = Depends(get_db)):
-    return [_summary(db, c) for c in course_service.list_published_courses(db)]
+def list_courses(arm: str | None = None, db: Session = Depends(get_db)):
+    return [_summary(db, c) for c in course_service.list_published_courses(db, arm_slug=arm)]
+
+
+@router.get("/arms", response_model=list[ArmRow])
+def list_arms(db: Session = Depends(get_db)):
+    """Declared ahead of /{slug} — a literal segment must be matched before
+    the catch-all param, same convention /mpesa/callback below uses."""
+    return arms_service.list_arms(db)
 
 
 @router.post("/mpesa/callback", status_code=status.HTTP_200_OK)

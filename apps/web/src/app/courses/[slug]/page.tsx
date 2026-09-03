@@ -47,6 +47,18 @@ export default function CourseDetailPage() {
         <Link href="/courses" className="relative font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint hover:text-foreground">
           ← courses
         </Link>
+        {course.arms.length > 0 && (
+          <div className="relative mt-4 flex flex-wrap gap-1.5">
+            {course.arms.map((a) => (
+              <span
+                key={a.id}
+                className="rounded border border-accent-dim px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-navy"
+              >
+                {a.name}
+              </span>
+            ))}
+          </div>
+        )}
         <h1 className="relative mt-5.5 text-[clamp(36px,7vw,84px)] uppercase leading-[0.95] tracking-[-0.045em]">
           {course.title}
         </h1>

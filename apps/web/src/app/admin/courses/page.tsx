@@ -128,6 +128,19 @@ export default function AdminCoursesPage() {
               )}
               <div className="mt-2.5 font-mono text-[10px] text-faint">by {c.created_by}</div>
 
+              {c.arms.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {c.arms.map((a) => (
+                    <span
+                      key={a.id}
+                      className="rounded-md border border-border-strong px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.06em] text-muted"
+                    >
+                      {a.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted">
                 <span>
                   {c.module_count} module{c.module_count === 1 ? "" : "s"}

@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { CourseForm, type CourseFormValues, valuesToPayload } from "@/components/CourseForm";
 import { QuizQuestionBuilder } from "@/components/QuizQuestionBuilder";
 import { CourseAiImportPanel } from "@/components/CourseAiImportPanel";
+import { CourseArmsPanel } from "@/components/CourseArmsPanel";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ApiError, adminApi, type AdminCourseRow, type AdminModuleRow, type AdminQuizRow } from "@/lib/api";
 
@@ -225,6 +226,12 @@ export default function EditCoursePage() {
           </button>
         </form>
       </div>
+
+      <CourseArmsPanel
+        slug={slug}
+        assignedArms={course.arms}
+        onChange={(arms) => setCourse((c) => (c ? { ...c, arms } : c))}
+      />
 
       <CourseAiImportPanel
         slug={slug}

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import require_admin
+from app.models.arm import Arm
 from app.models.course import Course
 from app.models.course_enrollment import CourseEnrollment
 from app.models.course_lesson import CourseLesson
@@ -12,6 +13,7 @@ from app.models.course_module import CourseModule
 from app.models.course_quiz import CourseQuiz
 from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.user import User
+from app.schemas.arm import ArmRow, AssignArmRequest, CreateArmRequest, RenameArmRequest
 from app.schemas.course import (
     AdminCourseRow,
     AdminLessonRow,
@@ -30,6 +32,7 @@ from app.schemas.course import (
     QuizWriteRequest,
     ReorderRequest,
 )
+from app.services import arms as arms_service
 from app.services import course as course_service
 
 router = APIRouter(prefix="/admin", tags=["admin-courses"], dependencies=[Depends(require_admin)])
@@ -52,6 +55,7 @@ def _admin_course_row(db: Session, course: Course) -> AdminCourseRow:
         module_count=len(course_service.list_modules(db, course)),
         enrollment_count=db.query(CourseEnrollment).filter(CourseEnrollment.course_id == course.id).count(),
         created_by=_display_name(course.created_by),
+        arms=[ArmRow.model_validate(a) for a in arms_service.list_course_arms(db, course)],
     )
 
 
@@ -442,3 +446,70 @@ def reorder_question(
     except course_service.CourseError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return _admin_question_row(question)
+# ── arms ─────────────────────────────────────────────────────────────────
+
+
+def _get_arm_or_404(db: Session, arm_id: uuid.UUID) -> Arm:
+    try:
+        return arms_service.get_arm(db, arm_id)
+    except arms_service.ArmError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.get("/arms", response_model=list[ArmRow])
+def list_arms(db: Session = Depends(get_db)):
+    return arms_service.list_arms(db)
+
+
+@router.post("/arms", response_model=ArmRow, status_code=status.HTTP_201_CREATED)
+def create_arm(payload: CreateArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    try:
+        return arms_service.create_arm(db, admin, payload.name)
+    except arms_service.ArmError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.patch("/arms/{arm_id}", response_model=ArmRow)
+def rename_arm(
+    arm_id: uuid.UUID, payload: RenameArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    arm = _get_arm_or_404(db, arm_id)
+    try:
+        return arms_service.rename_arm(db, admin, arm, payload.name)
+    except arms_service.ArmError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.delete("/arms/{arm_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_arm(arm_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    arm = _get_arm_or_404(db, arm_id)
+    arms_service.delete_arm(db, admin, arm)
+
+
+@router.post("/arms/{arm_id}/reorder", response_model=ArmRow)
+def reorder_arm(
+    arm_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    arm = _get_arm_or_404(db, arm_id)
+    try:
+        return arms_service.reorder_arm(db, admin, arm, payload.direction)
+    except arms_service.ArmError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+@router.post("/courses/{slug}/arms", response_model=AdminCourseRow)
+def assign_arm(
+    slug: str, payload: AssignArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    course = _get_course_or_404(db, slug)
+    arm = _get_arm_or_404(db, payload.arm_id)
+    arms_service.assign_arm(db, admin, course, arm)
+    return _admin_course_row(db, course)
+
+
+@router.delete("/courses/{slug}/arms/{arm_id}", response_model=AdminCourseRow)
+def unassign_arm(slug: str, arm_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = _get_course_or_404(db, slug)
+    arm = _get_arm_or_404(db, arm_id)
+    arms_service.unassign_arm(db, admin, course, arm)
+    return _admin_course_row(db, course)

@@ -302,6 +302,8 @@ export type QuizKind = "module_quiz" | "final_exam";
 
 export type ChoiceItem = { id: string; text: string };
 
+export type Arm = { id: string; slug: string; name: string; position: number };
+
 export type CourseSummary = {
   slug: string;
   title: string;
@@ -309,6 +311,7 @@ export type CourseSummary = {
   cover_image_url: string | null;
   price_kes: number;
   module_count: number;
+  arms: Arm[];
 };
 
 export type CourseModuleOutline = {
@@ -363,6 +366,7 @@ export type AdminCourseRow = {
   module_count: number;
   enrollment_count: number;
   created_by: string;
+  arms: Arm[];
 };
 
 export type AdminModuleRow = {
@@ -406,7 +410,8 @@ export type AdminQuestionRow = {
 };
 
 export const courseApi = {
-  list: () => apiFetch<CourseSummary[]>("/courses"),
+  list: (armSlug?: string) => apiFetch<CourseSummary[]>(`/courses${armSlug ? `?arm=${armSlug}` : ""}`),
+  arms: () => apiFetch<Arm[]>("/courses/arms"),
   get: (slug: string) => apiFetch<CourseDetail>(`/courses/${slug}`),
   enroll: (slug: string, phone?: string) =>
     apiFetch<CourseEnrollment>(`/courses/${slug}/enroll`, { method: "POST", body: JSON.stringify({ phone }) }),
@@ -549,6 +554,18 @@ export const adminApi = {
   deleteQuestion: (questionId: string) => apiFetch<void>(`/admin/questions/${questionId}`, { method: "DELETE" }),
   reorderQuestion: (questionId: string, direction: "up" | "down") =>
     apiFetch<AdminQuestionRow>(`/admin/questions/${questionId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
+  // Arms
+  listArms: () => apiFetch<Arm[]>("/admin/arms"),
+  createArm: (name: string) => apiFetch<Arm>("/admin/arms", { method: "POST", body: JSON.stringify({ name }) }),
+  renameArm: (armId: string, name: string) =>
+    apiFetch<Arm>(`/admin/arms/${armId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteArm: (armId: string) => apiFetch<void>(`/admin/arms/${armId}`, { method: "DELETE" }),
+  reorderArm: (armId: string, direction: "up" | "down") =>
+    apiFetch<Arm>(`/admin/arms/${armId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
+  assignArm: (slug: string, armId: string) =>
+    apiFetch<AdminCourseRow>(`/admin/courses/${slug}/arms`, { method: "POST", body: JSON.stringify({ arm_id: armId }) }),
+  unassignArm: (slug: string, armId: string) =>
+    apiFetch<AdminCourseRow>(`/admin/courses/${slug}/arms/${armId}`, { method: "DELETE" }),
   roster: () => apiFetch<RosterRow[]>("/admin/github/roster"),
   refreshRosterRow: (userId: string) => apiFetch<RosterRow>(`/admin/github/roster/${userId}/refresh`, { method: "POST" }),
   resendInvite: (userId: string) => apiFetch<void>(`/admin/github/roster/${userId}/resend-invite`, { method: "POST" }),

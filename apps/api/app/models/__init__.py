@@ -1,7 +1,9 @@
+from app.models.arm import Arm
 from app.models.audit_log import AuditLog
 from app.models.challenge_submission import ChallengeSubmission
 from app.models.content import Content, ContentStatus
 from app.models.course import Course
+from app.models.course_arm import CourseArm
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
 from app.models.course_module import CourseModule
@@ -25,12 +27,14 @@ from app.models.user import GithubOrgInviteStatus, User
 from app.models.user_tag import UserTag
 
 __all__ = [
+    "Arm",
     "AuditLog",
     "ChallengeSubmission",
     "Content",
     "ContentStatus",
     "Course",
     "CourseAccessType",
+    "CourseArm",
     "CourseEnrollment",
     "CourseLesson",
     "CourseModule",

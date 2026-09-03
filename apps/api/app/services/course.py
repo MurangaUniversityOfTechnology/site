@@ -3,7 +3,9 @@ from datetime import UTC, datetime
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.models.arm import Arm
 from app.models.course import Course
+from app.models.course_arm import CourseArm
 from app.models.course_enrollment import CourseAccessType, CourseEnrollment
 from app.models.course_lesson import CourseLesson
 from app.models.course_module import CourseModule
@@ -43,13 +45,15 @@ def get_published_course(db: Session, slug: str) -> Course:
     return course
 
 
-def list_published_courses(db: Session) -> list[Course]:
-    return (
-        db.query(Course)
-        .filter(Course.published_at.isnot(None), Course.archived_at.is_(None))
-        .order_by(Course.created_at.desc())
-        .all()
-    )
+def list_published_courses(db: Session, arm_slug: str | None = None) -> list[Course]:
+    query = db.query(Course).filter(Course.published_at.isnot(None), Course.archived_at.is_(None))
+    if arm_slug:
+        query = (
+            query.join(CourseArm, CourseArm.course_id == Course.id)
+            .join(Arm, Arm.id == CourseArm.arm_id)
+            .filter(Arm.slug == arm_slug)
+        )
+    return query.order_by(Course.created_at.desc()).all()
 
 
 def list_admin_courses(db: Session, archived: bool = False) -> list[Course]:
