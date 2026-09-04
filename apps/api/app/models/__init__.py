@@ -21,6 +21,9 @@ from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
 from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration, RegistrationStatus
+from app.models.form import Form
+from app.models.form_field import FormField
+from app.models.form_response import FormResponse
 from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
 from app.models.payment import Payment, PaymentStatus
@@ -60,6 +63,9 @@ __all__ = [
     "EventPayment",
     "EventRegistration",
     "ExperienceLevel",
+    "Form",
+    "FormField",
+    "FormResponse",
     "GithubOrgInviteStatus",
     "JoinRequestStatus",
     "Membership",
