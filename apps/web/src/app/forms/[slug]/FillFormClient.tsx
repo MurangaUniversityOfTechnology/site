@@ -88,7 +88,9 @@ export function FillFormClient({ slug }: { slug: string }) {
   return (
     <main className="mx-auto max-w-140 px-5 py-14 sm:px-8">
       <h1 className="text-[clamp(28px,5vw,44px)] leading-[1.05] tracking-[-0.03em]">{form.title}</h1>
-      {form.description && <p className="mt-4 text-[15.5px] leading-[1.6] text-muted">{form.description}</p>}
+      {form.description && (
+        <p className="mt-4 whitespace-pre-wrap text-[15.5px] leading-[1.6] text-muted">{form.description}</p>
+      )}
 
       {form.closed ? (
         <div className="mt-7 rounded-xl border border-border bg-surface p-6 text-center text-[14.5px] text-muted">
