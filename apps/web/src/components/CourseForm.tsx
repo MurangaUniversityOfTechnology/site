@@ -157,7 +157,7 @@ export function CourseForm({
       </Field>
       <Field label="Difficulty — sets the shape and finish of the completion badge students earn">
         <div className="flex flex-wrap items-center gap-4.5">
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {([1, 2, 3, 4, 5] as const).map((level) => {
               const on = values.difficulty === level;
               return (
