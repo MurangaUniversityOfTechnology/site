@@ -16,6 +16,7 @@ class CourseSummary(BaseModel):
     short_description: str
     cover_image_url: str | None
     price_kes: int
+    difficulty: int
     module_count: int
     arms: list[ArmRow]
 
@@ -164,6 +165,7 @@ class CourseEnrollmentSummary(BaseModel):
     slug: str
     title: str
     cover_image_url: str | None
+    difficulty: int
     completed_at: datetime | None
     modules_total: int
     modules_completed: int
@@ -202,6 +204,7 @@ class CourseWriteRequest(BaseModel):
     description: str = ""
     cover_image_url: str | None = None
     price_kes: int = 0
+    difficulty: int = Field(default=1, ge=1, le=5)
 
 
 class CourseUpdateRequest(BaseModel):
@@ -211,6 +214,7 @@ class CourseUpdateRequest(BaseModel):
     description: str | None = None
     cover_image_url: str | None = None
     price_kes: int | None = None
+    difficulty: int | None = Field(default=None, ge=1, le=5)
 
 
 class AdminCourseRow(BaseModel):
@@ -221,6 +225,7 @@ class AdminCourseRow(BaseModel):
     description: str
     cover_image_url: str | None
     price_kes: int
+    difficulty: int
     published_at: datetime | None
     archived_at: datetime | None
     module_count: int

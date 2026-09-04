@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { DifficultyDots } from "@/components/DifficultyLevel";
 import { useMe } from "@/lib/useMe";
 import { courseApi, type Arm, type CourseSummary } from "@/lib/api";
 
@@ -133,9 +134,10 @@ export default function CoursesPage() {
                 ))}
               </div>
             )}
-            <div className="mt-4 flex items-center justify-between">
-              <span className="font-mono text-[10.5px] text-faint">
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2.5 font-mono text-[10.5px] text-faint">
                 {c.module_count} module{c.module_count === 1 ? "" : "s"}
+                <DifficultyDots level={c.difficulty} />
               </span>
               <span className="rounded border border-border-strong px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
                 {c.price_kes === 0 ? "free" : `KSh ${c.price_kes} · free for members`}

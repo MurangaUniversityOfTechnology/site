@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { CourseBadge } from "@/components/CourseBadge";
 import { CourseEnrollPanel } from "@/components/CourseEnrollPanel";
+import { difficultyLabel } from "@/components/DifficultyLevel";
 import { courseApi, type CourseDetail } from "@/lib/api";
 
 export default function CourseDetailPage() {
@@ -80,6 +81,12 @@ export default function CourseDetailPage() {
               {course.price_kes === 0 ? "Free" : `KSh ${course.price_kes}`}
             </div>
           </div>
+          <div className="min-w-32 flex-1 bg-surface px-5.5 py-4">
+            <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">level</div>
+            <div className="mt-1.5 text-[17px] font-semibold">
+              {course.difficulty} · {difficultyLabel(course.difficulty)}
+            </div>
+          </div>
         </div>
 
         {course.price_kes > 0 && (
@@ -100,7 +107,7 @@ export default function CourseDetailPage() {
 
         {course.completed && (
           <div className="relative mt-6 flex items-center gap-3.5 rounded-lg border border-accent-dim bg-accent/[0.05] px-4.5 py-3.5">
-            <CourseBadge slug={course.slug} title={course.title} />
+            <CourseBadge slug={course.slug} title={course.title} difficulty={course.difficulty} />
             <div>
               <div className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-navy">badge earned</div>
               <div className="text-[13.5px] text-muted">You completed this course.</div>

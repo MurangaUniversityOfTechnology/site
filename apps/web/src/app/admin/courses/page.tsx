@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ApiError, adminApi, type AdminCourseRow } from "@/lib/api";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { DifficultyDots, difficultyLabel } from "@/components/DifficultyLevel";
 
 type Tab = "draft" | "published" | "archived";
 
@@ -141,12 +142,16 @@ export default function AdminCoursesPage() {
                 </div>
               )}
 
-              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted">
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[10.5px] text-muted">
                 <span>
                   {c.module_count} module{c.module_count === 1 ? "" : "s"}
                 </span>
                 <span>{c.price_kes === 0 ? "free" : `KSh ${c.price_kes}`}</span>
                 <span>{c.enrollment_count} enrolled</span>
+                <span className="flex items-center gap-1.5" title={`Level ${c.difficulty} · ${difficultyLabel(c.difficulty)}`}>
+                  <DifficultyDots level={c.difficulty} />
+                  {difficultyLabel(c.difficulty)}
+                </span>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">

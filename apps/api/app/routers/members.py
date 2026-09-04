@@ -44,6 +44,7 @@ def get_member(user_id: str, viewer: User | None = Depends(get_current_user_opti
         linkedin_url=profile.linkedin_url,
         photo_url=profile.photo_url,
         completed_courses=[
-            CourseBadge(slug=c.slug, title=c.title) for c in course_service.list_completed_courses(db, user_id)
+            CourseBadge(slug=c.slug, title=c.title, difficulty=c.difficulty)
+            for c in course_service.list_completed_courses(db, user_id)
         ],
     )

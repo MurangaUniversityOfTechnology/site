@@ -112,7 +112,7 @@ export default function MemberProfilePage() {
           <div className="mt-4 flex flex-wrap gap-4">
             {profile.completed_courses.map((c) => (
               <Link key={c.slug} href={`/courses/${c.slug}`} className="flex flex-col items-center gap-2 text-center">
-                <CourseBadge slug={c.slug} title={c.title} size="lg" />
+                <CourseBadge slug={c.slug} title={c.title} difficulty={c.difficulty} size="lg" />
                 <span className="max-w-20 text-[11px] leading-tight text-muted">{c.title}</span>
               </Link>
             ))}

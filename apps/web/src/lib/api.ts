@@ -326,6 +326,7 @@ export type CourseSummary = {
   short_description: string;
   cover_image_url: string | null;
   price_kes: number;
+  difficulty: number;
   module_count: number;
   arms: Arm[];
 };
@@ -440,6 +441,7 @@ export type CourseEnrollmentSummary = {
   slug: string;
   title: string;
   cover_image_url: string | null;
+  difficulty: number;
   completed_at: string | null;
   modules_total: number;
   modules_completed: number;
@@ -452,6 +454,7 @@ export type CourseWritePayload = {
   description: string;
   cover_image_url: string | null;
   price_kes: number;
+  difficulty: number;
 };
 
 export type AdminCourseRow = {
@@ -462,6 +465,7 @@ export type AdminCourseRow = {
   description: string;
   cover_image_url: string | null;
   price_kes: number;
+  difficulty: number;
   published_at: string | null;
   archived_at: string | null;
   module_count: number;
@@ -817,7 +821,7 @@ export type MemberSummary = {
   experience_level: ExperienceLevel | null;
 };
 
-export type CourseBadge = { slug: string; title: string };
+export type CourseBadge = { slug: string; title: string; difficulty: number };
 
 export type MemberProfile = {
   user_id: string;

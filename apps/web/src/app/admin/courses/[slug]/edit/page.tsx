@@ -59,6 +59,7 @@ export default function EditCoursePage() {
         description: found.description,
         coverImageUrl: found.cover_image_url ?? "",
         priceKes: String(found.price_kes),
+        difficulty: found.difficulty,
       });
     }
   }
@@ -96,6 +97,7 @@ export default function EditCoursePage() {
           description: found.description,
           coverImageUrl: found.cover_image_url ?? "",
           priceKes: String(found.price_kes),
+          difficulty: found.difficulty,
         });
       }
     });

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { CourseBadge } from "@/components/CourseBadge";
+import { DIFFICULTY_LABELS } from "@/components/DifficultyLevel";
 import { ApiError, adminApi, type CourseWritePayload } from "@/lib/api";
 
 export type CourseFormValues = {
@@ -10,6 +12,7 @@ export type CourseFormValues = {
   description: string;
   coverImageUrl: string;
   priceKes: string;
+  difficulty: number;
 };
 
 export const emptyCourseForm: CourseFormValues = {
@@ -19,6 +22,7 @@ export const emptyCourseForm: CourseFormValues = {
   description: "",
   coverImageUrl: "",
   priceKes: "0",
+  difficulty: 1,
 };
 
 function slugify(name: string): string {
@@ -36,6 +40,7 @@ export function valuesToPayload(v: CourseFormValues): CourseWritePayload {
     description: v.description.trim(),
     cover_image_url: v.coverImageUrl.trim() || null,
     price_kes: Number(v.priceKes) || 0,
+    difficulty: v.difficulty,
   };
 }
 
@@ -149,6 +154,38 @@ export function CourseForm({
           onChange={(e) => onChange({ ...values, priceKes: e.target.value })}
           className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
         />
+      </Field>
+      <Field label="Difficulty — sets the shape and finish of the completion badge students earn">
+        <div className="flex flex-wrap items-center gap-4.5">
+          <div className="flex gap-1.5">
+            {([1, 2, 3, 4, 5] as const).map((level) => {
+              const on = values.difficulty === level;
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => onChange({ ...values, difficulty: level })}
+                  className={`flex w-19 flex-col items-center gap-1 rounded-lg border py-2.5 ${
+                    on ? "border-accent-dim bg-accent/10" : "border-border-strong"
+                  }`}
+                >
+                  <span className={`font-mono text-[13px] ${on ? "text-navy" : "text-muted"}`}>{level}</span>
+                  <span className={`text-[9.5px] leading-tight ${on ? "text-navy" : "text-faint"}`}>
+                    {DIFFICULTY_LABELS[level]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2.5 rounded-lg border border-border-strong bg-background px-3.5 py-2">
+            <CourseBadge slug={values.slug || "preview"} title={values.title || "New Course"} difficulty={values.difficulty} size="md" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">
+              badge
+              <br />
+              preview
+            </span>
+          </div>
+        </div>
       </Field>
     </div>
   );

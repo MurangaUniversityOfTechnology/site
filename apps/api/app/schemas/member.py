@@ -18,6 +18,7 @@ class MemberSummary(BaseModel):
 class CourseBadge(BaseModel):
     slug: str
     title: str
+    difficulty: int
 
 
 class MemberProfile(BaseModel):

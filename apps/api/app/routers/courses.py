@@ -46,6 +46,7 @@ def _summary(db: Session, course: Course) -> CourseSummary:
         short_description=course.short_description,
         cover_image_url=course.cover_image_url,
         price_kes=course.price_kes,
+        difficulty=course.difficulty,
         module_count=len(course_service.list_modules(db, course)),
         arms=[ArmRow.model_validate(a) for a in arms_service.list_course_arms(db, course)],
     )

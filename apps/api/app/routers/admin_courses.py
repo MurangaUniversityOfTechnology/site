@@ -59,6 +59,7 @@ def _admin_course_row(db: Session, course: Course) -> AdminCourseRow:
         description=course.description,
         cover_image_url=course.cover_image_url,
         price_kes=course.price_kes,
+        difficulty=course.difficulty,
         published_at=course.published_at,
         archived_at=course.archived_at,
         module_count=len(course_service.list_modules(db, course)),

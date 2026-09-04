@@ -38,6 +38,10 @@ class Course(Base):
     # Charged to non-members/lapsed members only — active members and admins
     # always get free instant access, see services/course.py's enroll().
     price_kes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # 1 (foundational) - 5 (expert) — drives the completion badge's shape and
+    # finish in CourseBadge.tsx. Every course predating this column backfills
+    # to 1 via the migration's server_default.
+    difficulty: Mapped[int] = mapped_column(Integer, default=1, server_default="1", nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Sibling to Event.archived_at — tucks a retired course out of the public
     # catalog and the admin's active list without deleting it.

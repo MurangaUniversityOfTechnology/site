@@ -724,6 +724,7 @@ def list_my_enrollments_summary(db: Session, user: User) -> list[dict]:
                 "slug": course.slug,
                 "title": course.title,
                 "cover_image_url": course.cover_image_url,
+                "difficulty": course.difficulty,
                 "completed_at": enrollment.completed_at,
                 "modules_total": len(modules),
                 "modules_completed": modules_completed,

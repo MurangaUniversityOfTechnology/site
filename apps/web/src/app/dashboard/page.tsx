@@ -276,7 +276,7 @@ export default function DashboardPage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 {earnedBadges.map((c) => (
                   <Link key={c.slug} href={`/courses/${c.slug}`} title={c.title}>
-                    <CourseBadge slug={c.slug} title={c.title} size="sm" />
+                    <CourseBadge slug={c.slug} title={c.title} difficulty={c.difficulty} size="sm" />
                   </Link>
                 ))}
               </div>
