@@ -10,6 +10,7 @@ import { courseApi, type CourseDetail } from "@/lib/api";
 export default function CourseDetailPage() {
   const params = useParams<{ slug: string }>();
   const [course, setCourse] = useState<CourseDetail | null | undefined>(undefined);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -97,8 +98,6 @@ export default function CourseDetailPage() {
           )}
         </div>
 
-        <p className="relative mt-7 max-w-[560px] text-[17px] leading-[1.55] text-[#7a7060]">{course.description}</p>
-
         {course.completed && (
           <div className="relative mt-6 flex items-center gap-3.5 rounded-lg border border-accent-dim bg-accent/[0.05] px-4.5 py-3.5">
             <CourseBadge slug={course.slug} title={course.title} />
@@ -111,21 +110,45 @@ export default function CourseDetailPage() {
       </div>
 
       <div className="px-5 py-12 sm:px-10">
-        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">what you&apos;ll cover</div>
-        <div className="mt-5 flex flex-col gap-px overflow-hidden rounded-[10px] border border-border bg-border">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">what you&apos;ll discover</div>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {course.modules.map((m, i) => (
-            <div key={m.id} className="flex items-center gap-4 bg-surface px-5 py-4">
-              <span className="font-mono text-[13px] text-faint">{String(i + 1).padStart(2, "0")}</span>
-              <div className="flex-1">
-                <div className="text-[15px] font-medium">{m.title}</div>
-                {m.summary && <div className="mt-1 text-[13px] text-muted">{m.summary}</div>}
+            <div key={m.id} className="flex flex-col gap-2.5 rounded-[10px] border border-border bg-surface px-5 py-4.5">
+              <div className="flex items-start justify-between gap-3">
+                <span className="font-mono text-[13px] text-faint">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-mono text-[10.5px] whitespace-nowrap text-faint">
+                  ~{m.est_minutes} min · {m.lesson_count} lesson{m.lesson_count === 1 ? "" : "s"}
+                </span>
               </div>
-              <span className="font-mono text-[10.5px] text-faint">
-                ~{m.est_minutes} min · {m.lesson_count} lesson{m.lesson_count === 1 ? "" : "s"}
-              </span>
+              <div>
+                <div className="text-[15px] font-medium">{m.title}</div>
+                {m.summary && <div className="mt-1.5 text-[13.5px] leading-[1.5] text-muted">{m.summary}</div>}
+              </div>
             </div>
           ))}
         </div>
+
+        {course.description && (
+          <div className="mt-9 max-w-[640px]">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">about this course</div>
+            <p
+              className={`relative mt-3 text-[15px] leading-[1.6] text-[#7a7060] ${
+                descriptionExpanded ? "" : "line-clamp-3"
+              }`}
+            >
+              {course.description}
+            </p>
+            {course.description.length > 220 && (
+              <button
+                type="button"
+                onClick={() => setDescriptionExpanded((v) => !v)}
+                className="mt-2 font-mono text-[11px] uppercase tracking-[0.1em] text-navy hover:underline"
+              >
+                {descriptionExpanded ? "Show less" : "Show more"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </main>
   );
