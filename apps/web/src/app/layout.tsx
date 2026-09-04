@@ -19,6 +19,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Without this, every relative image URL in per-page metadata (link
+  // previews on courses, events, etc.) silently resolves against
+  // localhost:3000 in production instead of the real domain.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://mutlabs.tech"),
   title: {
     default: "MUT Tech Community",
     template: "%s · MUT Tech Community",

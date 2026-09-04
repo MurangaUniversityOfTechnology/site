@@ -1,10 +1,29 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecentSubmissions } from "@/components/RecentSubmissions";
 import { challenges } from "@/lib/data";
+import { ogImageUrl } from "@/lib/og";
 
 export function generateStaticParams() {
   return challenges.map((c) => ({ slug: c.slug }));
+}
+
+export async function generateMetadata(props: PageProps<"/challenges/[slug]">): Promise<Metadata> {
+  const { slug } = await props.params;
+  const challenge = challenges.find((c) => c.slug === slug);
+  if (!challenge) return {};
+
+  const description = challenge.detail?.description;
+  const eyebrow = challenge.detail ? `Challenge · ${challenge.detail.difficulty}` : "Challenge";
+  const image = ogImageUrl({ eyebrow, title: challenge.title });
+
+  return {
+    title: challenge.title,
+    description,
+    openGraph: { title: challenge.title, description, images: [image] },
+    twitter: { title: challenge.title, description, images: [image] },
+  };
 }
 
 export default async function ChallengeDetailPage(props: PageProps<"/challenges/[slug]">) {

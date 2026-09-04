@@ -3,7 +3,7 @@
 // localhost:3000 and from a LAN IP (phone testing) without hardcoding an IP
 // that changes on every DHCP renewal. Server-side rendering has no window,
 // so it always hits the API on this same machine directly.
-const API_URL =
+export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   (typeof window !== "undefined" ? `http://${window.location.hostname}:8000` : "http://localhost:8000");
 

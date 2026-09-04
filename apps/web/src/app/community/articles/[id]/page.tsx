@@ -1,60 +1,26 @@
-"use client";
+import type { Metadata } from "next";
+import { ArticleClient } from "./ArticleClient";
+import { ogImageUrl } from "@/lib/og";
+import { excerptOf, fetchPublic } from "@/lib/serverFetch";
+import type { ContentItem } from "@/lib/api";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { contentApi, type ContentItem } from "@/lib/api";
+export async function generateMetadata(props: PageProps<"/community/articles/[id]">): Promise<Metadata> {
+  const { id } = await props.params;
+  const article = await fetchPublic<ContentItem>(`/content/published/${id}`);
+  if (!article) return {};
 
-export default function ArticlePage() {
-  const params = useParams<{ id: string }>();
-  const [article, setArticle] = useState<ContentItem | null | undefined>(undefined);
+  const description = excerptOf(article.body);
+  const image = ogImageUrl({ eyebrow: "Community", title: article.title });
 
-  useEffect(() => {
-    let active = true;
-    contentApi
-      .getPublished(params.id)
-      .then((result) => {
-        if (active) setArticle(result);
-      })
-      .catch(() => {
-        if (active) setArticle(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [params.id]);
+  return {
+    title: article.title,
+    description,
+    openGraph: { title: article.title, description, images: [image] },
+    twitter: { title: article.title, description, images: [image] },
+  };
+}
 
-  if (article === undefined) return null;
-
-  if (!article) {
-    return (
-      <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 text-center">
-        <div>
-          <h1 className="text-2xl tracking-[-0.02em]">Article not found</h1>
-          <Link href="/community" className="mt-3 inline-block text-navy hover:underline">
-            Back to community
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main className="mx-auto max-w-160 px-5 py-14 sm:px-8">
-      <Link href="/community" className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint hover:text-foreground">
-        ← community
-      </Link>
-      <h1 className="mt-5.5 text-[clamp(28px,4.4vw,44px)] leading-[1.05] tracking-[-0.035em]">{article.title}</h1>
-      {article.tags.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {article.tags.map((t) => (
-            <span key={t} className="rounded-full border border-border-strong px-3 py-1 font-mono text-[11px] text-muted">
-              {t}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="mt-8 whitespace-pre-wrap text-[16.5px] leading-[1.75] text-[#33302b]">{article.body}</div>
-    </main>
-  );
+export default async function ArticlePage(props: PageProps<"/community/articles/[id]">) {
+  const { id } = await props.params;
+  return <ArticleClient id={id} />;
 }
