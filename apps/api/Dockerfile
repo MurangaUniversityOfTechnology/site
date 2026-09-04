@@ -27,4 +27,13 @@ ENV PATH="/venv/bin:$PATH"
 USER api
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers --forwarded-allow-ips='*': trusts X-Forwarded-For so
+# request.client.host reflects the real internet client rather than Caddy's
+# container IP — needed for app/core/deps.py's require_mpesa_ip check.
+# Safe to trust any peer here specifically because this container is never
+# reachable except through Caddy (no host port is published in production,
+# see docker-compose.prod.yml / README) — nothing else can connect directly
+# and inject a fake X-Forwarded-For. In local dev (docker-compose.local.yml
+# publishes 8000 straight to the host, no proxy in front), there's simply no
+# X-Forwarded-For header to trust, so this is a no-op there.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

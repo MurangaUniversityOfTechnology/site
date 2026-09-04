@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import get_current_user_optional
+from app.core.deps import get_current_user_optional, require_mpesa_ip
 from app.core.rate_limit import limiter
 from app.models.event import Event
 from app.models.event_registration import EventRegistration
@@ -83,7 +83,7 @@ def registration_status(registration_id: uuid.UUID, db: Session = Depends(get_db
     return _registration_response(db, registration)
 
 
-@router.post("/mpesa/callback", status_code=status.HTTP_200_OK)
+@router.post("/mpesa/callback", status_code=status.HTTP_200_OK, dependencies=[Depends(require_mpesa_ip)])
 async def mpesa_event_callback(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
     event_payment.apply_stk_callback(db, payload)

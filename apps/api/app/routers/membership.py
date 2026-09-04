@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_mpesa_ip
 from app.models.payment import Payment
 from app.models.user import User
 from app.schemas.membership import (
@@ -59,7 +59,7 @@ def membership_status(user: User = Depends(get_current_user), db: Session = Depe
     )
 
 
-@router.post("/mpesa/callback", status_code=status.HTTP_200_OK)
+@router.post("/mpesa/callback", status_code=status.HTTP_200_OK, dependencies=[Depends(require_mpesa_ip)])
 async def mpesa_callback(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
     membership_service.apply_stk_callback(db, payload)

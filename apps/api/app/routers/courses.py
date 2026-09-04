@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import get_current_user, get_current_user_optional
+from app.core.deps import get_current_user, get_current_user_optional, require_mpesa_ip
 from app.core.rate_limit import limiter
 from app.models.course import Course
 from app.models.course_enrollment import CourseEnrollment
@@ -103,7 +103,7 @@ def my_enrollments(user: User = Depends(get_current_user), db: Session = Depends
     return [CourseEnrollmentSummary(**row) for row in course_service.list_my_enrollments_summary(db, user)]
 
 
-@router.post("/mpesa/callback", status_code=status.HTTP_200_OK)
+@router.post("/mpesa/callback", status_code=status.HTTP_200_OK, dependencies=[Depends(require_mpesa_ip)])
 async def mpesa_course_callback(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
     course_payment.apply_stk_callback(db, payload)
