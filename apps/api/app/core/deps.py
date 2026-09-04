@@ -36,6 +36,13 @@ def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def require_staff(user: User = Depends(get_current_user)) -> User:
+    """Scoped admin access — forms, courses, events. Admins always qualify."""
+    if not (user.is_admin or user.is_staff):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
+    return user
+
+
 def require_mpesa_ip(request: Request) -> None:
     """Guards every /mpesa/callback* route against forged callbacks. Real
     STK push callbacks only ever arrive from Safaricom's Daraja servers, so

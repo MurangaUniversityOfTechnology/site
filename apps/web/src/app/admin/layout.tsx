@@ -11,7 +11,7 @@ import { signInHref } from "@/lib/nextParam";
 
 type NavGroup = { section: string | null; items: { href: string; label: string }[] };
 
-const adminNav: NavGroup[] = [
+const fullAdminNav: NavGroup[] = [
   { section: null, items: [{ href: "/admin", label: "Overview" }] },
   {
     section: "People",
@@ -42,6 +42,22 @@ const adminNav: NavGroup[] = [
     ],
   },
   { section: "System", items: [{ href: "/admin/audit", label: "Audit log" }] },
+];
+
+// Staff (not full admins) only get forms/courses/events — never funds or
+// member management. Arms are course taxonomy, managed by the same backend
+// router as courses, so staff gets those too.
+const staffNav: NavGroup[] = [
+  {
+    section: "Programs",
+    items: [
+      { href: "/admin/events", label: "Events" },
+      { href: "/admin/courses", label: "Courses" },
+      { href: "/admin/forms", label: "Forms" },
+      { href: "/admin/arms", label: "Arms" },
+    ],
+  },
+  { section: "People", items: [{ href: "/admin/roles", label: "Roles" }] },
 ];
 
 const COLLAPSED_STORAGE_KEY = "admin-nav-collapsed";
@@ -78,7 +94,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (loading) return;
     if (!me) router.push(signInHref(pathname));
-    else if (!me.is_admin) router.push("/dashboard");
+    else if (!me.is_admin && !me.is_staff) router.push("/dashboard");
+    // Staff has no Overview page (that endpoint is admin-only) — land them
+    // somewhere they can actually see.
+    else if (!me.is_admin && me.is_staff && pathname === "/admin") router.push("/admin/forms");
   }, [loading, me, router, pathname]);
 
   function toggleGroup(section: string) {
@@ -93,7 +112,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
   }
 
-  if (loading || !me || !me.is_admin) return null;
+  if (loading || !me || (!me.is_admin && !me.is_staff)) return null;
+  if (!me.is_admin && me.is_staff && pathname === "/admin") return null;
+
+  const nav = me.is_admin ? fullAdminNav : staffNav;
+  const roleLabel = me.is_admin ? "admin" : "staff";
 
   return (
     <div>
@@ -110,7 +133,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-tight text-white">MUT Tech</span>
         </Link>
         <span className="rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-accent">
-          admin
+          {roleLabel}
         </span>
         <div className="ml-auto">
           <AccountMenu />
@@ -119,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <div className="grid min-h-[calc(100vh-64px)] grid-cols-1 md:grid-cols-[210px_1fr]">
         <nav className="hidden md:flex md:flex-col md:gap-0.5 md:border-r md:border-border md:bg-surface-raised md:p-4">
-          <AdminNavList pathname={pathname} collapsed={collapsed} onToggle={toggleGroup} variant="sidebar" />
+          <AdminNavList nav={nav} pathname={pathname} collapsed={collapsed} onToggle={toggleGroup} variant="sidebar" />
         </nav>
         <main className="min-w-0 bg-background px-5 py-8 sm:px-9 sm:py-11">{children}</main>
       </div>
@@ -140,11 +163,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Image src="/images/logo.png" alt="MUT Tech Community" width={26} height={26} className="h-6.5 w-6.5" />
               <span className="text-[13.5px] font-semibold tracking-tight">MUT Tech</span>
               <span className="rounded-md border border-accent-dim/30 bg-accent/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] text-accent-dim">
-                admin
+                {roleLabel}
               </span>
             </div>
             <div className="flex-1 overflow-y-auto p-2.5">
-              <AdminNavList pathname={pathname} collapsed={collapsed} onToggle={toggleGroup} variant="drawer" />
+              <AdminNavList nav={nav} pathname={pathname} collapsed={collapsed} onToggle={toggleGroup} variant="drawer" />
             </div>
             <div className="border-t border-border p-2.5">
               <Link href="/" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[14px] text-muted hover:bg-surface-raised">
@@ -168,11 +191,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 }
 
 function AdminNavList({
+  nav,
   pathname,
   collapsed,
   onToggle,
   variant,
 }: {
+  nav: NavGroup[];
   pathname: string | null;
   collapsed: Record<string, boolean>;
   onToggle: (section: string) => void;
@@ -187,7 +212,7 @@ function AdminNavList({
 
   return (
     <>
-      {adminNav.map((group) => {
+      {nav.map((group) => {
         const groupHasActiveItem = group.items.some((n) => isActive(pathname, n.href));
         const expanded = !group.section || groupHasActiveItem || !collapsed[group.section];
         return (

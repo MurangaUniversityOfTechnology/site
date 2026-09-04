@@ -51,7 +51,7 @@ export function AccountMenu() {
           <MenuLink href="/settings" onClick={() => setOpen(false)}>
             Settings
           </MenuLink>
-          {me.is_admin && (
+          {(me.is_admin || me.is_staff) && (
             <MenuLink href="/admin" onClick={() => setOpen(false)}>
               Admin
             </MenuLink>

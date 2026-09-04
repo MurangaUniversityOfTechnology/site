@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_staff
 from app.models.form import Form
 from app.models.form_field import FormField
 from app.models.user import User
@@ -23,7 +23,7 @@ from app.schemas.form import (
 )
 from app.services import forms as forms_service
 
-router = APIRouter(prefix="/admin/forms", tags=["admin-forms"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin/forms", tags=["admin-forms"], dependencies=[Depends(require_staff)])
 
 
 # ── row shaping ──────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ def list_admin_forms(archived: bool = False, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=AdminFormRow, status_code=status.HTTP_201_CREATED)
-def create_form(payload: FormWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def create_form(payload: FormWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     try:
         form = forms_service.create_form(db, admin, payload.model_dump())
     except forms_service.FormError as exc:
@@ -95,7 +95,7 @@ def create_form(payload: FormWriteRequest, admin: User = Depends(require_admin),
 
 @router.patch("/{slug}", response_model=AdminFormRow)
 def update_form(
-    slug: str, payload: FormUpdateRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: FormUpdateRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     form = _get_form_or_404(db, slug)
     try:
@@ -106,7 +106,7 @@ def update_form(
 
 
 @router.delete("/{slug}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_form(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_form(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     form = _get_form_or_404(db, slug)
     try:
         forms_service.delete_form(db, admin, form)
@@ -115,7 +115,7 @@ def delete_form(slug: str, admin: User = Depends(require_admin), db: Session = D
 
 
 @router.post("/{slug}/publish", response_model=AdminFormRow)
-def publish_form(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def publish_form(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     form = _get_form_or_404(db, slug)
     try:
         form = forms_service.publish_form(db, admin, form)
@@ -125,7 +125,7 @@ def publish_form(slug: str, admin: User = Depends(require_admin), db: Session = 
 
 
 @router.post("/{slug}/unpublish", response_model=AdminFormRow)
-def unpublish_form(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def unpublish_form(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     form = _get_form_or_404(db, slug)
     try:
         form = forms_service.unpublish_form(db, admin, form)
@@ -135,7 +135,7 @@ def unpublish_form(slug: str, admin: User = Depends(require_admin), db: Session 
 
 
 @router.post("/{slug}/archive", response_model=AdminFormRow)
-def archive_form(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def archive_form(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     form = _get_form_or_404(db, slug)
     try:
         form = forms_service.archive_form(db, admin, form)
@@ -145,7 +145,7 @@ def archive_form(slug: str, admin: User = Depends(require_admin), db: Session = 
 
 
 @router.post("/{slug}/unarchive", response_model=AdminFormRow)
-def unarchive_form(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def unarchive_form(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     form = _get_form_or_404(db, slug)
     try:
         form = forms_service.unarchive_form(db, admin, form)
@@ -165,7 +165,7 @@ def list_admin_fields(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/{slug}/fields", response_model=AdminFieldRow, status_code=status.HTTP_201_CREATED)
 def create_field(
-    slug: str, payload: FieldWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: FieldWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     form = _get_form_or_404(db, slug)
     field = forms_service.create_field(db, admin, form, payload.model_dump())
@@ -176,7 +176,7 @@ def create_field(
 def update_field(
     field_id: uuid.UUID,
     payload: FieldUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     field = _get_field_or_404(db, field_id)
@@ -185,7 +185,7 @@ def update_field(
 
 
 @router.delete("/fields/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_field(field_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_field(field_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     field = _get_field_or_404(db, field_id)
     try:
         forms_service.delete_field(db, admin, field)
@@ -195,7 +195,7 @@ def delete_field(field_id: uuid.UUID, admin: User = Depends(require_admin), db: 
 
 @router.post("/fields/{field_id}/reorder", response_model=AdminFieldRow)
 def reorder_field(
-    field_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    field_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     field = _get_field_or_404(db, field_id)
     try:

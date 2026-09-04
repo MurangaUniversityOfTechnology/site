@@ -30,6 +30,9 @@ class User(Base):
     google_sub: Mapped[str | None] = mapped_column(String, unique=True, index=True, nullable=True)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Scoped admin access: forms, courses, events (incl. registrations) only —
+    # never funds, member management, tags, or the audit log. See require_staff().
+    is_staff: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     # Bumped on every password change/reset, embedded in session cookies as
     # "sver" — a mismatch means the cookie predates that change, so every
     # other outstanding session for the account gets invalidated without a

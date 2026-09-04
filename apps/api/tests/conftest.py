@@ -122,7 +122,7 @@ def client(db_session):
 
 @pytest.fixture
 def make_user(db_session):
-    """make_user(email=None, password="pw12345678", is_admin=False,
+    """make_user(email=None, password="pw12345678", is_admin=False, is_staff=False,
     membership_status=MembershipStatus.none, email_verified=True) -> User.
     Wraps the real auth_service.create_user() so Profile+Membership get
     created the same way production code creates them, then optionally
@@ -145,6 +145,7 @@ def make_user(db_session):
         email=None,
         password="pw12345678",
         is_admin=False,
+        is_staff=False,
         membership_status=MembershipStatus.none,
         email_verified=True,
     ):
@@ -154,6 +155,8 @@ def make_user(db_session):
         user.email_verified = email_verified
         if is_admin:
             user.is_admin = True
+        if is_staff:
+            user.is_staff = True
         if membership_status != MembershipStatus.none:
             user.membership.status = membership_status
             if membership_status == MembershipStatus.active:

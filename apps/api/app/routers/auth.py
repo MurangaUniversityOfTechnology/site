@@ -457,6 +457,7 @@ def _to_me_response(user: User) -> MeResponse:
         email=user.email,
         email_verified=user.email_verified,
         is_admin=user.is_admin,
+        is_staff=user.is_staff,
         photo_url=user.profile.photo_url if user.profile else None,
         membership_status=user.membership.status.value if user.membership else "none",
         onboarded=_is_onboarded(user),

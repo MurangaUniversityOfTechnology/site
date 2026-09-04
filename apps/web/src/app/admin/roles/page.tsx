@@ -3,8 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, adminApi, type AdminRow, type Tag } from "@/lib/api";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { useMe } from "@/lib/useMe";
 
 export default function AdminRolesPage() {
+  const { me } = useMe();
+  const isAdmin = me?.is_admin ?? false;
+
   const [admins, setAdmins] = useState<AdminRow[] | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AdminRow[]>([]);
@@ -21,6 +25,14 @@ export default function AdminRolesPage() {
   const [pickedTagId, setPickedTagId] = useState("");
   const confirm = useConfirm();
 
+  const [staff, setStaff] = useState<AdminRow[] | null>(null);
+  const [staffQuery, setStaffQuery] = useState("");
+  const [staffResults, setStaffResults] = useState<AdminRow[]>([]);
+  const [staffSearching, setStaffSearching] = useState(false);
+  const [staffFound, setStaffFound] = useState<AdminRow | undefined>(undefined);
+  const [staffError, setStaffError] = useState<string | null>(null);
+  const [staffBusy, setStaffBusy] = useState(false);
+
   const loadAdmins = useCallback(() => {
     adminApi.listAdmins().then(setAdmins);
   }, []);
@@ -29,10 +41,76 @@ export default function AdminRolesPage() {
     adminApi.listTags().then(setTags);
   }, []);
 
+  const loadStaff = useCallback(() => {
+    adminApi.listStaff().then(setStaff);
+  }, []);
+
   useEffect(() => {
-    loadAdmins();
-    loadTags();
-  }, [loadAdmins, loadTags]);
+    if (isAdmin) {
+      loadAdmins();
+      loadTags();
+    }
+    loadStaff();
+  }, [isAdmin, loadAdmins, loadTags, loadStaff]);
+
+  useEffect(() => {
+    const q = staffQuery.trim();
+    if (!q || staffFound) return;
+    const timeout = setTimeout(() => {
+      adminApi
+        .searchUsers(q)
+        .then(setStaffResults)
+        .finally(() => setStaffSearching(false));
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [staffQuery, staffFound]);
+
+  function handleStaffQueryChange(value: string) {
+    setStaffQuery(value);
+    if (value.trim()) setStaffSearching(true);
+  }
+
+  function pickStaff(row: AdminRow) {
+    setStaffFound(row);
+    setStaffResults([]);
+    setStaffQuery("");
+  }
+
+  function clearStaffSelection() {
+    setStaffFound(undefined);
+    setStaffError(null);
+  }
+
+  async function grantStaff() {
+    if (!staffFound) return;
+    setStaffBusy(true);
+    setStaffError(null);
+    try {
+      await adminApi.makeStaff(staffFound.user_id);
+      setStaffFound({ ...staffFound, is_staff: true });
+      loadStaff();
+    } catch (err) {
+      setStaffError(err instanceof ApiError ? err.message : "Couldn't grant staff access.");
+    } finally {
+      setStaffBusy(false);
+    }
+  }
+
+  async function revokeStaff(row: AdminRow) {
+    const ok = await confirm({
+      title: "Remove staff access?",
+      message: `${row.name} will lose access to Forms, Courses, and Events management.`,
+    });
+    if (!ok) return;
+    setStaffError(null);
+    try {
+      await adminApi.removeStaff(row.user_id);
+      loadStaff();
+      if (staffFound?.user_id === row.user_id) setStaffFound({ ...row, is_staff: false });
+    } catch (err) {
+      setStaffError(err instanceof ApiError ? err.message : "Couldn't remove staff access.");
+    }
+  }
 
   useEffect(() => {
     const q = query.trim();
@@ -173,6 +251,8 @@ export default function AdminRolesPage() {
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">settings · people</div>
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Roles</h1>
 
+      {isAdmin && (
+        <>
       <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
         <div className="border-b border-[#e8e1d2] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
           current admins
@@ -383,6 +463,117 @@ export default function AdminRolesPage() {
           </button>
         </div>
         {tagError && <p className="mt-3.5 text-sm text-danger">{tagError}</p>}
+      </div>
+        </>
+      )}
+
+      <div className="mt-7 overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="border-b border-[#e8e1d2] px-5 py-3.5 font-mono text-[10px] uppercase tracking-[0.14em] text-faint">
+          current staff
+        </div>
+        {staff?.map((s) => (
+          <div key={s.user_id} className="flex items-center gap-3.5 border-b border-[#e8e1d2] px-5 py-3.5 last:border-0">
+            <div className="grid h-8.5 w-8.5 flex-none place-items-center rounded-full border border-border-strong bg-[#f0ece0] font-mono text-[11px] text-muted">
+              {s.name[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[15px] font-medium">{s.name}</div>
+              <div className="mt-0.5 font-mono text-[10.5px] text-faint">{s.email}</div>
+            </div>
+            <span className="rounded-md border border-border-strong px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+              staff
+            </span>
+            {isAdmin && (
+              <button onClick={() => revokeStaff(s)} className="flex-none text-sm text-danger hover:underline">
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+        {staff?.length === 0 && <div className="px-5 py-8 text-center text-sm text-muted">No staff yet.</div>}
+      </div>
+
+      <div className="mt-7 rounded-xl border border-border bg-surface p-5.5">
+        <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">grant staff access</div>
+        <p className="mt-1.5 text-[13px] text-muted">
+          Staff can manage Forms, Courses, Events (and Arms) — never members, payments, or the audit log. Any member
+          can be promoted, and staff can promote each other.
+        </p>
+
+        {!staffFound && (
+          <div className="relative mt-3.5">
+            <input
+              value={staffQuery}
+              onChange={(e) => handleStaffQueryChange(e.target.value)}
+              placeholder="Search by name, GitHub username, or email…"
+              className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
+            />
+            {staffQuery.trim() && (
+              <div className="absolute z-10 mt-1.5 w-full overflow-hidden rounded-md border border-border-strong bg-surface shadow-lg">
+                {staffSearching && <div className="px-3.5 py-2.5 text-sm text-faint">Searching…</div>}
+                {!staffSearching && staffResults.length === 0 && (
+                  <div className="px-3.5 py-2.5 text-sm text-faint">No matches.</div>
+                )}
+                {!staffSearching &&
+                  staffResults.map((r) => (
+                    <button
+                      key={r.user_id}
+                      type="button"
+                      onClick={() => pickStaff(r)}
+                      className="flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left hover:bg-surface-raised"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px]">{r.name}</span>
+                        <span className="block truncate font-mono text-[10.5px] text-faint">{r.email}</span>
+                      </span>
+                      {(r.is_admin || r.is_staff) && (
+                        <span className="flex-none font-mono text-[9.5px] uppercase tracking-[0.1em] text-warn">
+                          {r.is_admin ? "admin" : "staff"}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {staffFound && (
+          <div className="mt-4.5 rounded-lg border border-border-strong p-4">
+            <div className="flex items-center gap-3.5">
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px]">{staffFound.name}</div>
+                <div className="mt-0.5 font-mono text-[10.5px] text-faint">{staffFound.email}</div>
+              </div>
+              <button onClick={clearStaffSelection} className="flex-none text-sm text-muted hover:underline">
+                Change
+              </button>
+              {staffFound.is_staff ? (
+                isAdmin ? (
+                  <button
+                    onClick={() => revokeStaff(staffFound)}
+                    className="rounded-md border border-[#f6d9d6] px-4 py-2 text-sm font-medium text-danger"
+                  >
+                    Remove staff
+                  </button>
+                ) : (
+                  <span className="flex-none font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+                    already staff
+                  </span>
+                )
+              ) : (
+                <button
+                  onClick={grantStaff}
+                  disabled={staffBusy}
+                  className="rounded-md border-0 bg-accent px-4 py-2 text-sm font-medium text-[#1a2744] disabled:opacity-50"
+                >
+                  Make staff
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        {staffError && <p className="mt-3.5 text-sm text-danger">{staffError}</p>}
       </div>
     </div>
   );

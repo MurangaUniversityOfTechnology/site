@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_staff
 from app.models.arm import Arm
 from app.models.course import Course
 from app.models.course_enrollment import CourseEnrollment
@@ -44,7 +44,7 @@ from app.schemas.course import (
 from app.services import arms as arms_service
 from app.services import course as course_service
 
-router = APIRouter(prefix="/admin", tags=["admin-courses"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin", tags=["admin-courses"], dependencies=[Depends(require_staff)])
 
 
 # ── row shaping ──────────────────────────────────────────────────────────
@@ -226,7 +226,7 @@ def list_admin_courses(archived: bool = False, db: Session = Depends(get_db)):
 
 
 @router.post("/courses", response_model=AdminCourseRow, status_code=status.HTTP_201_CREATED)
-def create_course(payload: CourseWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def create_course(payload: CourseWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     try:
         course = course_service.create_course(db, admin, payload.model_dump())
     except course_service.CourseError as exc:
@@ -236,7 +236,7 @@ def create_course(payload: CourseWriteRequest, admin: User = Depends(require_adm
 
 @router.patch("/courses/{slug}", response_model=AdminCourseRow)
 def update_course(
-    slug: str, payload: CourseUpdateRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: CourseUpdateRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     course = _get_course_or_404(db, slug)
     try:
@@ -247,7 +247,7 @@ def update_course(
 
 
 @router.delete("/courses/{slug}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_course(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_course(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     try:
         course_service.delete_course(db, admin, course)
@@ -256,7 +256,7 @@ def delete_course(slug: str, admin: User = Depends(require_admin), db: Session =
 
 
 @router.post("/courses/{slug}/publish", response_model=AdminCourseRow)
-def publish_course(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def publish_course(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     try:
         course = course_service.publish_course(db, admin, course)
@@ -266,7 +266,7 @@ def publish_course(slug: str, admin: User = Depends(require_admin), db: Session 
 
 
 @router.post("/courses/{slug}/unpublish", response_model=AdminCourseRow)
-def unpublish_course(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def unpublish_course(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     try:
         course = course_service.unpublish_course(db, admin, course)
@@ -276,7 +276,7 @@ def unpublish_course(slug: str, admin: User = Depends(require_admin), db: Sessio
 
 
 @router.post("/courses/{slug}/archive", response_model=AdminCourseRow)
-def archive_course(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def archive_course(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     try:
         course = course_service.archive_course(db, admin, course)
@@ -286,7 +286,7 @@ def archive_course(slug: str, admin: User = Depends(require_admin), db: Session 
 
 
 @router.post("/courses/{slug}/unarchive", response_model=AdminCourseRow)
-def unarchive_course(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def unarchive_course(slug: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     try:
         course = course_service.unarchive_course(db, admin, course)
@@ -306,7 +306,7 @@ def list_admin_modules(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/courses/{slug}/modules", response_model=AdminModuleRow, status_code=status.HTTP_201_CREATED)
 def create_module(
-    slug: str, payload: ModuleWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: ModuleWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     course = _get_course_or_404(db, slug)
     module = course_service.create_module(db, admin, course, payload.model_dump())
@@ -317,7 +317,7 @@ def create_module(
 def update_module(
     module_id: uuid.UUID,
     payload: ModuleUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     module = _get_module_or_404(db, module_id)
@@ -326,7 +326,7 @@ def update_module(
 
 
 @router.delete("/modules/{module_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_module(module_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_module(module_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     module = _get_module_or_404(db, module_id)
     try:
         course_service.delete_module(db, admin, module)
@@ -336,7 +336,7 @@ def delete_module(module_id: uuid.UUID, admin: User = Depends(require_admin), db
 
 @router.post("/modules/{module_id}/reorder", response_model=AdminModuleRow)
 def reorder_module(
-    module_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    module_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     module = _get_module_or_404(db, module_id)
     try:
@@ -359,7 +359,7 @@ def list_admin_lessons(module_id: uuid.UUID, db: Session = Depends(get_db)):
 def create_lesson(
     module_id: uuid.UUID,
     payload: LessonWriteRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     module = _get_module_or_404(db, module_id)
@@ -371,7 +371,7 @@ def create_lesson(
 def update_lesson(
     lesson_id: uuid.UUID,
     payload: LessonUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     lesson = _get_lesson_or_404(db, lesson_id)
@@ -380,7 +380,7 @@ def update_lesson(
 
 
 @router.delete("/lessons/{lesson_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_lesson(lesson_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_lesson(lesson_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     lesson = _get_lesson_or_404(db, lesson_id)
     try:
         course_service.delete_lesson(db, admin, lesson)
@@ -390,7 +390,7 @@ def delete_lesson(lesson_id: uuid.UUID, admin: User = Depends(require_admin), db
 
 @router.post("/lessons/{lesson_id}/reorder", response_model=AdminLessonRow)
 def reorder_lesson(
-    lesson_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    lesson_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     lesson = _get_lesson_or_404(db, lesson_id)
     try:
@@ -412,7 +412,7 @@ def get_module_quiz(module_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.post("/modules/{module_id}/quiz", response_model=AdminQuizRow, status_code=status.HTTP_201_CREATED)
 def create_module_quiz(
-    module_id: uuid.UUID, payload: QuizWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    module_id: uuid.UUID, payload: QuizWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     module = _get_module_or_404(db, module_id)
     try:
@@ -431,7 +431,7 @@ def get_final_exam(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/courses/{slug}/final-exam", response_model=AdminQuizRow, status_code=status.HTTP_201_CREATED)
 def create_final_exam(
-    slug: str, payload: QuizWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: QuizWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     course = _get_course_or_404(db, slug)
     try:
@@ -443,7 +443,7 @@ def create_final_exam(
 
 @router.patch("/quizzes/{quiz_id}", response_model=AdminQuizRow)
 def update_quiz(
-    quiz_id: uuid.UUID, payload: QuizUpdateRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    quiz_id: uuid.UUID, payload: QuizUpdateRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     quiz = _get_quiz_or_404(db, quiz_id)
     quiz = course_service.update_quiz(db, admin, quiz, payload.model_dump(exclude_unset=True))
@@ -451,7 +451,7 @@ def update_quiz(
 
 
 @router.delete("/quizzes/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_quiz(quiz_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_quiz(quiz_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     quiz = _get_quiz_or_404(db, quiz_id)
     try:
         course_service.delete_quiz(db, admin, quiz)
@@ -472,7 +472,7 @@ def list_admin_questions(quiz_id: uuid.UUID, db: Session = Depends(get_db)):
 def create_question(
     quiz_id: uuid.UUID,
     payload: QuestionWriteRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     quiz = _get_quiz_or_404(db, quiz_id)
@@ -484,7 +484,7 @@ def create_question(
 def update_question(
     question_id: uuid.UUID,
     payload: QuestionUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     question = _get_question_or_404(db, question_id)
@@ -493,7 +493,7 @@ def update_question(
 
 
 @router.delete("/questions/{question_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_question(question_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_question(question_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     question = _get_question_or_404(db, question_id)
     try:
         course_service.delete_question(db, admin, question)
@@ -505,7 +505,7 @@ def delete_question(question_id: uuid.UUID, admin: User = Depends(require_admin)
 def reorder_question(
     question_id: uuid.UUID,
     payload: ReorderRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     question = _get_question_or_404(db, question_id)
@@ -528,7 +528,7 @@ def get_capstone(slug: str, db: Session = Depends(get_db)):
 
 @router.post("/courses/{slug}/capstone", response_model=AdminCapstoneAssignmentRow, status_code=status.HTTP_201_CREATED)
 def create_capstone(
-    slug: str, payload: CapstoneWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: CapstoneWriteRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     course = _get_course_or_404(db, slug)
     try:
@@ -542,7 +542,7 @@ def create_capstone(
 def update_capstone(
     capstone_id: uuid.UUID,
     payload: CapstoneUpdateRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     capstone = _get_capstone_or_404(db, capstone_id)
@@ -551,7 +551,7 @@ def update_capstone(
 
 
 @router.delete("/capstones/{capstone_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_capstone(capstone_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_capstone(capstone_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     capstone = _get_capstone_or_404(db, capstone_id)
     try:
         course_service.delete_capstone(db, admin, capstone)
@@ -569,7 +569,7 @@ def list_capstone_submissions(slug: str, db: Session = Depends(get_db)):
 def review_capstone_submission(
     submission_id: uuid.UUID,
     payload: CapstoneReviewRequest,
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_staff),
     db: Session = Depends(get_db),
 ):
     submission = _get_submission_or_404(db, submission_id)
@@ -620,7 +620,7 @@ def list_arms(db: Session = Depends(get_db)):
 
 
 @router.post("/arms", response_model=ArmRow, status_code=status.HTTP_201_CREATED)
-def create_arm(payload: CreateArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def create_arm(payload: CreateArmRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     try:
         return arms_service.create_arm(db, admin, payload.name)
     except arms_service.ArmError as exc:
@@ -629,7 +629,7 @@ def create_arm(payload: CreateArmRequest, admin: User = Depends(require_admin), 
 
 @router.patch("/arms/{arm_id}", response_model=ArmRow)
 def rename_arm(
-    arm_id: uuid.UUID, payload: RenameArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    arm_id: uuid.UUID, payload: RenameArmRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     arm = _get_arm_or_404(db, arm_id)
     try:
@@ -639,14 +639,14 @@ def rename_arm(
 
 
 @router.delete("/arms/{arm_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_arm(arm_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def delete_arm(arm_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     arm = _get_arm_or_404(db, arm_id)
     arms_service.delete_arm(db, admin, arm)
 
 
 @router.post("/arms/{arm_id}/reorder", response_model=ArmRow)
 def reorder_arm(
-    arm_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    arm_id: uuid.UUID, payload: ReorderRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     arm = _get_arm_or_404(db, arm_id)
     try:
@@ -657,7 +657,7 @@ def reorder_arm(
 
 @router.post("/courses/{slug}/arms", response_model=AdminCourseRow)
 def assign_arm(
-    slug: str, payload: AssignArmRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+    slug: str, payload: AssignArmRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
 ):
     course = _get_course_or_404(db, slug)
     arm = _get_arm_or_404(db, payload.arm_id)
@@ -666,7 +666,7 @@ def assign_arm(
 
 
 @router.delete("/courses/{slug}/arms/{arm_id}", response_model=AdminCourseRow)
-def unassign_arm(slug: str, arm_id: uuid.UUID, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+def unassign_arm(slug: str, arm_id: uuid.UUID, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
     course = _get_course_or_404(db, slug)
     arm = _get_arm_or_404(db, arm_id)
     arms_service.unassign_arm(db, admin, course, arm)

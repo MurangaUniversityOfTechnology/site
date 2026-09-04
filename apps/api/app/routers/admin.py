@@ -1,23 +1,18 @@
-import logging
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_admin
 from app.models.audit_log import AuditLog
 from app.models.content import Content
 from app.models.course_payment import CoursePayment
 from app.models.donation import Donation
-from app.models.event import Event
 from app.models.event_payment import EventPayment
-from app.models.event_registration import EventRegistration
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
-from app.models.profile import Profile
 from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
 from app.models.tag import Tag
@@ -39,28 +34,17 @@ from app.schemas.admin import (
     PaymentTotal,
 )
 from app.schemas.content import AdminContentRow
-from app.schemas.event import (
-    AdminEventRow,
-    AdminRegistrationRow,
-    EventUpdateRequest,
-    EventWriteRequest,
-)
 from app.schemas.github import RosterRow
 from app.schemas.project import AddProjectRequest, AdminJoinRequestRow, AdminProjectRow
 from app.schemas.tag import AssignTagRequest, CreateTagRequest, RenameTagRequest, TagRow
 from app.services import audit
 from app.services import content as content_service
-from app.services import email as email_service
-from app.services import event as event_service
 from app.services import github as github_service
 from app.services import membership as membership_service
 from app.services import project as project_service
 from app.services import tags as tag_service
-from app.services.email_templates import render_email
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
-settings = get_settings()
-logger = logging.getLogger(__name__)
 
 STATUS_FILTERS = {
     "active": [MembershipStatus.active],
@@ -240,173 +224,25 @@ def donations_overview(db: Session = Depends(get_db)):
 
 
 @router.get("/audit", response_model=list[AuditEntry])
-def audit_log(db: Session = Depends(get_db)):
-    entries = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(100).all()
-    return [AuditEntry(at=e.created_at, who=e.actor_name, what=e.action, kind=e.kind) for e in entries]
-
-
-# ── events (admin CRUD) ──────────────────────────────────────────────
-
-
-def _admin_event_row(db: Session, event: Event) -> AdminEventRow:
-    count = db.query(EventRegistration).filter(EventRegistration.event_id == event.id).count()
-    return AdminEventRow(
-        id=event.id,
-        slug=event.slug,
-        title=event.title,
-        starts_at=event.starts_at,
-        venue=event.venue,
-        description=event.description,
-        audience=event.audience,
-        fee_kes=event.fee_kes,
-        capacity=event.capacity,
-        seats_left=event_service.seats_left(db, event),
-        what_youll_build=event.what_youll_build,
-        schedule=event.schedule,
-        speaker_name=event.speaker_name,
-        speaker_meta=event.speaker_meta,
-        requirements=event.requirements,
-        who_should_attend=event.who_should_attend,
-        registration_count=count,
-        archived_at=event.archived_at,
-    )
-
-
-@router.get("/events", response_model=list[AdminEventRow])
-def list_admin_events(archived: bool = False, db: Session = Depends(get_db)):
-    return [_admin_event_row(db, e) for e in event_service.list_events(db, archived=archived)]
-
-
-@router.post("/events", response_model=AdminEventRow, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventWriteRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    try:
-        event = event_service.create_event(db, admin, payload.model_dump())
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    return _admin_event_row(db, event)
-
-
-def _get_event_or_404(db: Session, slug: str) -> Event:
-    try:
-        return event_service.get_event(db, slug)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-
-
-@router.patch("/events/{slug}", response_model=AdminEventRow)
-def update_event(
-    slug: str, payload: EventUpdateRequest, admin: User = Depends(require_admin), db: Session = Depends(get_db)
+def audit_log(
+    kind: str | None = None,
+    q: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    db: Session = Depends(get_db),
 ):
-    event = _get_event_or_404(db, slug)
-    try:
-        event = event_service.update_event(db, admin, event, payload.model_dump(exclude_unset=True))
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    return _admin_event_row(db, event)
-
-
-@router.delete("/events/{slug}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    event = _get_event_or_404(db, slug)
-    try:
-        event_service.delete_event(db, admin, event)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-
-
-@router.post("/events/{slug}/archive", response_model=AdminEventRow)
-def archive_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    event = _get_event_or_404(db, slug)
-    try:
-        event = event_service.archive_event(db, admin, event)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    return _admin_event_row(db, event)
-
-
-@router.post("/events/{slug}/unarchive", response_model=AdminEventRow)
-def unarchive_event(slug: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    event = _get_event_or_404(db, slug)
-    try:
-        event = event_service.unarchive_event(db, admin, event)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    return _admin_event_row(db, event)
-
-
-@router.get("/events/{slug}/registrations", response_model=list[AdminRegistrationRow])
-def list_registrations(slug: str, db: Session = Depends(get_db)):
-    try:
-        registrations = event_service.list_for_event(db, slug)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-
-    rows = []
-    for r in registrations:
-        if r.user:
-            profile = r.user.profile
-            name = " ".join(part for part in [profile.first_name, profile.last_name] if part) if profile else r.user.email
-            detail = f"registered {r.created_at:%d %b %H:%M}"
-            member = True
-        else:
-            name = r.guest_name or "Guest"
-            detail = r.guest_email or ""
-            member = False
-        payment = db.query(EventPayment).filter(EventPayment.registration_id == r.id).first()
-        rows.append(
-            AdminRegistrationRow(
-                id=r.id,
-                name=name or r.user.email,
-                detail=detail,
-                member=member,
-                status=r.status.value,
-                payment_status=payment.status.value if payment else None,
-            )
-        )
-    return rows
-
-
-def _get_registration(db: Session, registration_id: str) -> EventRegistration:
-    reg = db.get(EventRegistration, registration_id)
-    if not reg:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Registration not found")
-    return reg
-
-
-@router.post("/registrations/{registration_id}/approve", status_code=status.HTTP_204_NO_CONTENT)
-def approve_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    reg = _get_registration(db, registration_id)
-    try:
-        event_service.approve(db, admin, reg)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-
-
-@router.post("/registrations/{registration_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
-def reject_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    reg = _get_registration(db, registration_id)
-    try:
-        event_service.reject(db, admin, reg)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-
-
-@router.post("/registrations/{registration_id}/waitlist", status_code=status.HTTP_204_NO_CONTENT)
-def waitlist_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    reg = _get_registration(db, registration_id)
-    try:
-        event_service.waitlist(db, admin, reg)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-
-
-@router.post("/registrations/{registration_id}/attend", status_code=status.HTTP_204_NO_CONTENT)
-def attend_registration(registration_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    reg = _get_registration(db, registration_id)
-    try:
-        event_service.mark_attended(db, admin, reg)
-    except event_service.EventError as exc:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    query = db.query(AuditLog)
+    if kind:
+        query = query.filter(AuditLog.kind == kind)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(or_(AuditLog.actor_name.ilike(like), AuditLog.action.ilike(like)))
+    if since:
+        query = query.filter(AuditLog.created_at >= since)
+    if until:
+        query = query.filter(AuditLog.created_at <= until)
+    entries = query.order_by(AuditLog.created_at.desc()).limit(100).all()
+    return [AuditEntry(at=e.created_at, who=e.actor_name, what=e.action, kind=e.kind) for e in entries]
 
 
 # ── content moderation ──────────────────────────────────────────────
@@ -458,6 +294,9 @@ def request_content_changes(content_id: str, admin: User = Depends(require_admin
 
 
 # ── roles ────────────────────────────────────────────────────────────
+# list_admins/search_users/make_admin/remove_admin/make_staff/remove_staff
+# live in admin_roles.py (mixed admin/staff permissions). This helper stays
+# here too since the tags endpoints below still need it.
 
 
 def _to_admin_row(db: Session, u: User) -> AdminRow:
@@ -466,90 +305,9 @@ def _to_admin_row(db: Session, u: User) -> AdminRow:
         name=(u.profile.display_name if u.profile and u.profile.display_name else u.email),
         email=u.email,
         is_admin=u.is_admin,
+        is_staff=u.is_staff,
         tags=tag_service.list_member_tags(db, u),
     )
-
-
-@router.get("/admins", response_model=list[AdminRow])
-def list_admins(db: Session = Depends(get_db)):
-    admins = db.query(User).filter(User.is_admin.is_(True)).all()
-    return [_to_admin_row(db, u) for u in admins]
-
-
-SEARCH_RESULT_LIMIT = 10
-
-
-@router.get("/users/search", response_model=list[AdminRow])
-def search_users(query: str, db: Session = Depends(get_db)):
-    """Matches on full name, display name, email, or GitHub username —
-    whichever the admin typed. Any of these can be a partial, case-insensitive
-    match; results are capped since this is meant to feed a live dropdown,
-    not a full roster browse (that's what the members list is for)."""
-    q = query.strip()
-    if not q:
-        return []
-    like = f"%{q.lower()}%"
-    full_name = func.lower(func.concat_ws(" ", Profile.first_name, Profile.last_name))
-    users = (
-        db.query(User)
-        .outerjoin(Profile, Profile.user_id == User.id)
-        .filter(
-            or_(
-                func.lower(User.email).like(like),
-                func.lower(func.coalesce(User.github_login, "")).like(like),
-                func.lower(func.coalesce(Profile.display_name, "")).like(like),
-                full_name.like(like),
-            )
-        )
-        .order_by(User.email)
-        .limit(SEARCH_RESULT_LIMIT)
-        .all()
-    )
-    return [_to_admin_row(db, u) for u in users]
-
-
-def _send_admin_granted_email(user: User) -> None:
-    # Promotion is a single click with no confirmation from the target's
-    # side — this is the only way the newly-admin'd member finds out, short
-    # of noticing new links in the nav, so a mistaken or unauthorized grant
-    # doesn't go unnoticed by the one person best placed to flag it.
-    html = render_email(
-        eyebrow="account update",
-        heading="You've been made an admin.",
-        body_html=(
-            "Another admin just granted your MUT Tech Community account admin access. "
-            "If that doesn't sound right, let a fellow admin know."
-        ),
-        cta_label="Open admin panel",
-        cta_url=f"{settings.web_origin}/admin",
-    )
-    try:
-        email_service.send_email(to=user.email, subject="You've been made an admin — MUT Tech Community", html=html)
-    except Exception:
-        logger.warning("Failed to send admin-granted email to %s", user.email, exc_info=True)
-
-
-@router.post("/users/{user_id}/make-admin", status_code=status.HTTP_204_NO_CONTENT)
-def make_admin(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    target = db.get(User, user_id)
-    if not target:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    target.is_admin = True
-    audit.log(db, admin, "settings", f"Granted admin access to {target.email}")
-    db.commit()
-    _send_admin_granted_email(target)
-
-
-@router.post("/users/{user_id}/remove-admin", status_code=status.HTTP_204_NO_CONTENT)
-def remove_admin(user_id: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
-    target = db.get(User, user_id)
-    if not target:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
-    if target.id == admin.id and db.query(User).filter(User.is_admin.is_(True)).count() <= 1:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Can't remove the last admin")
-    target.is_admin = False
-    audit.log(db, admin, "settings", f"Removed admin access from {target.email}")
-    db.commit()
 
 
 # ── tags ─────────────────────────────────────────────────────────────

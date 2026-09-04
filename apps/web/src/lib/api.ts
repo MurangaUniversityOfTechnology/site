@@ -58,6 +58,7 @@ export type Me = {
   email: string;
   email_verified: boolean;
   is_admin: boolean;
+  is_staff: boolean;
   photo_url: string | null;
   membership_status: string;
   onboarded: boolean;
@@ -634,7 +635,15 @@ export const adminApi = {
     apiFetch<MembershipApplication[]>(`/admin/memberships?status_filter=${statusFilter}`),
   payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
   donations: () => apiFetch<DonationsOverview>("/admin/donations"),
-  audit: () => apiFetch<AuditEntry[]>("/admin/audit"),
+  audit: (filters?: { kind?: string; q?: string; since?: string; until?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.kind) params.set("kind", filters.kind);
+    if (filters?.q) params.set("q", filters.q);
+    if (filters?.since) params.set("since", filters.since);
+    if (filters?.until) params.set("until", filters.until);
+    const qs = params.toString();
+    return apiFetch<AuditEntry[]>(`/admin/audit${qs ? `?${qs}` : ""}`);
+  },
   eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),
   approveRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/approve`, { method: "POST" }),
   rejectRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/reject`, { method: "POST" }),
@@ -645,9 +654,12 @@ export const adminApi = {
   rejectContent: (id: string) => apiFetch<void>(`/admin/content/${id}/reject`, { method: "POST" }),
   requestContentChanges: (id: string) => apiFetch<void>(`/admin/content/${id}/request-changes`, { method: "POST" }),
   listAdmins: () => apiFetch<AdminRow[]>("/admin/admins"),
+  listStaff: () => apiFetch<AdminRow[]>("/admin/staff"),
   searchUsers: (query: string) => apiFetch<AdminRow[]>(`/admin/users/search?query=${encodeURIComponent(query)}`),
   makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
   removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
+  makeStaff: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-staff`, { method: "POST" }),
+  removeStaff: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-staff`, { method: "POST" }),
   listTags: () => apiFetch<Tag[]>("/admin/tags"),
   createTag: (name: string) => apiFetch<Tag>("/admin/tags", { method: "POST", body: JSON.stringify({ name }) }),
   renameTag: (tagId: string, name: string) =>
@@ -922,7 +934,14 @@ export type AdminContentRow = { id: string; title: string; body: string; author:
 
 export type Tag = { id: string; name: string; created_at: string };
 
-export type AdminRow = { user_id: string; name: string; email: string; is_admin: boolean; tags: Tag[] };
+export type AdminRow = {
+  user_id: string;
+  name: string;
+  email: string;
+  is_admin: boolean;
+  is_staff: boolean;
+  tags: Tag[];
+};
 
 export type AddMemberResponse = {
   user_id: string;

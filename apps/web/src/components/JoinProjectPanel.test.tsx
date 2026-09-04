@@ -56,7 +56,7 @@ describe("JoinProjectPanel", () => {
 
   test("prompts membership activation when signed in but not active", () => {
     mockUseMe.mockReturnValue({
-      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, photo_url: null, membership_status: "none", onboarded: true },
+      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, is_staff: false, photo_url: null, membership_status: "none", onboarded: true },
       loading: false,
       refresh: vi.fn(),
     });
@@ -69,7 +69,7 @@ describe("JoinProjectPanel", () => {
 
   test("active member can open the form, toggle areas, and submit", async () => {
     mockUseMe.mockReturnValue({
-      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, photo_url: null, membership_status: "active", onboarded: true },
+      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, is_staff: false, photo_url: null, membership_status: "active", onboarded: true },
       loading: false,
       refresh: vi.fn(),
     });
@@ -92,7 +92,7 @@ describe("JoinProjectPanel", () => {
 
   test("surfaces an ApiError message when submit fails", async () => {
     mockUseMe.mockReturnValue({
-      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, photo_url: null, membership_status: "active", onboarded: true },
+      me: { id: "1", email: "a@example.com", email_verified: true, is_admin: false, is_staff: false, photo_url: null, membership_status: "active", onboarded: true },
       loading: false,
       refresh: vi.fn(),
     });

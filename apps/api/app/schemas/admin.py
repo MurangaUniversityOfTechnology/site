@@ -76,6 +76,7 @@ class AdminRow(BaseModel):
     name: str
     email: str
     is_admin: bool
+    is_staff: bool
     tags: list[TagRow] = []
 
 

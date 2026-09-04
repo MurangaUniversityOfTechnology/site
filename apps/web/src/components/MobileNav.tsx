@@ -97,7 +97,7 @@ export function MobileNav() {
                   Write something
                 </Link>
               )}
-              {me?.is_admin && (
+              {(me?.is_admin || me?.is_staff) && (
                 <Link
                   href="/admin"
                   onClick={() => setSheet(null)}
@@ -123,7 +123,7 @@ export function MobileNav() {
                 <SheetLink href="/settings" onClick={() => setSheet(null)}>
                   Settings
                 </SheetLink>
-                {me.is_admin && (
+                {(me.is_admin || me.is_staff) && (
                   <SheetLink href="/admin" onClick={() => setSheet(null)}>
                     Admin
                   </SheetLink>

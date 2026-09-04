@@ -40,6 +40,7 @@ class MeResponse(BaseModel):
     email: str
     email_verified: bool
     is_admin: bool
+    is_staff: bool
     photo_url: str | None
     membership_status: str
     # True once the member has finished onboarding, or unconditionally for
