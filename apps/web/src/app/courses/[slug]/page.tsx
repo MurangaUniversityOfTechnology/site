@@ -67,9 +67,8 @@ export default function CourseDetailPage() {
         <h1 className="relative mt-5.5 text-[clamp(36px,7vw,84px)] uppercase leading-[0.95] tracking-[-0.045em]">
           {course.title}
         </h1>
-        <p className="relative mt-5 max-w-[560px] text-[17px] leading-[1.55] text-[#7a7060]">{course.description}</p>
 
-        <div className="relative mt-9 flex max-w-[420px] flex-wrap gap-px overflow-hidden rounded-[10px] border border-border bg-border">
+        <div className="relative mt-7 flex max-w-[420px] flex-wrap gap-px overflow-hidden rounded-[10px] border border-border bg-border">
           <div className="min-w-32 flex-1 bg-surface px-5.5 py-4">
             <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">modules</div>
             <div className="mt-1.5 text-[17px] font-semibold">{course.module_count}</div>
@@ -86,7 +85,7 @@ export default function CourseDetailPage() {
           <p className="relative mt-3 font-mono text-[11px] text-faint">Free for active club members.</p>
         )}
 
-        <div className="relative mt-7 flex flex-wrap items-center gap-3">
+        <div className="relative mt-6 flex flex-wrap items-center gap-3">
           <CourseEnrollPanel slug={course.slug} priceKes={course.price_kes} onEnrolled={refreshAfterEnroll} />
           {course.enrolled && (
             <Link
@@ -97,6 +96,8 @@ export default function CourseDetailPage() {
             </Link>
           )}
         </div>
+
+        <p className="relative mt-7 max-w-[560px] text-[17px] leading-[1.55] text-[#7a7060]">{course.description}</p>
 
         {course.completed && (
           <div className="relative mt-6 flex items-center gap-3.5 rounded-lg border border-accent-dim bg-accent/[0.05] px-4.5 py-3.5">
