@@ -333,6 +333,7 @@ export type CourseModuleOutline = {
   summary: string | null;
   position: number;
   lesson_count: number;
+  est_minutes: number;
 };
 
 export type CourseDetail = CourseSummary & {

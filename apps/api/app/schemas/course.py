@@ -50,6 +50,7 @@ class CourseModuleOutline(BaseModel):
     summary: str | None
     position: int
     lesson_count: int
+    est_minutes: int
 
 
 class CourseDetail(CourseSummary):

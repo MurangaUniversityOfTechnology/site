@@ -51,6 +51,21 @@ def _summary(db: Session, course: Course) -> CourseSummary:
     )
 
 
+def _module_outline(db: Session, m: CourseModule) -> CourseModuleOutline:
+    lessons = course_service.list_lessons(db, m)
+    word_count = sum(len(lesson.body.split()) for lesson in lessons)
+    # ~200 wpm reading pace, same estimate style as Medium/Substack.
+    est_minutes = max(1, round(word_count / 200))
+    return CourseModuleOutline(
+        id=m.id,
+        title=m.title,
+        summary=m.summary,
+        position=m.position,
+        lesson_count=len(lessons),
+        est_minutes=est_minutes,
+    )
+
+
 def _detail(db: Session, course: Course, user: User | None) -> CourseDetail:
     modules = course_service.list_modules(db, course)
     enrollment = course_service.get_enrollment(db, course, user) if user else None
@@ -59,16 +74,7 @@ def _detail(db: Session, course: Course, user: User | None) -> CourseDetail:
         description=course.description,
         enrolled=bool(enrollment),
         completed=bool(enrollment and enrollment.completed_at),
-        modules=[
-            CourseModuleOutline(
-                id=m.id,
-                title=m.title,
-                summary=m.summary,
-                position=m.position,
-                lesson_count=len(course_service.list_lessons(db, m)),
-            )
-            for m in modules
-        ],
+        modules=[_module_outline(db, m) for m in modules],
     )
 
 

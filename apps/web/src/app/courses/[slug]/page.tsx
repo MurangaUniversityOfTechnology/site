@@ -121,7 +121,7 @@ export default function CourseDetailPage() {
                 {m.summary && <div className="mt-1 text-[13px] text-muted">{m.summary}</div>}
               </div>
               <span className="font-mono text-[10.5px] text-faint">
-                {m.lesson_count} lesson{m.lesson_count === 1 ? "" : "s"}
+                ~{m.est_minutes} min · {m.lesson_count} lesson{m.lesson_count === 1 ? "" : "s"}
               </span>
             </div>
           ))}
