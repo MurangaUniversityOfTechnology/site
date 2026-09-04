@@ -18,6 +18,7 @@ def list_members(viewer: User | None = Depends(get_current_user_optional), db: S
         MemberSummary(
             user_id=p.user_id,
             display_name=p.display_name,
+            photo_url=p.photo_url,
             interests=p.interests,
             experience_level=p.experience_level,
         )

@@ -311,6 +311,7 @@ def google_callback(
 
     google_sub = info["sub"]
     email = info["email"]
+    picture = info.get("picture")
 
     user = auth_service.get_user_by_google_sub(db, google_sub)
     if not user:
@@ -318,9 +319,13 @@ def google_callback(
         if user:
             user.google_sub = google_sub
             user.email_verified = True
+            # Only backfill — never clobber a photo the member already set
+            # themselves (upload or a prior Google link) with this login's.
+            if user.profile and not user.profile.photo_url:
+                user.profile.photo_url = picture
             db.commit()
         else:
-            user = auth_service.create_user(db, email, password=None, google_sub=google_sub)
+            user = auth_service.create_user(db, email, password=None, google_sub=google_sub, photo_url=picture)
 
     destination = "/dashboard" if _is_onboarded(user) else "/onboarding"
     redirect = RedirectResponse(f"{settings.web_origin}{destination}")
@@ -428,6 +433,7 @@ def _to_me_response(user: User) -> MeResponse:
         email=user.email,
         email_verified=user.email_verified,
         is_admin=user.is_admin,
+        photo_url=user.profile.photo_url if user.profile else None,
         membership_status=user.membership.status.value if user.membership else "none",
         onboarded=_is_onboarded(user),
     )

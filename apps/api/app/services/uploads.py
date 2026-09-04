@@ -23,7 +23,7 @@ class UploadError(Exception):
     pass
 
 
-def upload_file(content: bytes, content_type: str | None) -> str:
+def upload_file(content: bytes, content_type: str | None, folder: str = "mut-tech") -> str:
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise UploadError("That file type isn't allowed")
     if len(content) > MAX_UPLOAD_BYTES:
@@ -41,5 +41,5 @@ def upload_file(content: bytes, content_type: str | None) -> str:
     )
     # resource_type="auto" lets Cloudinary correctly store both images and
     # raw files (pdf/zip/docx/etc.) through this one generic endpoint.
-    result = cloudinary.uploader.upload(content, folder="mut-tech", resource_type="auto")
+    result = cloudinary.uploader.upload(content, folder=folder, resource_type="auto")
     return result["secure_url"]

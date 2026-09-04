@@ -10,6 +10,7 @@ class MemberSummary(BaseModel):
 
     user_id: uuid.UUID
     display_name: str
+    photo_url: str | None
     interests: list[str]
     experience_level: ExperienceLevel | None
 

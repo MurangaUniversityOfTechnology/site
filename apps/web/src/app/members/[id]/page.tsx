@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Avatar } from "@/components/Avatar";
 import { CourseBadge } from "@/components/CourseBadge";
 import { ApiError, memberApi, type MemberProfile } from "@/lib/api";
 
@@ -51,9 +52,12 @@ export default function MemberProfilePage() {
   return (
     <main className="mx-auto max-w-160 px-5 py-14 sm:px-8">
       <div className="rounded-2xl border border-border bg-surface p-7 text-center sm:p-9">
-        <div className="mx-auto grid h-19 w-19 place-items-center rounded-full border border-[#e8d9ad] bg-[linear-gradient(150deg,#fbf3df,#f5e6bf)] font-mono text-2xl text-navy">
-          {profile.display_name[0]?.toUpperCase()}
-        </div>
+        <Avatar
+          photoUrl={profile.photo_url}
+          name={profile.display_name}
+          className="mx-auto h-19 w-19"
+          textClassName="text-2xl"
+        />
         <div className="mt-4 text-xl font-semibold">{profile.display_name}</div>
         {profile.experience_level && (
           <div className="mt-1.5 font-mono text-[11px] text-faint">{EXPERIENCE_LABEL[profile.experience_level]}</div>

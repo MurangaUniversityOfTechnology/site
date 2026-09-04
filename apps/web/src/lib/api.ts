@@ -58,6 +58,7 @@ export type Me = {
   email: string;
   email_verified: boolean;
   is_admin: boolean;
+  photo_url: string | null;
   membership_status: string;
   onboarded: boolean;
 };
@@ -133,6 +134,8 @@ export const profileApi = {
   me: () => apiFetch<Profile>("/profile/me"),
   update: (payload: OnboardingPayload) =>
     apiFetch<Profile>("/profile/me", { method: "PATCH", body: JSON.stringify(payload) }),
+  uploadPhoto: (file: File) => apiUpload<{ url: string }>("/profile/me/photo", file),
+  deletePhoto: () => apiFetch<void>("/profile/me/photo", { method: "DELETE" }),
 };
 
 export type PaymentStatus = "initiated" | "pending" | "completed" | "failed" | "cancelled" | "unknown";
@@ -809,6 +812,7 @@ export const notificationApi = {
 export type MemberSummary = {
   user_id: string;
   display_name: string;
+  photo_url: string | null;
   interests: string[];
   experience_level: ExperienceLevel | null;
 };

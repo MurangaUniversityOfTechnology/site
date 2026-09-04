@@ -40,6 +40,7 @@ class MeResponse(BaseModel):
     email: str
     email_verified: bool
     is_admin: bool
+    photo_url: str | None
     membership_status: str
     # True once the member has finished onboarding, or unconditionally for
     # admins — see routers/auth.py's _to_me_response().

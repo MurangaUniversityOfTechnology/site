@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Avatar } from "@/components/Avatar";
 import { memberApi, type MemberSummary } from "@/lib/api";
 
 const EXPERIENCE_LABEL: Record<string, string> = {
@@ -33,9 +34,7 @@ export default function MembersPage() {
             href={`/members/${m.user_id}`}
             className="flex items-center gap-3.5 rounded-xl border border-border bg-surface p-5 hover:border-accent-dim"
           >
-            <div className="grid h-11 w-11 flex-none place-items-center rounded-full border border-[#e8d9ad] bg-[linear-gradient(150deg,#fbf3df,#f5e6bf)] font-mono text-[15px] text-navy">
-              {m.display_name[0]?.toUpperCase()}
-            </div>
+            <Avatar photoUrl={m.photo_url} name={m.display_name} className="h-11 w-11" />
             <div className="min-w-0">
               <div className="truncate text-[15.5px] font-medium">{m.display_name}</div>
               <div className="mt-1 truncate font-mono text-[10.5px] text-faint">

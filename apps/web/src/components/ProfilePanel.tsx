@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Avatar } from "@/components/Avatar";
 import { ApiError, profileApi, type ExperienceLevel, type ProfileVisibility } from "@/lib/api";
 import { experienceLevels, goalOptions, interestOptions, mutCourses, yearsOfStudy } from "@/lib/data";
+import { useMe } from "@/lib/useMe";
 
 type FormState = {
+  photoUrl: string | null;
   firstName: string;
   lastName: string;
   preferredName: string;
@@ -26,16 +29,21 @@ function toggle<T>(list: T[], value: T): T[] {
 }
 
 export default function ProfilePanel() {
+  const { refresh } = useMe();
   const [form, setForm] = useState<FormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let active = true;
     profileApi.me().then((p) => {
       if (!active) return;
       setForm({
+        photoUrl: p.photo_url,
         firstName: p.first_name ?? "",
         lastName: p.last_name ?? "",
         preferredName: p.display_name ?? "",
@@ -58,6 +66,38 @@ export default function ProfilePanel() {
   }, []);
 
   if (!form) return null;
+
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !form) return;
+    setPhotoError(null);
+    setPhotoBusy(true);
+    try {
+      const { url } = await profileApi.uploadPhoto(file);
+      setForm({ ...form, photoUrl: url });
+      await refresh();
+    } catch (err) {
+      setPhotoError(err instanceof ApiError ? err.message : "Couldn't upload that photo.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (!form) return;
+    setPhotoError(null);
+    setPhotoBusy(true);
+    try {
+      await profileApi.deletePhoto();
+      setForm({ ...form, photoUrl: null });
+      await refresh();
+    } catch (err) {
+      setPhotoError(err instanceof ApiError ? err.message : "Couldn't remove that photo.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -104,6 +144,43 @@ export default function ProfilePanel() {
       </p>
 
       <form onSubmit={submit} className="mt-5.5 flex flex-col gap-4">
+        <Field label="photo">
+          <div className="flex items-center gap-4">
+            <Avatar photoUrl={form.photoUrl} name={form.preferredName || form.firstName || "?"} className="h-16 w-16" />
+            <div className="flex flex-col gap-1.5">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={photoBusy}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-lg border border-border-strong px-3.5 py-2 text-[13px] text-foreground hover:border-accent-dim disabled:opacity-50"
+                >
+                  {photoBusy ? "Working…" : form.photoUrl ? "Change photo" : "Upload photo"}
+                </button>
+                {form.photoUrl && (
+                  <button
+                    type="button"
+                    disabled={photoBusy}
+                    onClick={removePhoto}
+                    className="rounded-lg px-3.5 py-2 text-[13px] text-danger hover:bg-surface-raised disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="font-mono text-[10px] text-faint">JPEG, PNG, WEBP, or GIF · up to 5MB</p>
+              {photoError && <p className="text-[13px] text-danger">{photoError}</p>}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
+          </div>
+        </Field>
+
         <div className="grid grid-cols-2 gap-4">
           <Field label="first name">
             <input

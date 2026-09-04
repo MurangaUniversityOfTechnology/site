@@ -6,7 +6,9 @@ from app.models.profile import Profile
 from app.models.user import User
 
 
-def create_user(db: Session, email: str, password: str | None, google_sub: str | None = None) -> User:
+def create_user(
+    db: Session, email: str, password: str | None, google_sub: str | None = None, photo_url: str | None = None
+) -> User:
     user = User(
         email=email.strip().lower(),
         password_hash=hash_password(password) if password else None,
@@ -16,7 +18,7 @@ def create_user(db: Session, email: str, password: str | None, google_sub: str |
     db.add(user)
     db.flush()
 
-    db.add(Profile(user_id=user.id))
+    db.add(Profile(user_id=user.id, photo_url=photo_url))
     db.add(Membership(user_id=user.id, status=MembershipStatus.none))
     db.commit()
     db.refresh(user)

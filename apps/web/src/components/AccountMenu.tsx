@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Avatar } from "@/components/Avatar";
 import { useMe } from "@/lib/useMe";
 import { useSignOut } from "@/lib/useSignOut";
 
@@ -24,8 +25,6 @@ export function AccountMenu() {
 
   if (!me) return null;
 
-  const initial = me.email[0]?.toUpperCase() ?? "?";
-
   return (
     <div ref={ref} className="relative flex-none">
       <button
@@ -34,9 +33,13 @@ export function AccountMenu() {
         aria-label="Account menu"
         className="flex items-center gap-2 rounded-full border border-white/16 bg-white/[0.06] py-1 pl-1 pr-3 text-[12.5px] text-white hover:border-accent"
       >
-        <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-accent text-[11px] font-bold text-navy-3">
-          {initial}
-        </span>
+        <Avatar
+          photoUrl={me.photo_url}
+          name={me.email}
+          className="h-6 w-6"
+          fallbackClassName="bg-accent text-navy-3"
+          textClassName="text-[11px] font-bold"
+        />
         <span className="hidden max-w-32 truncate sm:inline">{me.email}</span>
         <span className="text-white/50">▾</span>
       </button>
