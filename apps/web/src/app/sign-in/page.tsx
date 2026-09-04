@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import { GoogleIcon } from "@/components/icons";
 import PasswordInput from "@/components/PasswordInput";
+import { isSafeNext, signUpHref } from "@/lib/nextParam";
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const next = isSafeNext(rawNext) ? rawNext : null;
   const { me, loading, refresh } = useMe();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,8 +22,8 @@ export default function SignInPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && me) router.push(me.onboarded ? "/dashboard" : "/onboarding");
-  }, [loading, me, router]);
+    if (!loading && me) router.push(me.onboarded ? next ?? "/dashboard" : "/onboarding");
+  }, [loading, me, router, next]);
 
   if (loading || me) return null;
 
@@ -31,7 +35,7 @@ export default function SignInPage() {
     try {
       const me = await authApi.login(email.trim(), password);
       await refresh();
-      router.push(me.onboarded ? "/dashboard" : "/onboarding");
+      router.push(me.onboarded ? next ?? "/dashboard" : "/onboarding");
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setNoAccount(true);
@@ -65,7 +69,7 @@ export default function SignInPage() {
         </h1>
 
         <a
-          href={authApi.googleStartUrl()}
+          href={authApi.googleStartUrl(next)}
           className="mb-6 flex w-full items-center justify-center gap-2.5 rounded-md border border-border-strong bg-surface px-4 py-3 text-sm text-foreground transition hover:border-accent-dim"
         >
           <GoogleIcon />
@@ -108,7 +112,7 @@ export default function SignInPage() {
           {noAccount && (
             <p className="text-sm text-danger">
               We couldn&apos;t find an account for that email.{" "}
-              <Link href="/sign-up" className="underline hover:opacity-80">
+              <Link href={signUpHref(next)} className="underline hover:opacity-80">
                 Create one?
               </Link>
             </p>
@@ -125,7 +129,7 @@ export default function SignInPage() {
 
         <p className="mt-6 text-sm text-muted">
           Don&apos;t have an account?{" "}
-          <Link href="/sign-up" className="text-navy hover:underline">
+          <Link href={signUpHref(next)} className="text-navy hover:underline">
             Join the club
           </Link>
         </p>
@@ -145,5 +149,13 @@ export default function SignInPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
   );
 }

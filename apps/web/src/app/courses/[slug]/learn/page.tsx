@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { ApiError, courseApi, type CourseDetail, type CourseProgress, type ModulePublic } from "@/lib/api";
+import { signInHref } from "@/lib/nextParam";
 
 function nextStep(
   slug: string,
@@ -66,7 +67,7 @@ export default function LearnPage() {
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 text-center">
         <div>
           <h1 className="text-2xl tracking-[-0.02em]">Sign in to continue this course</h1>
-          <Link href="/sign-in" className="mt-3 inline-block text-navy hover:underline">
+          <Link href={signInHref(`/courses/${slug}/learn`)} className="mt-3 inline-block text-navy hover:underline">
             Sign in
           </Link>
         </div>

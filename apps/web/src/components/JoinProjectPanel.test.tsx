@@ -48,7 +48,10 @@ describe("JoinProjectPanel", () => {
   test("prompts sign-in when signed out", () => {
     mockUseMe.mockReturnValue({ me: null, loading: false, refresh: vi.fn() });
     render(<JoinProjectPanel slug="p" isMember={false} requestStatus={null} />);
-    expect(screen.getByRole("link", { name: /sign in to join/i })).toHaveAttribute("href", "/sign-in");
+    expect(screen.getByRole("link", { name: /sign in to join/i })).toHaveAttribute(
+      "href",
+      "/sign-in?next=%2Fprojects%2Fp"
+    );
   });
 
   test("prompts membership activation when signed in but not active", () => {

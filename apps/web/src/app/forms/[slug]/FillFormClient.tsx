@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, formApi, type AnswerValue, type FormPublic } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 export function FillFormClient({ slug }: { slug: string }) {
   const router = useRouter();
@@ -30,8 +31,8 @@ export function FillFormClient({ slug }: { slug: string }) {
   }, [slug]);
 
   useEffect(() => {
-    if (!loading && form?.require_login && !me) router.push("/sign-in");
-  }, [loading, me, form, router]);
+    if (!loading && form?.require_login && !me) router.push(signInHref(`/forms/${slug}`));
+  }, [loading, me, form, router, slug]);
 
   function setAnswer(fieldId: string, value: AnswerValue) {
     setAnswers((a) => ({ ...a, [fieldId]: value }));

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, contentApi } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 const TAG_OPTIONS = ["Backend", "Frontend", "Rust", "Python", "DevOps", "Career"];
 
@@ -19,7 +20,7 @@ export default function PublishPage() {
   const [sent, setSent] = useState(false);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/publish"));
   }, [loading, me, router]);
 
   if (loading || !me) return null;

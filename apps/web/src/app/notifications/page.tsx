@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signInHref } from "@/lib/nextParam";
 import { notificationApi, type Notification } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 
@@ -31,7 +32,7 @@ export default function NotificationsPage() {
   }, []);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/notifications"));
   }, [loading, me, router]);
 
   useEffect(() => {

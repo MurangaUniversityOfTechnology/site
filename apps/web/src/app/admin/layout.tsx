@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { useSignOut } from "@/lib/useSignOut";
 import { AccountMenu } from "@/components/AccountMenu";
+import { signInHref } from "@/lib/nextParam";
 
 type NavGroup = { section: string | null; items: { href: string; label: string }[] };
 
@@ -76,9 +77,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (loading) return;
-    if (!me) router.push("/sign-in");
+    if (!me) router.push(signInHref(pathname));
     else if (!me.is_admin) router.push("/dashboard");
-  }, [loading, me, router]);
+  }, [loading, me, router, pathname]);
 
   function toggleGroup(section: string) {
     setCollapsed((prev) => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { membershipApi } from "@/lib/api";
 import { membershipFeeKes } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 const POLL_INTERVAL_MS = 3000;
 const UNKNOWN_AFTER_MS = 60_000;
@@ -48,7 +49,7 @@ export default function WaitingPage() {
   }, [me, checkStatus]);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/membership/waiting"));
   }, [loading, me, router]);
 
   if (loading || !me) return null;

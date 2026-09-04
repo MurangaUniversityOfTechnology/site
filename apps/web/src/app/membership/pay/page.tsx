@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, membershipApi } from "@/lib/api";
 import { membershipFeeKes } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 export default function PayPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function PayPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/membership/pay"));
   }, [loading, me, router]);
 
   if (loading || !me) return null;

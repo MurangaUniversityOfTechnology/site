@@ -6,6 +6,11 @@ import { usePathname } from "next/navigation";
 import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
 import { useSignOut } from "@/lib/useSignOut";
+import { signInHref } from "@/lib/nextParam";
+
+// Paths that are themselves part of the auth/onboarding flow — don't send
+// someone back into onboarding or the sign-in page itself as a "next".
+const AUTH_FLOW_PREFIXES = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/onboarding", "/welcome"];
 
 const MORE_LINKS = [
   { href: "/projects", label: "Projects" },
@@ -37,6 +42,7 @@ export function MobileNav() {
   const { me } = useMe();
   const signOut = useSignOut();
   const unread = useUnreadCount(me, pathname);
+  const signInTarget = AUTH_FLOW_PREFIXES.some((p) => pathname.startsWith(p)) ? "/sign-in" : signInHref(pathname);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
@@ -155,7 +161,7 @@ export function MobileNav() {
             onClick={() => setSheet((s) => (s === "profile" ? null : "profile"))}
           />
         ) : (
-          <TabLink href="/sign-in" label="Sign In" active={onProfile} icon={<ProfileIcon />} />
+          <TabLink href={signInTarget} label="Sign In" active={onProfile} icon={<ProfileIcon />} />
         )}
       </nav>
     </>

@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { eventApi, type EventSummary, type Registration } from "@/lib/api";
 import { formatEventDay, formatEventMeta } from "@/lib/eventFormat";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 // Prefixed so the door scanner can reject an unrelated QR code (wifi, a
 // random URL) instead of trying to look it up as a registration id.
@@ -21,8 +22,8 @@ export default function EventPassPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
-  }, [loading, me, router]);
+    if (!loading && !me) router.push(signInHref(`/events/${slug}/pass`));
+  }, [loading, me, router, slug]);
 
   useEffect(() => {
     if (!me) return;

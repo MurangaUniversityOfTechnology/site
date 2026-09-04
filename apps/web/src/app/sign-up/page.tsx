@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { authApi, ApiError } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import { GoogleIcon } from "@/components/icons";
 import PasswordInput from "@/components/PasswordInput";
+import { isSafeNext, signInHref } from "@/lib/nextParam";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const rawNext = searchParams.get("next");
+  const next = isSafeNext(rawNext) ? rawNext : null;
   const { me, loading, refresh } = useMe();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +21,8 @@ export default function SignUpPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!loading && me) router.push(me.onboarded ? "/dashboard" : "/onboarding");
-  }, [loading, me, router]);
+    if (!loading && me) router.push(me.onboarded ? next ?? "/dashboard" : "/onboarding");
+  }, [loading, me, router, next]);
 
   if (loading || me) return null;
 
@@ -48,7 +52,7 @@ export default function SignUpPage() {
         </h1>
 
         <a
-          href={authApi.googleStartUrl()}
+          href={authApi.googleStartUrl(next)}
           className="mb-6 flex w-full items-center justify-center gap-2.5 rounded-md border border-border-strong bg-surface px-4 py-3 text-sm text-foreground transition hover:border-accent-dim"
         >
           <GoogleIcon />
@@ -97,11 +101,19 @@ export default function SignUpPage() {
 
         <p className="mt-6 text-sm text-muted">
           Already have an account?{" "}
-          <Link href="/sign-in" className="text-navy hover:underline">
+          <Link href={signInHref(next)} className="text-navy hover:underline">
             Sign in
           </Link>
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpForm />
+    </Suspense>
   );
 }

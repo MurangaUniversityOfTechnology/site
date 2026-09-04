@@ -7,6 +7,7 @@ import { useMe } from "@/lib/useMe";
 import SignaturePanel from "@/components/SignaturePanel";
 import ProfilePanel from "@/components/ProfilePanel";
 import PasswordInput from "@/components/PasswordInput";
+import { signInHref } from "@/lib/nextParam";
 
 type Category = "account" | "profile" | "signature";
 
@@ -22,7 +23,7 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/settings"));
   }, [loading, me, router]);
 
   if (loading || !me) return null;

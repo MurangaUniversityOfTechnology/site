@@ -52,6 +52,16 @@ GITHUB_AUTH_URL = "https://github.com/login/oauth/authorize"
 GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
 GITHUB_USER_URL = "https://api.github.com/user"
 OAUTH_STATE_COOKIE = "oauth_state"
+OAUTH_NEXT_COOKIE = "oauth_next"
+
+
+def _safe_next(value: str | None) -> str | None:
+    """Only ever a same-origin relative path — rejects protocol-relative
+    ("//evil.com") and backslash ("/\\evil.com") tricks a browser will still
+    treat as absolute, since this value ends up in a server-issued redirect."""
+    if not value or not value.startswith("/") or value.startswith(("//", "/\\")):
+        return None
+    return value
 
 
 def _set_session_cookie(response: Response, user: User) -> None:
@@ -258,7 +268,7 @@ def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
 
 
 @router.get("/google/start")
-def google_start(response: Response):
+def google_start(response: Response, next: str | None = None):
     if not settings.google_client_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in is not configured yet")
 
@@ -278,6 +288,12 @@ def google_start(response: Response):
         )
     )
     response.set_cookie(OAUTH_STATE_COOKIE, state, httponly=True, samesite="lax", max_age=600)
+    safe_next = _safe_next(next)
+    if safe_next:
+        # Round-tripped through the callback so an existing member who
+        # started Google sign-in from, say, an event registration page
+        # lands back there instead of on the dashboard — see google_callback.
+        response.set_cookie(OAUTH_NEXT_COOKIE, safe_next, httponly=True, samesite="lax", max_age=600)
     return response
 
 
@@ -286,6 +302,7 @@ def google_callback(
     code: str,
     state: str,
     oauth_state: str | None = Cookie(default=None, alias=OAUTH_STATE_COOKIE),
+    oauth_next: str | None = Cookie(default=None, alias=OAUTH_NEXT_COOKIE),
     db: Session = Depends(get_db),
 ):
     if not oauth_state or oauth_state != state:
@@ -327,10 +344,17 @@ def google_callback(
         else:
             user = auth_service.create_user(db, email, password=None, google_sub=google_sub, photo_url=picture)
 
-    destination = "/dashboard" if _is_onboarded(user) else "/onboarding"
+    if _is_onboarded(user):
+        # New signups always go through onboarding regardless of `next` —
+        # only an already-onboarded member returning mid-flow gets bounced
+        # back to wherever they started (e.g. an event registration page).
+        destination = _safe_next(oauth_next) or "/dashboard"
+    else:
+        destination = "/onboarding"
     redirect = RedirectResponse(f"{settings.web_origin}{destination}")
     _set_session_cookie(redirect, user)
     redirect.delete_cookie(OAUTH_STATE_COOKIE)
+    redirect.delete_cookie(OAUTH_NEXT_COOKIE)
     return redirect
 
 

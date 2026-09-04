@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ApiError, githubApi, type GithubStatus } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import { GitHubIcon } from "@/components/icons";
+import { signInHref } from "@/lib/nextParam";
 
 const INVITE_COPY: Record<string, { tag: string; title: string; body: string }> = {
   invited: {
@@ -32,7 +33,7 @@ export default function GithubConnectPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/github"));
   }, [loading, me, router]);
 
   useEffect(() => {

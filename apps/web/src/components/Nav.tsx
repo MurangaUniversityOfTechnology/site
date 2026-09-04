@@ -7,6 +7,11 @@ import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
 import { BellIcon } from "@/components/icons";
 import { AccountMenu } from "@/components/AccountMenu";
+import { signInHref } from "@/lib/nextParam";
+
+// Paths that are themselves part of the auth/onboarding flow — don't send
+// someone back into onboarding or the sign-in page itself as a "next".
+const AUTH_FLOW_PREFIXES = ["/sign-in", "/sign-up", "/forgot-password", "/reset-password", "/onboarding", "/welcome"];
 
 const links = [
   { href: "/projects", label: "Projects" },
@@ -25,6 +30,9 @@ export function Nav() {
   const unread = useUnreadCount(me, pathname);
 
   if (pathname?.startsWith("/admin")) return null;
+
+  const signInTarget =
+    !pathname || AUTH_FLOW_PREFIXES.some((p) => pathname.startsWith(p)) ? "/sign-in" : signInHref(pathname);
 
   return (
     <header className="sticky top-0 z-50 flex h-16 items-center gap-5 border-b border-navy-2 bg-navy px-4 text-white/90 backdrop-blur-sm sm:px-6">
@@ -58,7 +66,7 @@ export function Nav() {
           </>
         ) : (
           <>
-            <Link href="/sign-in" className="whitespace-nowrap text-[13.5px] text-white/60 hover:text-white">
+            <Link href={signInTarget} className="whitespace-nowrap text-[13.5px] text-white/60 hover:text-white">
               Sign In
             </Link>
             <Link

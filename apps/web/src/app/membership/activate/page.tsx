@@ -4,13 +4,14 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { membershipFeeKes, membershipPerks } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 export default function ActivateReviewPage() {
   const router = useRouter();
   const { me, loading } = useMe();
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
+    if (!loading && !me) router.push(signInHref("/membership/activate"));
   }, [loading, me, router]);
 
   if (loading || !me) return null;

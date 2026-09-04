@@ -48,7 +48,7 @@ describe("MobileNav", () => {
   test("Profile tab shows Sign In and links there when signed out", () => {
     setup("/dashboard", null);
     const link = screen.getByRole("link", { name: /sign in/i });
-    expect(link).toHaveAttribute("href", "/sign-in");
+    expect(link).toHaveAttribute("href", "/sign-in?next=%2Fdashboard");
   });
 
   test("Profile tab opens an account sheet with Dashboard/Settings when signed in", () => {

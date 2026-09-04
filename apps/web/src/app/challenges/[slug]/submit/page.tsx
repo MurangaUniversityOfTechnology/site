@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ApiError, challengeApi, type Submission } from "@/lib/api";
 import { challenges } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 export default function SubmitBuildPage() {
   const params = useParams<{ slug: string }>();
@@ -24,8 +25,8 @@ export default function SubmitBuildPage() {
   const [justSubmitted, setJustSubmitted] = useState<Submission | null>(null);
 
   useEffect(() => {
-    if (!loading && !me) router.push("/sign-in");
-  }, [loading, me, router]);
+    if (!loading && !me) router.push(signInHref(`/challenges/${slug}/submit`));
+  }, [loading, me, router, slug]);
 
   useEffect(() => {
     if (!me) return;

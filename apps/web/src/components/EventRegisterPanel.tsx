@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ApiError, eventApi, type Registration } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
+import { signInHref } from "@/lib/nextParam";
 
 const STATUS_COPY: Record<string, { label: string; color: string }> = {
   pending: { label: "Registered · pending approval", color: "text-warn" },
@@ -202,7 +203,7 @@ export function EventRegisterPanel({
   if (audience === "members only") {
     return (
       <Link
-        href="/sign-in"
+        href={signInHref(`/events/${slug}`)}
         className="rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
       >
         Sign in to register

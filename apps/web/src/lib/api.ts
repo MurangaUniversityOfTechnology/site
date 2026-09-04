@@ -70,7 +70,8 @@ export const authApi = {
     apiFetch<Me>("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   logout: () => apiFetch<void>("/auth/logout", { method: "POST" }),
   me: () => apiFetch<Me>("/auth/me"),
-  googleStartUrl: () => `${API_URL}/auth/google/start`,
+  googleStartUrl: (next?: string | null) =>
+    next ? `${API_URL}/auth/google/start?next=${encodeURIComponent(next)}` : `${API_URL}/auth/google/start`,
   // Dev-only — the backend 404s this outside ENVIRONMENT=development.
   devLogin: () => apiFetch<Me>("/auth/dev-login", { method: "POST" }),
   sendVerificationEmail: () => apiFetch<void>("/auth/send-verification-email", { method: "POST" }),
