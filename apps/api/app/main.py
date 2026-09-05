@@ -15,6 +15,7 @@ from app.routers import (
     admin_uploads,
     auth,
     challenges,
+    community,
     content,
     courses,
     donations,
@@ -65,6 +66,7 @@ app.include_router(projects.router)
 app.include_router(donations.router)
 app.include_router(courses.router)
 app.include_router(forms.router)
+app.include_router(community.router)
 
 
 @app.get("/health")

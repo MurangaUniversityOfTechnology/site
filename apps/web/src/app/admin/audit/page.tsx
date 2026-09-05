@@ -11,6 +11,7 @@ const KINDS = [
   "project",
   "tags",
   "roles",
+  "community",
   "import",
   "content",
   "settings",
@@ -31,6 +32,7 @@ const KIND_COLOR: Record<string, string> = {
   project: "text-muted",
   tags: "text-muted",
   roles: "text-warn",
+  community: "text-navy",
 };
 
 export default function AuditPage() {

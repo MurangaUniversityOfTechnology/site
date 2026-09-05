@@ -20,6 +20,7 @@ dependencies = [
     "qrcode[pil]>=8.0",
     "cryptography>=43.0",
     "cloudinary>=1.41",
+    "beautifulsoup4>=4.15.0",
 ]
 
 [project.optional-dependencies]

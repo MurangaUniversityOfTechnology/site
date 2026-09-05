@@ -18,13 +18,32 @@ ALLOWED_CONTENT_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+# Community post/comment attachments — images plus short video clips.
+# Deliberately its own set rather than extending ALLOWED_CONTENT_TYPES: that
+# one gates the staff-only admin uploads endpoint (course covers, etc.), and
+# there's no reason to open video there too.
+COMMUNITY_ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "video/mp4",
+    "video/webm",
+    "video/quicktime",
+}
+
 
 class UploadError(Exception):
     pass
 
 
-def upload_file(content: bytes, content_type: str | None, folder: str = "mut-tech") -> str:
-    if content_type not in ALLOWED_CONTENT_TYPES:
+def upload_file(
+    content: bytes,
+    content_type: str | None,
+    folder: str = "mut-tech",
+    allowed_types: set[str] | None = None,
+) -> str:
+    if content_type not in (allowed_types or ALLOWED_CONTENT_TYPES):
         raise UploadError("That file type isn't allowed")
     if len(content) > MAX_UPLOAD_BYTES:
         raise UploadError("File is too large (max 5MB)")

@@ -20,6 +20,7 @@ class AuditLog(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     actor_name: Mapped[str] = mapped_column(String, nullable=False)
-    kind: Mapped[str] = mapped_column(String, nullable=False)  # membership | payment | event | content | settings | import | tags
+    # membership | payment | event | content | settings | import | tags | course | form | project | arms | roles | community
+    kind: Mapped[str] = mapped_column(String, nullable=False)
     action: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

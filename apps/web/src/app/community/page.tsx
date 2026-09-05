@@ -16,12 +16,20 @@ export default function CommunityPage() {
             built right now
           </h1>
         </div>
-        <Link
-          href="/publish"
-          className="rounded-lg border border-border-strong px-5 py-2.5 text-sm hover:border-accent-dim"
-        >
-          Write something
-        </Link>
+        <div className="flex gap-2.5">
+          <Link
+            href="/community/board"
+            className="rounded-lg border border-border-strong px-5 py-2.5 text-sm hover:border-accent-dim"
+          >
+            Questions & polls
+          </Link>
+          <Link
+            href="/publish"
+            className="rounded-lg border border-border-strong px-5 py-2.5 text-sm hover:border-accent-dim"
+          >
+            Write something
+          </Link>
+        </div>
       </div>
 
       <div className="mt-9 grid items-start gap-6 md:grid-cols-[1.6fr_1fr]">
