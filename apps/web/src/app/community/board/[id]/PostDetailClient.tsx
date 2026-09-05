@@ -92,7 +92,7 @@ function Comments({
   onCommented: () => void;
 }) {
   const [body, setBody] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +106,7 @@ function Comments({
     try {
       await communityApi.addComment(post.id, body.trim(), isAnonymous, attachments);
       setBody("");
-      setIsAnonymous(false);
+      setIsAnonymous(true);
       setAttachments([]);
       onCommented();
     } catch (err) {

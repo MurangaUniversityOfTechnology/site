@@ -20,6 +20,7 @@ const links = [
   { href: "/courses", label: "Courses" },
   { href: "/learn", label: "Learn" },
   { href: "/community", label: "Community" },
+  { href: "/community/board", label: "Q&A & Polls" },
   { href: "/members", label: "People" },
   { href: "/donate", label: "Donate" },
 ];

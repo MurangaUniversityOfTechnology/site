@@ -38,7 +38,11 @@ def _excerpt(body: str | None, max_length: int = 180) -> str | None:
 
 
 def _author_display(author: User, is_anonymous: bool, viewer: User | None) -> str:
-    can_see_real_author = viewer is not None and (viewer.is_admin or viewer.is_staff)
+    # The admin/staff reveal is for moderating *other* people's anonymous
+    # posts — it shouldn't unmask your own to yourself, which would just
+    # show your real name right next to your own "Anonymous" badge.
+    is_self = viewer is not None and viewer.id == author.id
+    can_see_real_author = viewer is not None and not is_self and (viewer.is_admin or viewer.is_staff)
     if is_anonymous and not can_see_real_author:
         return "Anonymous"
     return author.profile.display_name if author.profile and author.profile.display_name else author.email

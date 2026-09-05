@@ -147,6 +147,16 @@ def test_anonymous_hides_author_from_regular_viewer_but_not_staff(client, make_u
     assert res.json()["author_display"] == author.email
 
 
+def test_anonymous_staff_author_sees_their_own_post_as_anonymous_too(client, make_user, login_as):
+    staff_author = make_user(is_staff=True)
+    login_as(staff_author)
+    post = _make_question(client, is_anonymous=True)
+    assert post["author_display"] == "Anonymous"
+
+    res = client.get(f"/community/posts/{post['id']}")
+    assert res.json()["author_display"] == "Anonymous"
+
+
 def test_hidden_post_rejects_new_votes_and_comments(client, make_user, login_as):
     author = make_user()
     login_as(author)

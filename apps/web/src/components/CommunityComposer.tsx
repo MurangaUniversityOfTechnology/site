@@ -11,7 +11,7 @@ export function CommunityComposer({ onCreated }: { onCreated: (post: CommunityPo
   const [kind, setKind] = useState<CommunityPostKind>("question");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [options, setOptions] = useState(["", ""]);
   const [attachments, setAttachments] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -21,7 +21,7 @@ export function CommunityComposer({ onCreated }: { onCreated: (post: CommunityPo
     setKind("question");
     setTitle("");
     setBody("");
-    setIsAnonymous(false);
+    setIsAnonymous(true);
     setOptions(["", ""]);
     setAttachments([]);
     setError(null);

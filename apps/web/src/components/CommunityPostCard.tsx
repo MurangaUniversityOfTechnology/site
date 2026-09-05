@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ApiError, communityApi, type CommunityPostSummary } from "@/lib/api";
 import { CommunityLinkPreview } from "@/components/CommunityLinkPreview";
 import { CommunityAttachments } from "@/components/CommunityAttachments";
+import { CommunityShareButton } from "@/components/CommunityShareButton";
 import { signInHref } from "@/lib/nextParam";
 
 function timeAgo(iso: string): string {
@@ -160,6 +161,7 @@ export function CommunityPostCard({
         </Link>
         <span>{post.author_display}</span>
         <span>{timeAgo(post.created_at)}</span>
+        <CommunityShareButton postId={post.id} title={post.title} />
         {!signedIn && (
           <a href={signInHref("/community/board")} className="text-navy hover:underline">
             Sign in to join in

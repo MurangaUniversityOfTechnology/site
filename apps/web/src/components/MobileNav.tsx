@@ -88,6 +88,13 @@ export function MobileNav() {
                   </Link>
                 ))}
               </div>
+              <Link
+                href="/community/board"
+                onClick={() => setSheet(null)}
+                className="mt-2.5 block rounded-lg border border-accent-dim bg-accent/[0.06] px-4 py-3.5 text-center text-[15px] text-navy"
+              >
+                Questions & Polls
+              </Link>
               {me && (
                 <Link
                   href="/publish"
