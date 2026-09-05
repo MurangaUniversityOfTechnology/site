@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
@@ -37,15 +38,34 @@ def _excerpt(body: str | None, max_length: int = 180) -> str | None:
     return f"{flat[:max_length].rstrip()}…"
 
 
+def _is_mine(author: User, viewer: User | None) -> bool:
+    return viewer is not None and viewer.id == author.id
+
+
 def _author_display(author: User, is_anonymous: bool, viewer: User | None) -> str:
     # The admin/staff reveal is for moderating *other* people's anonymous
     # posts — it shouldn't unmask your own to yourself, which would just
     # show your real name right next to your own "Anonymous" badge.
-    is_self = viewer is not None and viewer.id == author.id
-    can_see_real_author = viewer is not None and not is_self and (viewer.is_admin or viewer.is_staff)
+    can_see_real_author = viewer is not None and not _is_mine(author, viewer) and (viewer.is_admin or viewer.is_staff)
     if is_anonymous and not can_see_real_author:
         return "Anonymous"
     return author.profile.display_name if author.profile and author.profile.display_name else author.email
+
+
+def _apply_link_preview(post: CommunityPost, title: str, body: str | None) -> None:
+    """Best-effort — clears any existing preview and refetches from the
+    (possibly edited) title/body. Used by both create_post and update_post."""
+    post.link_url = post.link_title = post.link_description = post.link_image_url = post.link_site_name = None
+    preview_url = link_preview.extract_first_url(title, body)
+    if not preview_url:
+        return
+    preview = link_preview.fetch_preview(preview_url)
+    if preview:
+        post.link_url = preview.url
+        post.link_title = preview.title
+        post.link_description = preview.description
+        post.link_image_url = preview.image_url
+        post.link_site_name = preview.site_name
 
 
 def _validate_attachments(urls: list[str]) -> None:
@@ -93,16 +113,7 @@ def create_post(
         body=body,
         attachments=attachments,
     )
-
-    preview_url = link_preview.extract_first_url(title, body)
-    if preview_url:
-        preview = link_preview.fetch_preview(preview_url)
-        if preview:
-            post.link_url = preview.url
-            post.link_title = preview.title
-            post.link_description = preview.description
-            post.link_image_url = preview.image_url
-            post.link_site_name = preview.site_name
+    _apply_link_preview(post, title, body)
 
     db.add(post)
     db.flush()
@@ -111,6 +122,30 @@ def create_post(
     db.commit()
     db.refresh(post)
     return post
+
+
+def update_post(
+    db: Session, post: CommunityPost, title: str, body: str | None, is_anonymous: bool, attachments: list[str]
+) -> CommunityPost:
+    """Title/body/anonymity/attachments only — kind and poll options are
+    frozen after creation so existing votes stay meaningful."""
+    _require_not_hidden(post)
+    _validate_attachments(attachments)
+    post.title = title
+    post.body = body
+    post.is_anonymous = is_anonymous
+    post.attachments = attachments
+    _apply_link_preview(post, title, body)
+    post.edited_at = datetime.now(UTC)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+def delete_post(db: Session, user: User, post: CommunityPost) -> None:
+    audit.log(db, user, "community", f'Deleted their own post "{post.title}"')
+    db.delete(post)
+    db.commit()
 
 
 def _base_query(db: Session, viewer: User | None):
@@ -204,7 +239,9 @@ def shape_post(db: Session, post: CommunityPost, viewer: User | None) -> Communi
         author_display=_author_display(post.author, post.is_anonymous, viewer),
         is_anonymous=post.is_anonymous,
         created_at=post.created_at,
+        edited_at=post.edited_at,
         is_hidden=post.is_hidden,
+        is_mine=_is_mine(post.author, viewer),
         comment_count=comment_count,
         score=score,
         my_vote=my_vote,
@@ -237,7 +274,9 @@ def shape_comment(db: Session, comment: CommunityComment, viewer: User | None) -
         body=comment.body,
         attachments=comment.attachments,
         created_at=comment.created_at,
+        edited_at=comment.edited_at,
         is_hidden=comment.is_hidden,
+        is_mine=_is_mine(comment.author, viewer),
         score=score,
         my_vote=my_vote,
     )
@@ -289,6 +328,19 @@ def add_comment(
     _validate_attachments(attachments)
     comment = CommunityComment(post_id=post.id, author_id=user.id, is_anonymous=is_anonymous, body=body, attachments=attachments)
     db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
+
+
+def update_comment(db: Session, comment: CommunityComment, body: str, is_anonymous: bool, attachments: list[str]) -> CommunityComment:
+    if comment.is_hidden:
+        raise CommunityError("This comment has been removed")
+    _validate_attachments(attachments)
+    comment.body = body
+    comment.is_anonymous = is_anonymous
+    comment.attachments = attachments
+    comment.edited_at = datetime.now(UTC)
     db.commit()
     db.refresh(comment)
     return comment

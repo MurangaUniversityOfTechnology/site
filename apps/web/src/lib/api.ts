@@ -1060,7 +1060,9 @@ export type CommunityPostSummary = {
   author_display: string;
   is_anonymous: boolean;
   created_at: string;
+  edited_at: string | null;
   is_hidden: boolean;
+  is_mine: boolean;
   comment_count: number;
   score: number | null;
   my_vote: number | null;
@@ -1077,7 +1079,9 @@ export type CommunityComment = {
   body: string;
   attachments: string[];
   created_at: string;
+  edited_at: string | null;
   is_hidden: boolean;
+  is_mine: boolean;
   score: number;
   my_vote: number | null;
 };
@@ -1098,6 +1102,11 @@ export const communityApi = {
     options: string[];
     attachments: string[];
   }) => apiFetch<CommunityPostSummary>("/community/posts", { method: "POST", body: JSON.stringify(payload) }),
+  update: (
+    id: string,
+    payload: { title: string; body: string | null; is_anonymous: boolean; attachments: string[] }
+  ) => apiFetch<CommunityPostSummary>(`/community/posts/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  remove: (id: string) => apiFetch<void>(`/community/posts/${id}`, { method: "DELETE" }),
   vote: (id: string, value: 1 | -1) =>
     apiFetch<CommunityPostSummary>(`/community/posts/${id}/vote`, { method: "POST", body: JSON.stringify({ value }) }),
   pollVote: (id: string, optionId: string) =>
@@ -1110,6 +1119,8 @@ export const communityApi = {
       method: "POST",
       body: JSON.stringify({ body, is_anonymous: isAnonymous, attachments }),
     }),
+  updateComment: (id: string, payload: { body: string; is_anonymous: boolean; attachments: string[] }) =>
+    apiFetch<CommunityComment>(`/community/comments/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   voteComment: (id: string, value: 1 | -1) =>
     apiFetch<CommunityComment>(`/community/comments/${id}/vote`, { method: "POST", body: JSON.stringify({ value }) }),
   uploadAttachment: (file: File) => apiUpload<{ url: string }>("/community/uploads", file),

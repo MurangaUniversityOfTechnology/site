@@ -28,6 +28,10 @@ export default function CommunityBoardPage() {
     setPosts((prev) => prev?.map((p) => (p.id === updated.id ? updated : p)) ?? prev);
   }
 
+  function removePost(id: string) {
+    setPosts((prev) => prev?.filter((p) => p.id !== id) ?? prev);
+  }
+
   return (
     <main className="mx-auto max-w-160 px-5 py-12 sm:px-8 sm:py-14">
       <Link href="/community" className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint hover:text-muted">
@@ -68,7 +72,14 @@ export default function CommunityBoardPage() {
 
       <div className="mt-6 flex flex-col gap-4">
         {posts?.map((post) => (
-          <CommunityPostCard key={post.id} post={post} canModerate={canModerate} signedIn={!!me} onChange={updatePost} />
+          <CommunityPostCard
+            key={post.id}
+            post={post}
+            canModerate={canModerate}
+            signedIn={!!me}
+            onChange={updatePost}
+            onDeleted={() => removePost(post.id)}
+          />
         ))}
       </div>
     </main>

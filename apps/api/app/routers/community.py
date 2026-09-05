@@ -13,6 +13,8 @@ from app.schemas.community import (
     CreatePostRequest,
     HideRequest,
     PollVoteRequest,
+    UpdateCommentRequest,
+    UpdatePostRequest,
     VoteRequest,
 )
 from app.schemas.upload import FileUploadResponse
@@ -69,6 +71,28 @@ def create_post(payload: CreatePostRequest, user: User = Depends(get_current_use
     return community_service.shape_post(db, post, user)
 
 
+@router.patch("/posts/{post_id}", response_model=CommunityPostRow)
+def update_post(
+    post_id: str, payload: UpdatePostRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    post = _get_post_or_404(db, user, post_id)
+    if post.author_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only edit your own post")
+    try:
+        community_service.update_post(db, post, payload.title, payload.body, payload.is_anonymous, payload.attachments)
+    except community_service.CommunityError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return community_service.shape_post(db, post, user)
+
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(post_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    post = _get_post_or_404(db, user, post_id)
+    if post.author_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only delete your own post")
+    community_service.delete_post(db, user, post)
+
+
 @router.post("/posts/{post_id}/vote", response_model=CommunityPostRow)
 def vote(
     post_id: str, payload: VoteRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -103,6 +127,22 @@ def add_comment(
     except community_service.CommunityError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return community_service.shape_detail(db, post, user)
+
+
+@router.patch("/comments/{comment_id}", response_model=CommunityCommentRow)
+def update_comment(
+    comment_id: str, payload: UpdateCommentRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    comment = community_service.get_comment_visible(db, user, comment_id)
+    if not comment:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Comment not found")
+    if comment.author_id != user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "You can only edit your own comment")
+    try:
+        community_service.update_comment(db, comment, payload.body, payload.is_anonymous, payload.attachments)
+    except community_service.CommunityError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return community_service.shape_comment(db, comment, user)
 
 
 @router.post("/comments/{comment_id}/vote", response_model=CommunityCommentRow)

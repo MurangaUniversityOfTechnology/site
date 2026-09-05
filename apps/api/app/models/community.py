@@ -68,6 +68,7 @@ class CommunityPost(Base):
     attachments: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hidden_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -140,6 +141,7 @@ class CommunityComment(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     attachments: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hidden_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 

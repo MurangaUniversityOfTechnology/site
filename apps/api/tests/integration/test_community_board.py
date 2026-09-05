@@ -404,3 +404,169 @@ def test_upload_success(client, make_user, login_as, monkeypatch):
     res = client.post("/community/uploads", files={"file": ("x.jpg", b"fake-bytes", "image/jpeg")})
     assert res.status_code == 200
     assert res.json()["url"] == VALID_ATTACHMENT
+
+
+def test_author_can_edit_their_post(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client, title="Original title", body="original body")
+
+    res = client.patch(
+        f"/community/posts/{post['id']}",
+        json={"title": "Edited title", "body": "edited body", "is_anonymous": True, "attachments": []},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["title"] == "Edited title"
+    assert body["is_anonymous"] is True
+    assert body["edited_at"] is not None
+    assert body["author_display"] == "Anonymous"
+
+
+def test_non_author_cannot_edit_post(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+
+    other = make_user()
+    login_as(other)
+    res = client.patch(
+        f"/community/posts/{post['id']}", json={"title": "hijacked", "body": None, "is_anonymous": False, "attachments": []}
+    )
+    assert res.status_code == 403
+
+
+def test_edit_refreshes_link_preview(client, make_user, login_as, monkeypatch):
+    monkeypatch.setattr(
+        link_preview,
+        "fetch_preview",
+        lambda url: link_preview.LinkPreview(url=url, title="New Preview", description=None, image_url=None, site_name=None),
+    )
+    author = make_user()
+    login_as(author)
+    post = _make_question(client, body="no link here")
+    assert post["link"] is None
+
+    res = client.patch(
+        f"/community/posts/{post['id']}",
+        json={"title": post["title"], "body": "now with https://example.com", "is_anonymous": False, "attachments": []},
+    )
+    assert res.json()["link"]["title"] == "New Preview"
+
+
+def test_cannot_edit_a_hidden_post(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+
+    staff = make_user(is_staff=True)
+    login_as(staff)
+    client.post(f"/community/posts/{post['id']}/hide", json={"reason": "spam"})
+
+    # Hidden posts already 404 for non-staff before update_post's own
+    # _require_not_hidden ever runs — same as votes/comments on a hidden
+    # post (test_hidden_post_rejects_new_votes_and_comments).
+    login_as(author)
+    res = client.patch(
+        f"/community/posts/{post['id']}", json={"title": "x", "body": None, "is_anonymous": False, "attachments": []}
+    )
+    assert res.status_code == 404
+
+
+def test_author_can_delete_their_post(client, make_user, login_as, db_session):
+    from app.models.audit_log import AuditLog
+
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+
+    res = client.delete(f"/community/posts/{post['id']}")
+    assert res.status_code == 204
+
+    res = client.get(f"/community/posts/{post['id']}")
+    assert res.status_code == 404
+
+    entries = db_session.query(AuditLog).filter(AuditLog.kind == "community").all()
+    assert any("Deleted their own post" in e.action for e in entries)
+
+
+def test_deleting_a_post_removes_its_comments(client, make_user, login_as, db_session):
+    from app.models.community import CommunityComment
+
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+    commenter = make_user()
+    login_as(commenter)
+    client.post(f"/community/posts/{post['id']}/comments", json={"body": "hi", "is_anonymous": False, "attachments": []})
+
+    login_as(author)
+    res = client.delete(f"/community/posts/{post['id']}")
+    assert res.status_code == 204
+
+    assert db_session.query(CommunityComment).filter(CommunityComment.post_id == post["id"]).count() == 0
+
+
+def test_non_author_cannot_delete_post(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+
+    other = make_user()
+    login_as(other)
+    res = client.delete(f"/community/posts/{post['id']}")
+    assert res.status_code == 403
+
+
+def test_admin_cannot_delete_someone_elses_post(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+
+    admin = make_user(is_admin=True)
+    login_as(admin)
+    res = client.delete(f"/community/posts/{post['id']}")
+    assert res.status_code == 403
+
+
+def test_author_can_edit_their_comment(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+    detail = client.post(
+        f"/community/posts/{post['id']}/comments", json={"body": "typo", "is_anonymous": False, "attachments": []}
+    ).json()
+    comment_id = detail["comments"][0]["id"]
+
+    res = client.patch(f"/community/comments/{comment_id}", json={"body": "fixed", "is_anonymous": True, "attachments": []})
+    assert res.status_code == 200
+    assert res.json()["body"] == "fixed"
+    assert res.json()["author_display"] == "Anonymous"
+    assert res.json()["edited_at"] is not None
+
+
+def test_non_author_cannot_edit_comment(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+    detail = client.post(
+        f"/community/posts/{post['id']}/comments", json={"body": "original", "is_anonymous": False, "attachments": []}
+    ).json()
+    comment_id = detail["comments"][0]["id"]
+
+    other = make_user()
+    login_as(other)
+    res = client.patch(f"/community/comments/{comment_id}", json={"body": "hijacked", "is_anonymous": False, "attachments": []})
+    assert res.status_code == 403
+
+
+def test_is_mine_flag_reflects_authorship(client, make_user, login_as):
+    author = make_user()
+    login_as(author)
+    post = _make_question(client)
+    assert post["is_mine"] is True
+
+    other = make_user()
+    login_as(other)
+    res = client.get(f"/community/posts/{post['id']}")
+    assert res.json()["is_mine"] is False

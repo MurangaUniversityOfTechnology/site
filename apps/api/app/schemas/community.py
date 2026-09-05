@@ -35,6 +35,19 @@ class CreateCommentRequest(BaseModel):
     attachments: list[str] = Field(default_factory=list, max_length=2)
 
 
+class UpdatePostRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str | None = Field(default=None, max_length=4000)
+    is_anonymous: bool = False
+    attachments: list[str] = Field(default_factory=list, max_length=4)
+
+
+class UpdateCommentRequest(BaseModel):
+    body: str = Field(min_length=1, max_length=2000)
+    is_anonymous: bool = False
+    attachments: list[str] = Field(default_factory=list, max_length=2)
+
+
 class HideRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=300)
 
@@ -54,7 +67,9 @@ class CommunityPostRow(BaseModel):
     author_display: str
     is_anonymous: bool
     created_at: datetime
+    edited_at: datetime | None
     is_hidden: bool
+    is_mine: bool
     comment_count: int
     score: int | None  # question posts only
     my_vote: int | None  # question posts only — the caller's own vote, if any
@@ -71,7 +86,9 @@ class CommunityCommentRow(BaseModel):
     body: str
     attachments: list[str]
     created_at: datetime
+    edited_at: datetime | None
     is_hidden: bool
+    is_mine: bool
     score: int
     my_vote: int | None
 
