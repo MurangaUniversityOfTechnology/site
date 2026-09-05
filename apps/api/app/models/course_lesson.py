@@ -32,8 +32,6 @@ class CourseLesson(Base):
     # Plain text / lightly-formatted markdown — same as Content.body, no
     # WYSIWYG editor anywhere in this codebase.
     body: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    # A YouTube link rendered as an <iframe> — no video hosting infra exists.
-    video_url: Mapped[str | None] = mapped_column(String, nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

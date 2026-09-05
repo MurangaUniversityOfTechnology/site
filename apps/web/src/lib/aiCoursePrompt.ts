@@ -18,8 +18,7 @@ PHASE 2 — MODULES
 Convert the roadmap into 4-8 modules. Each module must be a genuinely self-contained, learnable unit:
 - A clear before/after: "after this module, the learner can do X."
 - 2-5 short lessons (each roughly 10-15 minutes of reading), building on each other WITHIN the module — but the module as a whole must not depend on a LATER module's content.
-- Each lesson has a title and a body written as real teaching content in plain text / light markdown (no HTML) — actually explain the concept with examples, not just a bullet-point summary or a list of links.
-- video_url is optional per lesson. Only include one if you are highly confident it points to a real, stable, well-known resource (e.g. the technology's own official channel, freeCodeCamp, a well-known conference talk). If you are not certain a specific video exists at that exact URL, leave video_url as null — a broken link is worse than no link.
+- Each lesson has a title and a body written as real teaching content in markdown (headings, lists, tables, \`\`\`mermaid fences for diagrams — no raw HTML) — actually explain the concept with examples, not just a bullet-point summary or a list of links.
 - Each module ends with a short quiz: 3-5 multiple-choice questions covering ONLY that module's material.
 
 PHASE 3 — FINAL EXAM
@@ -40,7 +39,7 @@ Return ONLY a single JSON object, no markdown code fence, no commentary before o
       "title": "string",
       "summary": "string, one sentence",
       "lessons": [
-        { "title": "string", "body": "string, the actual lesson content", "video_url": "string or null" }
+        { "title": "string", "body": "string, the actual lesson content in markdown" }
       ],
       "quiz": {
         "title": "string, e.g. 'Module 1 Quiz'",

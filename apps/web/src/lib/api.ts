@@ -387,7 +387,6 @@ export type LessonDetail = {
   id: string;
   title: string;
   body: string;
-  video_url: string | null;
   completed: boolean;
 };
 
@@ -491,7 +490,6 @@ export type AdminLessonRow = {
   module_id: string;
   title: string;
   body: string;
-  video_url: string | null;
   position: number;
 };
 
@@ -725,9 +723,9 @@ export const adminApi = {
   reorderModule: (moduleId: string, direction: "up" | "down") =>
     apiFetch<AdminModuleRow>(`/admin/modules/${moduleId}/reorder`, { method: "POST", body: JSON.stringify({ direction }) }),
   listLessons: (moduleId: string) => apiFetch<AdminLessonRow[]>(`/admin/modules/${moduleId}/lessons`),
-  createLesson: (moduleId: string, payload: { title: string; body: string; video_url: string | null }) =>
+  createLesson: (moduleId: string, payload: { title: string; body: string }) =>
     apiFetch<AdminLessonRow>(`/admin/modules/${moduleId}/lessons`, { method: "POST", body: JSON.stringify(payload) }),
-  updateLesson: (lessonId: string, payload: { title?: string; body?: string; video_url?: string | null }) =>
+  updateLesson: (lessonId: string, payload: { title?: string; body?: string }) =>
     apiFetch<AdminLessonRow>(`/admin/lessons/${lessonId}`, { method: "PATCH", body: JSON.stringify(payload) }),
   deleteLesson: (lessonId: string) => apiFetch<void>(`/admin/lessons/${lessonId}`, { method: "DELETE" }),
   reorderLesson: (lessonId: string, direction: "up" | "down") =>

@@ -6,11 +6,6 @@ import { useParams } from "next/navigation";
 import { Markdown } from "@/components/Markdown";
 import { ApiError, courseApi, type LessonDetail, type ModulePublic } from "@/lib/api";
 
-function youtubeEmbedUrl(url: string): string {
-  const match = url.match(/(?:youtu\.be\/|v=)([\w-]{11})/);
-  return match ? `https://www.youtube.com/embed/${match[1]}` : url;
-}
-
 export default function LessonPage() {
   const { slug, lessonId } = useParams<{ slug: string; lessonId: string }>();
   const [lesson, setLesson] = useState<LessonDetail | null | undefined>(undefined);
@@ -81,12 +76,6 @@ export default function LessonPage() {
         <div className="mt-4 font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint lg:hidden">{currentModule.title}</div>
       )}
       <h1 className="mt-1.5 text-[clamp(24px,3.6vw,36px)] tracking-[-0.03em] lg:mt-4">{lesson.title}</h1>
-
-      {lesson.video_url && (
-        <div className="mt-6 aspect-video overflow-hidden rounded-lg border border-border">
-          <iframe src={youtubeEmbedUrl(lesson.video_url)} className="h-full w-full" allowFullScreen />
-        </div>
-      )}
 
       <div className="mt-6">
         <Markdown>{lesson.body}</Markdown>

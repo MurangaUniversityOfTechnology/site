@@ -18,7 +18,6 @@ export default function ManageModulePage() {
   const [editing, setEditing] = useState<AdminLessonRow | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newBody, setNewBody] = useState("");
-  const [newVideoUrl, setNewVideoUrl] = useState("");
   const [lessonBusy, setLessonBusy] = useState(false);
   const [bodyTab, setBodyTab] = useState<"write" | "preview">("write");
   const [uploading, setUploading] = useState<"image" | "attachment" | null>(null);
@@ -58,14 +57,12 @@ export default function ManageModulePage() {
     setEditing(lesson);
     setNewTitle(lesson.title);
     setNewBody(lesson.body);
-    setNewVideoUrl(lesson.video_url ?? "");
   }
 
   function startNew() {
     setEditing(null);
     setNewTitle("");
     setNewBody("");
-    setNewVideoUrl("");
     setBodyTab("write");
   }
 
@@ -104,7 +101,7 @@ export default function ManageModulePage() {
     setLessonBusy(true);
     setLessonError(null);
     try {
-      const payload = { title: newTitle.trim(), body: newBody, video_url: newVideoUrl.trim() || null };
+      const payload = { title: newTitle.trim(), body: newBody };
       if (editing) {
         await adminApi.updateLesson(editing.id, payload);
       } else {
@@ -288,12 +285,6 @@ export default function ManageModulePage() {
             </div>
             {uploadError && <p className="text-sm text-danger">{uploadError}</p>}
           </div>
-          <input
-            value={newVideoUrl}
-            onChange={(e) => setNewVideoUrl(e.target.value)}
-            placeholder="Video URL (optional, e.g. a YouTube link)"
-            className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
-          />
           {lessonError && <p className="text-sm text-danger">{lessonError}</p>}
           <div className="flex gap-2">
             <button

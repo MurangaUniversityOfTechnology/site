@@ -243,7 +243,6 @@ def get_lesson(slug: str, lesson_id: str, user: User = Depends(get_current_user)
         id=lesson.id,
         title=lesson.title,
         body=lesson.body,
-        video_url=lesson.video_url,
         completed=course_service.is_lesson_completed(db, enrollment, lesson),
     )
 

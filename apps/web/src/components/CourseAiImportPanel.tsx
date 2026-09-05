@@ -13,7 +13,7 @@ type AiQuestion = {
 
 type AiQuiz = { title?: string; pass_threshold_pct?: number; questions?: AiQuestion[] };
 
-type AiLesson = { title: string; body?: string; video_url?: string | null };
+type AiLesson = { title: string; body?: string };
 
 type AiModule = { title: string; summary?: string | null; lessons?: AiLesson[]; quiz?: AiQuiz };
 
@@ -75,7 +75,6 @@ export function CourseAiImportPanel({
           await adminApi.createLesson(createdModule.id, {
             title: l.title,
             body: l.body ?? "",
-            video_url: l.video_url ?? null,
           });
         }
         append(`  + ${m.lessons?.length ?? 0} lesson${(m.lessons?.length ?? 0) === 1 ? "" : "s"}`);

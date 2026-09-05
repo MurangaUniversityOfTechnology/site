@@ -91,7 +91,6 @@ def _admin_lesson_row(lesson: CourseLesson) -> AdminLessonRow:
         module_id=lesson.module_id,
         title=lesson.title,
         body=lesson.body,
-        video_url=lesson.video_url,
         position=lesson.position,
     )
 

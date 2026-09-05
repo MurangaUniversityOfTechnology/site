@@ -65,7 +65,6 @@ class LessonDetail(BaseModel):
     id: uuid.UUID
     title: str
     body: str
-    video_url: str | None
     completed: bool
 
 
@@ -311,13 +310,11 @@ class AdminEnrollmentDetail(AdminEnrollmentRow):
 class LessonWriteRequest(BaseModel):
     title: str
     body: str = ""
-    video_url: str | None = None
 
 
 class LessonUpdateRequest(BaseModel):
     title: str | None = None
     body: str | None = None
-    video_url: str | None = None
 
 
 class AdminLessonRow(BaseModel):
@@ -325,7 +322,6 @@ class AdminLessonRow(BaseModel):
     module_id: uuid.UUID
     title: str
     body: str
-    video_url: str | None
     position: int
 
 
