@@ -269,8 +269,8 @@ export default function AdminRolesPage() {
                 {a.name[0]?.toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-medium">{a.name}</div>
-                <div className="mt-0.5 font-mono text-[10.5px] text-faint">{a.email}</div>
+                <div className="truncate text-[15px] font-medium">{a.name}</div>
+                <div className="mt-0.5 truncate font-mono text-[10.5px] text-faint">{a.email}</div>
                 {a.tags.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {a.tags.map((t) => (
@@ -302,8 +302,8 @@ export default function AdminRolesPage() {
               {s.name[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[15px] font-medium">{s.name}</div>
-              <div className="mt-0.5 font-mono text-[10.5px] text-faint">{s.email}</div>
+              <div className="truncate text-[15px] font-medium">{s.name}</div>
+              <div className="mt-0.5 truncate font-mono text-[10.5px] text-faint">{s.email}</div>
             </div>
             <span className="rounded-md border border-border-strong px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
               staff
@@ -367,9 +367,9 @@ export default function AdminRolesPage() {
         {found && (
           <div className="mt-4.5 rounded-lg border border-border-strong p-4">
             <div className="flex flex-wrap items-center gap-3.5">
-              <div className="min-w-0 flex-1">
-                <div className="text-[15px]">{found.name}</div>
-                <div className="mt-0.5 font-mono text-[10.5px] text-faint">{found.email}</div>
+              <div className="min-w-40 max-w-full flex-1">
+                <div className="truncate text-[15px]">{found.name}</div>
+                <div className="mt-0.5 truncate font-mono text-[10.5px] text-faint">{found.email}</div>
               </div>
               <button onClick={clearSelection} className="flex-none text-sm text-muted hover:underline">
                 Change
