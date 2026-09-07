@@ -526,7 +526,7 @@ def test_admin_add_member_expired_creates_lapsed_membership(client, db_session, 
 
     user = db_session.query(User).filter(User.email == "legacy-lapsed@example.com").first()
     assert user.membership.status == MembershipStatus.expired
-    assert user.membership.period_end < date.today()
+    assert user.membership.period_end < date.today()  # noqa: DTZ011
     # Still gets their account-created email so they can sign in and renew.
     assert len(mock_email) == 1
 
