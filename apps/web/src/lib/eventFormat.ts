@@ -25,6 +25,14 @@ export function formatEventDay(iso: string): { dow: string; day: string; mon: st
   };
 }
 
+// Calendar-day key in the viewer's browser timezone — matches the day number
+// formatEventDay already shows in the list view, so an event lands on the
+// same date in both views.
+export function eventDateKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export function formatEventDateLong(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", { day: "numeric", month: "long" });
 }
