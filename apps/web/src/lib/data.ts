@@ -320,7 +320,7 @@ export const learningPath = {
   otherPaths: ["Systems Programming", "AI / ML", "Cybersecurity", "Frontend", "Cloud & DevOps"],
 };
 
-export const membershipFeeKes = 200;
+export const membershipFeeKes = 100;
 
 export const donationReasons = [
   { value: "alumni", label: "Alumni giving back" },

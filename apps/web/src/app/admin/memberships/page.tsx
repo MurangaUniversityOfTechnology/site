@@ -7,6 +7,7 @@ import { experienceLevels, goalOptions } from "@/lib/data";
 
 const FILTERS = [
   { value: "active", label: "Active" },
+  { value: "expired", label: "Expired" },
   { value: "all", label: "All" },
 ];
 
@@ -188,7 +189,15 @@ export default function MembershipsPage() {
                 {a.payment_receipt ? ` · ${a.payment_receipt}` : ""}
               </div>
               <div>
-                <span className="justify-self-start rounded-md border border-border-strong px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                <span
+                  className={`justify-self-start rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${
+                    a.membership_status === "active"
+                      ? "border-accent-dim text-navy"
+                      : a.membership_status === "expired" || a.membership_status === "suspended"
+                        ? "border-[#e2b8b8] text-danger"
+                        : "border-border-strong text-muted"
+                  }`}
+                >
                   {a.membership_status}
                 </span>
               </div>

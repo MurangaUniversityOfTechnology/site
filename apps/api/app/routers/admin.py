@@ -48,6 +48,7 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 
 STATUS_FILTERS = {
     "active": [MembershipStatus.active],
+    "expired": [MembershipStatus.expired],
     "all": None,
 }
 
@@ -417,7 +418,7 @@ def import_members(payload: ImportMembersRequest, admin: User = Depends(require_
                 None,
                 "Migrated from legacy list",
                 None,
-                "active",
+                payload.status,
                 None,
             )
             results.append(ImportMemberResult(email=row.email, status="created"))

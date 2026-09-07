@@ -238,7 +238,9 @@ def admin_add_member(
     blank); the admin is responsible for sharing it with the member.
 
     `activation="active"` grants membership immediately for free (the
-    original sponsor-path behavior). `activation="stk_push"` instead sends a
+    original sponsor-path behavior). `activation="expired"` creates the
+    account with membership already lapsed — for backfilling a legacy roster
+    whose paid year is over. `activation="stk_push"` instead sends a
     real M-Pesa request to `phone` — the account exists right away, but
     membership only goes active once they actually pay, via the exact same
     start_activation() used for self-service signup. `activation="manual_receipt"`
@@ -297,6 +299,16 @@ def admin_add_member(
         audit.log(db, admin, "import", f"Added {email} and recorded payment {receipt} · reason: {reason}")
         db.commit()
         _activate_membership(db, user.membership, user)
+    elif activation == "expired":
+        # Backfilling a legacy roster whose paid year is already over — the
+        # account exists and the member can sign in, but membership shows as
+        # expired and they go through the normal renewal flow, same as
+        # anyone whose active membership lapsed naturally.
+        user.membership.status = MembershipStatus.expired
+        user.membership.period_start = date.today() - timedelta(days=365)  # noqa: DTZ011
+        user.membership.period_end = date.today() - timedelta(days=1)  # noqa: DTZ011
+        audit.log(db, admin, "import", f"Added {email} with an already-expired membership · reason: {reason}")
+        db.commit()
     else:
         user.membership.status = MembershipStatus.active
         user.membership.period_start = date.today()  # noqa: DTZ011 — naive Date, see _activate_membership()

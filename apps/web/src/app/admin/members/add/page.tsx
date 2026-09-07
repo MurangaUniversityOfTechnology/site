@@ -6,7 +6,7 @@ import { ApiError, adminApi, type AddMemberResponse } from "@/lib/api";
 
 const REASONS = ["Sponsor / partner", "Committee member", "Speaker", "Migrated from legacy list", "Other"];
 
-type Activation = "active" | "stk_push" | "manual_receipt";
+type Activation = "active" | "expired" | "stk_push" | "manual_receipt";
 
 export default function AddMemberPage() {
   const [displayName, setDisplayName] = useState("");
@@ -90,6 +90,15 @@ export default function AddMemberPage() {
             <p className="mt-3 text-[14.5px] leading-[1.55] text-[#7a7060]">
               Receipt <span className="font-mono text-foreground">{mpesaReceipt}</span> is on file for {phone}.
               Membership is active now.
+            </p>
+          </div>
+        )}
+
+        {activation === "expired" && !pendingPayment && (
+          <div className="mt-6 rounded-xl border border-border-strong bg-surface-raised p-5.5">
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">membership shows expired</div>
+            <p className="mt-3 text-[14.5px] leading-[1.55] text-[#7a7060]">
+              They can sign in right away, but membership shows as expired until they renew.
             </p>
           </div>
         )}
@@ -232,6 +241,15 @@ export default function AddMemberPage() {
             </button>
             <button
               type="button"
+              onClick={() => setActivation("expired")}
+              className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
+                activation === "expired" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+              }`}
+            >
+              Mark as already expired
+            </button>
+            <button
+              type="button"
               onClick={() => setActivation("stk_push")}
               className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
                 activation === "stk_push" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
@@ -291,7 +309,7 @@ export default function AddMemberPage() {
                 min={1}
                 value={amountKes}
                 onChange={(e) => setAmountKes(e.target.value)}
-                placeholder="200"
+                placeholder="100"
                 className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
               />
             </Field>

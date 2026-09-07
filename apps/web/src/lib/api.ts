@@ -674,13 +674,13 @@ export const adminApi = {
     github_handle: string | null;
     reason: string;
     password: string | null;
-    activation: "active" | "stk_push" | "manual_receipt";
+    activation: "active" | "expired" | "stk_push" | "manual_receipt";
     phone: string | null;
     mpesa_receipt?: string | null;
     amount_kes?: number | null;
   }) => apiFetch<AddMemberResponse>("/admin/members/add", { method: "POST", body: JSON.stringify(payload) }),
-  importMembers: (rows: ImportMemberRow[]) =>
-    apiFetch<ImportMembersResponse>("/admin/members/import", { method: "POST", body: JSON.stringify({ rows }) }),
+  importMembers: (rows: ImportMemberRow[], status: "active" | "expired" = "active") =>
+    apiFetch<ImportMembersResponse>("/admin/members/import", { method: "POST", body: JSON.stringify({ rows, status }) }),
   joinRequests: () => apiFetch<AdminJoinRequestRow[]>("/admin/projects/join-requests"),
   approveJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/approve`, { method: "POST" }),
   rejectJoinRequest: (id: string) => apiFetch<void>(`/admin/projects/join-requests/${id}/reject`, { method: "POST" }),

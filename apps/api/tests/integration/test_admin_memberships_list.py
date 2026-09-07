@@ -30,3 +30,14 @@ def test_memberships_list_defaults_goals_and_experience_when_unset(client, make_
     row = next(r for r in res.json() if r["user_id"] == str(member.id))
     assert row["goals"] == []
     assert row["experience_level"] is None
+
+
+def test_memberships_list_expired_filter_returns_only_expired(client, make_user, login_as):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    lapsed = make_user(email="lapsed@example.com", membership_status=MembershipStatus.expired)
+    login_as(admin)
+
+    res = client.get("/admin/memberships", params={"status_filter": "expired"})
+    assert res.status_code == 200
+    user_ids = {r["user_id"] for r in res.json()}
+    assert user_ids == {str(lapsed.id)}

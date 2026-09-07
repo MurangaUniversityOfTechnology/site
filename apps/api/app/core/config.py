@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     mpesa_passkey: str = ""
     mpesa_callback_base_url: str = ""
     mpesa_transaction_type: str = "CustomerPayBillOnline"  # or CustomerBuyGoodsOnline for a Till
-    membership_fee_kes: int = 200
+    membership_fee_kes: int = 100
 
     @property
     def mpesa_base_url(self) -> str:

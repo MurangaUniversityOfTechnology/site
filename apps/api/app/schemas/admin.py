@@ -90,14 +90,18 @@ class AddMemberRequest(BaseModel):
     # auto-generated one-time password (the original behavior).
     password: str | None = Field(default=None, min_length=8, max_length=72)
     # "active" grants membership immediately for free (sponsor path, the
-    # original behavior). "stk_push" sends a real M-Pesa request to `phone` —
-    # the account exists right away, but membership only goes active once
-    # they actually pay (same reconciliation path as self-service signup:
-    # callback, or the STK Query fallback). "manual_receipt" is for a payment
-    # that already happened outside the app (cash, paid to a till/agent
-    # directly) — the admin records the M-Pesa receipt they were given and
-    # membership activates immediately with a real Payment row attached.
-    activation: Literal["active", "stk_push", "manual_receipt"] = "active"
+    # original behavior). "expired" creates the account with a membership
+    # that's already lapsed — for backfilling a legacy roster where the
+    # member's original paid year is already over; they see "expired" and
+    # go through the normal renewal flow. "stk_push" sends a real M-Pesa
+    # request to `phone` — the account exists right away, but membership
+    # only goes active once they actually pay (same reconciliation path as
+    # self-service signup: callback, or the STK Query fallback).
+    # "manual_receipt" is for a payment that already happened outside the
+    # app (cash, paid to a till/agent directly) — the admin records the
+    # M-Pesa receipt they were given and membership activates immediately
+    # with a real Payment row attached.
+    activation: Literal["active", "expired", "stk_push", "manual_receipt"] = "active"
     phone: str | None = None
     mpesa_receipt: str | None = Field(default=None, max_length=40)
     amount_kes: float | None = Field(default=None, gt=0)
@@ -129,6 +133,9 @@ class ImportMemberRow(BaseModel):
 
 class ImportMembersRequest(BaseModel):
     rows: list[ImportMemberRow] = Field(min_length=1, max_length=500)
+    # Applies to the whole batch — import a currently-active roster, or a
+    # legacy one whose paid year has already lapsed, as a separate import.
+    status: Literal["active", "expired"] = "active"
 
 
 class ImportMemberResult(BaseModel):

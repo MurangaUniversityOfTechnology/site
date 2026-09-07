@@ -26,6 +26,7 @@ function parseRows(text: string): { rows: ImportMemberRow[]; malformed: string[]
 
 export default function ImportMembersPage() {
   const [text, setText] = useState("");
+  const [status, setStatus] = useState<"active" | "expired">("active");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportMembersResponse | null>(null);
@@ -39,7 +40,7 @@ export default function ImportMembersPage() {
     setError(null);
     setResult(null);
     try {
-      const res = await adminApi.importMembers(rows);
+      const res = await adminApi.importMembers(rows, status);
       setResult(res);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't import members.");
@@ -56,13 +57,39 @@ export default function ImportMembersPage() {
       <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">members</div>
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Import members</h1>
       <p className="mt-3.5 text-[14.5px] leading-[1.55] text-muted">
-        For a legacy list of members who already paid outside the app — each row gets an active account with an
-        auto-generated password, emailed to them directly so they can sign in without paying again. They can change
-        it later from Settings.
+        For a legacy list of members — each row gets an account with an auto-generated password, emailed to them
+        directly so they can sign in without paying again. They can change it later from Settings.
       </p>
 
       <form onSubmit={submit} className="mt-6.5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
+        <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">this batch is</div>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setStatus("active")}
+            className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
+              status === "active" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+            }`}
+          >
+            Currently active members
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatus("expired")}
+            className={`rounded-full border px-3.5 py-1.5 text-[13px] ${
+              status === "expired" ? "border-accent-dim bg-accent/[0.08] text-navy" : "border-border-strong text-muted"
+            }`}
+          >
+            Already-expired members
+          </button>
+        </div>
+        <p className="mt-2.5 text-[13px] leading-[1.5] text-faint">
+          {status === "active"
+            ? "Their membership year is still current — accounts go active right away, no payment needed."
+            : "Their paid year is already over — accounts are created but show as expired until they renew."}
+        </p>
+
+        <div className="mt-5 font-mono text-[10px] uppercase tracking-[0.12em] text-faint">
           one per line — name, email, registration number (optional)
         </div>
         <textarea

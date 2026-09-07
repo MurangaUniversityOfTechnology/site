@@ -503,6 +503,53 @@ def test_admin_add_member_rejects_already_active(client, make_user, login_as):
     assert res.status_code == 400
 
 
+def test_admin_add_member_expired_creates_lapsed_membership(client, db_session, make_user, login_as, mock_email):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    login_as(admin)
+
+    res = client.post(
+        "/admin/members/add",
+        json={
+            "email": "legacy-lapsed@example.com",
+            "display_name": "Legacy Lapsed",
+            "registration_number": None,
+            "github_handle": None,
+            "reason": "Migrated from legacy list",
+            "activation": "expired",
+        },
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["membership_status"] == "expired"
+
+    from app.models.user import User
+
+    user = db_session.query(User).filter(User.email == "legacy-lapsed@example.com").first()
+    assert user.membership.status == MembershipStatus.expired
+    assert user.membership.period_end < date.today()
+    # Still gets their account-created email so they can sign in and renew.
+    assert len(mock_email) == 1
+
+
+def test_admin_add_member_expired_rejects_already_active(client, make_user, login_as):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    make_user(email="already-active@example.com", membership_status=MembershipStatus.active)
+    login_as(admin)
+
+    res = client.post(
+        "/admin/members/add",
+        json={
+            "email": "already-active@example.com",
+            "display_name": "Existing",
+            "registration_number": None,
+            "github_handle": None,
+            "reason": "Oops",
+            "activation": "expired",
+        },
+    )
+    assert res.status_code == 400
+
+
 def test_admin_add_member_sets_github_url_from_handle(client, db_session, make_user, login_as):
     admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
     login_as(admin)
@@ -794,6 +841,26 @@ def test_import_members_creates_active_accounts_and_emails_each(client, db_sessi
 
     assert len(mock_email) == 2
     assert {m["to"] for m in mock_email} == {"legacy1@example.com", "legacy2@example.com"}
+
+
+def test_import_members_with_expired_status_creates_lapsed_accounts(client, db_session, make_user, login_as):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    login_as(admin)
+
+    res = client.post(
+        "/admin/members/import",
+        json={
+            "rows": [{"email": "legacy-lapsed@example.com", "display_name": "Legacy Lapsed"}],
+            "status": "expired",
+        },
+    )
+    assert res.status_code == 200, res.text
+    assert [r["status"] for r in res.json()["results"]] == ["created"]
+
+    from app.models.user import User
+
+    user = db_session.query(User).filter(User.email == "legacy-lapsed@example.com").first()
+    assert user.membership.status == MembershipStatus.expired
 
 
 def test_import_members_reports_per_row_errors_without_failing_the_batch(
