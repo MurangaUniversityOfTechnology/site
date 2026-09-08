@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import SESSION_COOKIE_NAME, decode_session_token
 from app.models.user import User
+from app.services.tags import user_has_tag
 
 
 def get_current_user(
@@ -40,6 +41,14 @@ def require_staff(user: User = Depends(get_current_user)) -> User:
     """Scoped admin access — forms, courses, events. Admins always qualify."""
     if not (user.is_admin or user.is_staff):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
+    return user
+
+
+def require_chairperson(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
+    """Whoever currently holds the 'Chairperson' tag — admins always qualify
+    too, same as require_staff. Gates the org's Dean/Patron signature."""
+    if not (user.is_admin or user_has_tag(db, user, "chairperson")):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Chairperson access required")
     return user
 
 

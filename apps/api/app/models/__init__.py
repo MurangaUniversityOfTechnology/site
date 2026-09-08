@@ -26,6 +26,7 @@ from app.models.form_field import FormField
 from app.models.form_response import FormResponse
 from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
+from app.models.org_signature import OrgSignature
 from app.models.payment import Payment, PaymentStatus
 from app.models.profile import ExperienceLevel, Profile, ProfileVisibility
 from app.models.project import Project
@@ -71,6 +72,7 @@ __all__ = [
     "Membership",
     "MembershipStatus",
     "Notification",
+    "OrgSignature",
     "Payment",
     "PaymentStatus",
     "Profile",

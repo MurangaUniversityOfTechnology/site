@@ -61,6 +61,16 @@ def list_member_tags(db: Session, user: User) -> list[Tag]:
     )
 
 
+def user_has_tag(db: Session, user: User, tag_name: str) -> bool:
+    return (
+        db.query(UserTag)
+        .join(Tag, Tag.id == UserTag.tag_id)
+        .filter(UserTag.user_id == user.id, Tag.name.ilike(tag_name))
+        .first()
+        is not None
+    )
+
+
 def assign_tag(db: Session, admin: User, user: User, tag: Tag) -> None:
     existing = db.query(UserTag).filter(UserTag.user_id == user.id, UserTag.tag_id == tag.id).first()
     if existing:

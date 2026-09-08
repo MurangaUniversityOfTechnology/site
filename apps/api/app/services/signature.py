@@ -16,7 +16,7 @@ class SignatureError(Exception):
     pass
 
 
-def _decode_png(image_base64: str) -> bytes:
+def decode_signature_png(image_base64: str) -> bytes:
     image_base64 = image_base64.strip()
     if image_base64.startswith("data:") and "," in image_base64:
         image_base64 = image_base64.split(",", 1)[1]
@@ -32,7 +32,7 @@ def _decode_png(image_base64: str) -> bytes:
 
 
 def save_signature(db: Session, user: User, image_base64: str) -> Signature:
-    raw = _decode_png(image_base64)
+    raw = decode_signature_png(image_base64)
     ciphertext = encrypt_bytes(raw)
 
     sig = db.get(Signature, user.id)

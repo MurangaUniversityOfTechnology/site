@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { ApiError, authApi } from "@/lib/api";
 import { useMe } from "@/lib/useMe";
 import SignaturePanel from "@/components/SignaturePanel";
+import OrgSignaturePanel from "@/components/OrgSignaturePanel";
 import ProfilePanel from "@/components/ProfilePanel";
 import PasswordInput from "@/components/PasswordInput";
 import { signInHref } from "@/lib/nextParam";
 
-type Category = "account" | "profile" | "signature";
+type Category = "account" | "profile" | "signature" | "org-signature";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function SettingsPage() {
     { id: "account", label: "Account" },
     { id: "profile", label: "Profile" },
     { id: "signature", label: "Signature" },
+    ...(me.is_chairperson ? [{ id: "org-signature" as const, label: "Dean/Patron signature" }] : []),
   ];
 
   return (
@@ -133,6 +135,8 @@ export default function SettingsPage() {
           {category === "profile" && <ProfilePanel />}
 
           {category === "signature" && <SignaturePanel />}
+
+          {category === "org-signature" && me.is_chairperson && <OrgSignaturePanel />}
         </div>
       </div>
     </main>

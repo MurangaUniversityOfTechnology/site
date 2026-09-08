@@ -24,6 +24,7 @@ from app.routers import (
     members,
     membership,
     notifications,
+    org_signature,
     profile,
     projects,
 )
@@ -51,6 +52,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(membership.router)
 app.include_router(profile.router)
+app.include_router(org_signature.router)
 app.include_router(admin.router)
 app.include_router(admin_courses.router)
 app.include_router(admin_events.router)

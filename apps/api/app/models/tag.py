@@ -10,9 +10,11 @@ from app.core.db import Base
 
 class Tag(Base):
     """A free-form label admins can pin to a member (Dean, Chairperson,
-    Guest, ...) — purely descriptive, no behavior hangs off it. Kept as a
-    real entity (not just a string on Profile) so admins can rename/retire
-    one without touching every member who has it."""
+    Guest, ...) — mostly descriptive. One exception: whoever holds a tag
+    named "Chairperson" gets access to the org's Dean/Patron signature (see
+    app.core.deps.require_chairperson) — everything else is presentational.
+    Kept as a real entity (not just a string on Profile) so admins can
+    rename/retire one without touching every member who has it."""
 
     __tablename__ = "tags"
 

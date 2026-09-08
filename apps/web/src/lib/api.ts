@@ -59,6 +59,7 @@ export type Me = {
   email_verified: boolean;
   is_admin: boolean;
   is_staff: boolean;
+  is_chairperson: boolean;
   photo_url: string | null;
   membership_status: string;
   onboarded: boolean;
@@ -615,6 +616,19 @@ export const signatureApi = {
       body: JSON.stringify({ image_base64: imageBase64 }),
     }),
   remove: () => apiFetch<void>("/profile/me/signature", { method: "DELETE" }),
+};
+
+// The Dean/Club Patron's signature — visible only to whoever currently holds
+// the "Chairperson" tag (or an admin), for reuse on official documents later.
+export const orgSignatureApi = {
+  status: () => apiFetch<SignatureStatus>("/org-signature"),
+  image: () => apiFetch<SignatureImage>("/org-signature/image"),
+  save: (imageBase64: string) =>
+    apiFetch<SignatureStatus>("/org-signature", {
+      method: "PUT",
+      body: JSON.stringify({ image_base64: imageBase64 }),
+    }),
+  remove: () => apiFetch<void>("/org-signature", { method: "DELETE" }),
 };
 
 export const eventApi = {

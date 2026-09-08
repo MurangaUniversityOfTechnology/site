@@ -40,6 +40,7 @@ from app.services import email as email_service
 from app.services import github as github_service
 from app.services import membership as membership_service
 from app.services.email_templates import render_email
+from app.services.tags import user_has_tag
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -104,7 +105,7 @@ def signup(request: Request, payload: SignupRequest, response: Response, db: Ses
     user = auth_service.create_user(db, payload.email, payload.password)
     _send_verification_email(user)
     _set_session_cookie(response, user)
-    return _to_me_response(user)
+    return _to_me_response(db, user)
 
 
 @router.post("/send-verification-email", status_code=status.HTTP_204_NO_CONTENT)
@@ -195,7 +196,7 @@ def login(request: Request, payload: LoginRequest, response: Response, db: Sessi
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Incorrect password")
 
     _set_session_cookie(response, user)
-    return _to_me_response(user)
+    return _to_me_response(db, user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -258,13 +259,13 @@ def dev_login(response: Response, db: Session = Depends(get_db)):
     db.commit()
 
     _set_session_cookie(response, user)
-    return _to_me_response(user)
+    return _to_me_response(db, user)
 
 
 @router.get("/me", response_model=MeResponse)
 def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     membership_service.sync_expiry(db, user.membership)
-    return _to_me_response(user)
+    return _to_me_response(db, user)
 
 
 @router.get("/google/start")
@@ -451,13 +452,14 @@ def _is_onboarded(user: User) -> bool:
     return user.is_admin or bool(user.profile and user.profile.onboarded)
 
 
-def _to_me_response(user: User) -> MeResponse:
+def _to_me_response(db: Session, user: User) -> MeResponse:
     return MeResponse(
         id=user.id,
         email=user.email,
         email_verified=user.email_verified,
         is_admin=user.is_admin,
         is_staff=user.is_staff,
+        is_chairperson=user.is_admin or user_has_tag(db, user, "chairperson"),
         photo_url=user.profile.photo_url if user.profile else None,
         membership_status=user.membership.status.value if user.membership else "none",
         onboarded=_is_onboarded(user),

@@ -41,6 +41,9 @@ class MeResponse(BaseModel):
     email_verified: bool
     is_admin: bool
     is_staff: bool
+    # True for admins or whoever currently holds the "Chairperson" tag —
+    # gates access to the Dean/Patron signature. See core/deps.require_chairperson.
+    is_chairperson: bool
     photo_url: str | None
     membership_status: str
     # True once the member has finished onboarding, or unconditionally for
