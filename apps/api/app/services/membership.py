@@ -55,9 +55,14 @@ def start_activation(db: Session, user: User, phone: str) -> Payment:
     if membership.status not in (MembershipStatus.none, MembershipStatus.expired):
         raise MembershipError(f"Cannot start activation from status '{membership.status.value}'")
 
+    # A lapsed member renewing pays less than someone joining for the first
+    # time — status is still the pre-payment value here (none vs expired),
+    # so it's the only signal we have for which price applies.
+    fee = settings.membership_fee_renewal_kes if membership.status == MembershipStatus.expired else settings.membership_fee_new_kes
+
     payment = Payment(
         user_id=user.id,
-        amount=settings.membership_fee_kes,
+        amount=fee,
         phone=phone,
         status=PaymentStatus.initiated,
     )
@@ -67,7 +72,7 @@ def start_activation(db: Session, user: User, phone: str) -> Payment:
     try:
         response = mpesa.initiate_stk_push(
             phone=phone,
-            amount=settings.membership_fee_kes,
+            amount=fee,
             # Daraja caps AccountReference at 12 characters.
             account_reference=f"MUT-{user.id.hex[:8]}",
             # Daraja caps TransactionDesc at 13 characters.
@@ -288,9 +293,14 @@ def admin_add_member(
     elif activation == "manual_receipt":
         assert phone is not None and mpesa_receipt is not None  # validated above
         receipt = mpesa_receipt.strip()
+        default_fee = (
+            settings.membership_fee_renewal_kes
+            if user.membership.status == MembershipStatus.expired
+            else settings.membership_fee_new_kes
+        )
         payment = Payment(
             user_id=user.id,
-            amount=amount_kes or settings.membership_fee_kes,
+            amount=amount_kes or default_fee,
             phone=phone,
             mpesa_receipt=receipt,
             status=PaymentStatus.completed,

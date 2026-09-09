@@ -303,13 +303,13 @@ export default function AddMemberPage() {
                 className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
               />
             </Field>
-            <Field label="Amount received (optional — defaults to the membership fee)">
+            <Field label="Amount received (optional — defaults to KSh 200 for a new member, KSh 100 to renew a lapsed one)">
               <input
                 type="number"
                 min={1}
                 value={amountKes}
                 onChange={(e) => setAmountKes(e.target.value)}
-                placeholder="100"
+                placeholder="200"
                 className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 font-mono text-sm outline-none focus:border-accent"
               />
             </Field>

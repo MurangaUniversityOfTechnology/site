@@ -1,21 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { membershipApi } from "@/lib/api";
-import { membershipFeeKes } from "@/lib/data";
+import { membershipFeeNewKes } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 import { signInHref } from "@/lib/nextParam";
 
 const POLL_INTERVAL_MS = 3000;
 const UNKNOWN_AFTER_MS = 60_000;
 
-export default function WaitingPage() {
+function WaitingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { me, loading, refresh } = useMe();
   const [elapsed, setElapsed] = useState(0);
   const [unknown, setUnknown] = useState(false);
   const startedAt = useRef<number | null>(null);
+  const amount = Number(searchParams.get("amount")) || membershipFeeNewKes;
 
   const checkStatus = useCallback(async () => {
     try {
@@ -70,7 +72,7 @@ export default function WaitingPage() {
               We&apos;ve sent an M-Pesa request to your phone.
             </p>
             <p className="mt-3 text-[15px] leading-[1.55] text-[#8f8368]">
-              Enter your M-Pesa PIN on your phone to approve KSh {membershipFeeKes}.
+              Enter your M-Pesa PIN on your phone to approve KSh {amount}.
             </p>
             <div className="mt-7.5 flex justify-center gap-2">
               {[0, 0.2, 0.4].map((delay) => (
@@ -115,5 +117,13 @@ export default function WaitingPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function WaitingPage() {
+  return (
+    <Suspense fallback={null}>
+      <WaitingContent />
+    </Suspense>
   );
 }

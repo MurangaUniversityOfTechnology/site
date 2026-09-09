@@ -43,6 +43,18 @@ def test_start_activation_success(db_session, make_user, mock_mpesa_success):
     assert user.membership.status == MembershipStatus.payment_pending
 
 
+def test_start_activation_charges_new_member_full_fee(db_session, make_user, mock_mpesa_success):
+    user = make_user(membership_status=MembershipStatus.none)
+    payment = membership_service.start_activation(db_session, user, "0712345678")
+    assert payment.amount == membership_service.settings.membership_fee_new_kes
+
+
+def test_start_activation_charges_renewal_the_lower_fee(db_session, make_user, mock_mpesa_success):
+    user = make_user(membership_status=MembershipStatus.expired)
+    payment = membership_service.start_activation(db_session, user, "0712345678")
+    assert payment.amount == membership_service.settings.membership_fee_renewal_kes
+
+
 @pytest.mark.parametrize("status", [MembershipStatus.payment_pending, MembershipStatus.active])
 def test_start_activation_blocked_from_disallowed_statuses(db_session, make_user, mock_mpesa_success, status):
     user = make_user(membership_status=status)
@@ -707,7 +719,35 @@ def test_admin_add_member_manual_receipt_activates_and_records_payment(client, d
     payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
     assert payment.status == PaymentStatus.completed
     assert payment.mpesa_receipt == "QWE1RTY2UI"
-    assert payment.amount == membership_service.settings.membership_fee_kes
+    assert payment.amount == membership_service.settings.membership_fee_new_kes
+
+
+def test_admin_add_member_manual_receipt_defaults_to_renewal_fee_for_expired_member(client, db_session, make_user, login_as):
+    admin = make_user(is_admin=True, membership_status=MembershipStatus.active)
+    login_as(admin)
+    make_user(email="lapsed@example.com", membership_status=MembershipStatus.expired)
+
+    res = client.post(
+        "/admin/members/add",
+        json={
+            "email": "lapsed@example.com",
+            "display_name": "Lapsed Member",
+            "registration_number": None,
+            "github_handle": None,
+            "reason": "Renewed in person",
+            "activation": "manual_receipt",
+            "phone": "0712345678",
+            "mpesa_receipt": "REN3WAL001",
+        },
+    )
+    assert res.status_code == 201, res.text
+
+    from app.models.payment import Payment
+    from app.models.user import User
+
+    user = db_session.query(User).filter(User.email == "lapsed@example.com").first()
+    payment = db_session.query(Payment).filter(Payment.user_id == user.id).first()
+    assert payment.amount == membership_service.settings.membership_fee_renewal_kes
 
 
 def test_admin_add_member_manual_receipt_accepts_custom_amount(client, db_session, make_user, login_as):

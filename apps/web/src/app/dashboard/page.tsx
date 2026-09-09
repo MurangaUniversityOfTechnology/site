@@ -14,7 +14,7 @@ import {
   type EventSummary,
   type GithubStatus,
 } from "@/lib/api";
-import { challenges, membershipFeeKes, membershipPerks } from "@/lib/data";
+import { challenges, membershipFeeNewKes, membershipFeeRenewalKes, membershipPerks } from "@/lib/data";
 import { formatEventDay } from "@/lib/eventFormat";
 import { useMe } from "@/lib/useMe";
 import { useSignOut } from "@/lib/useSignOut";
@@ -88,6 +88,7 @@ export default function DashboardPage() {
   // Admins get full access regardless of payment status (see the backend
   // checks this mirrors) — never nag them to activate/pay.
   const canActivate = !me.is_admin && (status === "none" || status === "expired");
+  const membershipFee = status === "expired" ? membershipFeeRenewalKes : membershipFeeNewKes;
   const isPending = !me.is_admin && (status === "payment_pending" || status === "payment_received");
   const isActive = me.is_admin || status === "active";
 
@@ -161,7 +162,7 @@ export default function DashboardPage() {
               <div className="mt-7 flex flex-wrap items-center gap-4.5 border-t border-border pt-6">
                 <div>
                   <div className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-faint">annual</div>
-                  <div className="mt-1 font-mono text-[26px] font-bold">KSh {membershipFeeKes}</div>
+                  <div className="mt-1 font-mono text-[26px] font-bold">KSh {membershipFee}</div>
                 </div>
                 <Link
                   href="/membership/activate"

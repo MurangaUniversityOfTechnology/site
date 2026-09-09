@@ -320,7 +320,8 @@ export const learningPath = {
   otherPaths: ["Systems Programming", "AI / ML", "Cybersecurity", "Frontend", "Cloud & DevOps"],
 };
 
-export const membershipFeeKes = 100;
+export const membershipFeeNewKes = 200;
+export const membershipFeeRenewalKes = 100;
 
 export const donationReasons = [
   { value: "alumni", label: "Alumni giving back" },
@@ -417,7 +418,7 @@ export const faqs = [
   },
   {
     q: "How much does membership cost?",
-    a: `KSh ${membershipFeeKes} per semester. It covers member events, project access, weekly challenges, and a public builder profile.`,
+    a: `KSh ${membershipFeeNewKes} per semester (KSh ${membershipFeeRenewalKes} to renew if you've been a member before). It covers member events, project access, weekly challenges, and a public builder profile.`,
   },
   {
     q: "Is this only for Computer Science students?",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiError, membershipApi } from "@/lib/api";
-import { membershipFeeKes } from "@/lib/data";
+import { membershipFeeNewKes, membershipFeeRenewalKes } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 import { signInHref } from "@/lib/nextParam";
 
@@ -20,12 +20,14 @@ export default function PayPage() {
 
   if (loading || !me) return null;
 
+  const fee = me.membership_status === "expired" ? membershipFeeRenewalKes : membershipFeeNewKes;
+
   async function sendRequest() {
     setSubmitting(true);
     setError(null);
     try {
       await membershipApi.activate(`254${phone.replace(/\D/g, "")}`);
-      router.push("/membership/waiting");
+      router.push(`/membership/waiting?amount=${fee}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't reach M-Pesa — try again.");
       setSubmitting(false);
@@ -59,7 +61,7 @@ export default function PayPage() {
 
         <div className="mt-6.5 flex items-baseline justify-between border-t border-border pt-5.5">
           <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">amount</span>
-          <span className="font-mono text-2xl font-bold">KSh {membershipFeeKes}</span>
+          <span className="font-mono text-2xl font-bold">KSh {fee}</span>
         </div>
 
         {error && <p className="mt-4 text-sm text-danger">{error}</p>}

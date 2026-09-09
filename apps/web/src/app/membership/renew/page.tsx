@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { membershipFeeKes } from "@/lib/data";
+import { membershipFeeRenewalKes } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 import { signInHref } from "@/lib/nextParam";
 
@@ -53,7 +53,7 @@ export default function RenewPage() {
             onClick={() => router.push("/membership/pay")}
             className="mt-6.5 rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90"
           >
-            Renew for KSh {membershipFeeKes}
+            Renew for KSh {membershipFeeRenewalKes}
           </button>
         )}
       </div>

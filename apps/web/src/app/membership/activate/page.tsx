@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { membershipFeeKes, membershipPerks } from "@/lib/data";
+import { membershipFeeNewKes, membershipPerks } from "@/lib/data";
 import { useMe } from "@/lib/useMe";
 import { signInHref } from "@/lib/nextParam";
 
@@ -28,7 +28,7 @@ export default function ActivateReviewPage() {
               <div className="text-[17px] font-semibold">2026 Club Membership</div>
               <div className="mt-1.5 font-mono text-[11px] text-faint">24 Aug 2026 — 23 Aug 2027</div>
             </div>
-            <div className="whitespace-nowrap font-mono text-[22px] font-bold">KSh {membershipFeeKes}</div>
+            <div className="whitespace-nowrap font-mono text-[22px] font-bold">KSh {membershipFeeNewKes}</div>
           </div>
           <div className="grid grid-cols-1 gap-2.5 p-5.5 sm:grid-cols-2">
             {membershipPerks.map((perk) => (
