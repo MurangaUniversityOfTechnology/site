@@ -441,7 +441,7 @@ export default function EditCoursePage() {
           <textarea
             value={capstoneInstructions}
             onChange={(e) => setCapstoneInstructions(e.target.value)}
-            placeholder="What should the student build and submit?"
+            placeholder="What should the student build and submit? (Markdown supported)"
             rows={6}
             className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
           />

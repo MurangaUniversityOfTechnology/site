@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ApiError, courseApi, type CapstoneAssignment } from "@/lib/api";
+import { Markdown } from "@/components/Markdown";
 
 const STATUS_COPY: Record<string, { label: string; color: string; body: string }> = {
   pending: { label: "Pending review", color: "text-warn", body: "An admin will review it soon." },
@@ -82,7 +83,9 @@ export default function CapstonePage() {
         ← back to modules
       </Link>
       <h1 className="mt-4 text-[clamp(24px,3.6vw,36px)] tracking-[-0.03em]">{assignment.title}</h1>
-      <p className="mt-4 whitespace-pre-wrap text-[15px] leading-[1.6] text-muted">{assignment.instructions}</p>
+      <div className="mt-4 text-[15px] leading-[1.6] text-muted">
+        <Markdown>{assignment.instructions}</Markdown>
+      </div>
 
       {status && (
         <div className="mt-6 rounded-lg border border-border-strong bg-surface px-4.5 py-3.5">
