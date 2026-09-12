@@ -18,6 +18,7 @@ const links = [
   { href: "/events", label: "Events" },
   { href: "/challenges", label: "Challenges" },
   { href: "/courses", label: "Courses" },
+  { href: "/roadmaps", label: "Roadmaps" },
   { href: "/learn", label: "Learn" },
   { href: "/community", label: "Community" },
   { href: "/community/board", label: "Q&A & Polls" },

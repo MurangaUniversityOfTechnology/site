@@ -32,6 +32,8 @@ from app.models.profile import ExperienceLevel, Profile, ProfileVisibility
 from app.models.project import Project
 from app.models.project_join_request import JoinRequestStatus, ProjectJoinRequest
 from app.models.project_member import ProjectMember
+from app.models.roadmap import Roadmap
+from app.models.roadmap_milestone import MilestoneStatus, RoadmapMilestone
 from app.models.signature import Signature
 from app.models.tag import Tag
 from app.models.user import GithubOrgInviteStatus, User
@@ -71,6 +73,7 @@ __all__ = [
     "JoinRequestStatus",
     "Membership",
     "MembershipStatus",
+    "MilestoneStatus",
     "Notification",
     "OrgSignature",
     "Payment",
@@ -82,6 +85,8 @@ __all__ = [
     "ProjectMember",
     "QuizKind",
     "RegistrationStatus",
+    "Roadmap",
+    "RoadmapMilestone",
     "Signature",
     "Tag",
     "User",

@@ -27,6 +27,7 @@ const fullAdminNav: NavGroup[] = [
     items: [
       { href: "/admin/events", label: "Events" },
       { href: "/admin/courses", label: "Courses" },
+      { href: "/admin/roadmaps", label: "Roadmaps" },
       { href: "/admin/forms", label: "Forms" },
       { href: "/admin/arms", label: "Arms" },
       { href: "/admin/projects", label: "Projects" },
@@ -53,6 +54,7 @@ const staffNav: NavGroup[] = [
     items: [
       { href: "/admin/events", label: "Events" },
       { href: "/admin/courses", label: "Courses" },
+      { href: "/admin/roadmaps", label: "Roadmaps" },
       { href: "/admin/forms", label: "Forms" },
       { href: "/admin/arms", label: "Arms" },
     ],
