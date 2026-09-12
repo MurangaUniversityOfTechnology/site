@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { courseApi, roadmapApi, type Arm, type MilestoneStatus, type RoadmapSummary } from "@/lib/api";
+import { Markdown } from "@/components/Markdown";
 
 const STATUS_LABEL: Record<MilestoneStatus, string> = {
   planned: "Planned",
@@ -9,43 +10,104 @@ const STATUS_LABEL: Record<MilestoneStatus, string> = {
   done: "Done",
 };
 
+const NODE_STYLE: Record<MilestoneStatus, string> = {
+  planned: "border-border-strong bg-surface text-faint",
+  in_progress: "border-warn bg-warn/15 text-warn",
+  done: "border-accent-dim bg-accent text-navy",
+};
+
+const BADGE_STYLE: Record<MilestoneStatus, string> = {
+  planned: "border-border-strong text-faint",
+  in_progress: "border-warn/40 bg-warn/10 text-warn",
+  done: "border-accent-dim/40 bg-accent/[0.12] text-navy",
+};
+
+const BAR_STYLE: Record<MilestoneStatus, string> = {
+  planned: "bg-border-strong",
+  in_progress: "bg-warn",
+  done: "bg-accent-dim",
+};
+
 function StatusBadge({ status }: { status: MilestoneStatus }) {
-  const styles: Record<MilestoneStatus, string> = {
-    planned: "border-border-strong text-faint",
-    in_progress: "border-warn/40 bg-warn/10 text-warn",
-    done: "border-accent-dim/40 bg-accent/[0.12] text-navy",
-  };
   return (
-    <span
-      className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] ${styles[status]}`}
-    >
+    <span className={`shrink-0 rounded-full border px-2.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] ${BADGE_STYLE[status]}`}>
       {STATUS_LABEL[status]}
     </span>
   );
 }
 
 function RoadmapCard({ roadmap }: { roadmap: RoadmapSummary }) {
+  const milestones = roadmap.milestones;
+  const doneCount = milestones.filter((m) => m.status === "done").length;
+
   return (
     <div className="rounded-xl border border-border bg-surface p-5.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="text-lg font-semibold tracking-[-0.01em]">{roadmap.title}</h3>
+        {milestones.length > 0 && (
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.08em] text-faint">
+            {doneCount}/{milestones.length} done
+          </span>
+        )}
       </div>
-      {roadmap.goal_summary && <p className="mt-2 text-[14px] leading-[1.55] text-muted">{roadmap.goal_summary}</p>}
+      {roadmap.goal_summary && (
+        <div className="mt-1.5 text-[14px] leading-[1.55] text-muted">
+          <Markdown>{roadmap.goal_summary}</Markdown>
+        </div>
+      )}
 
-      {roadmap.milestones.length === 0 ? (
+      {milestones.length === 0 ? (
         <p className="mt-4 text-[13.5px] text-faint">Milestones for this semester haven&apos;t been added yet.</p>
       ) : (
-        <ul className="mt-4.5 flex flex-col gap-2.5">
-          {roadmap.milestones.map((m) => (
-            <li key={m.id} className="flex items-start justify-between gap-3 rounded-lg border border-border-strong bg-background px-3.5 py-3">
-              <div className="min-w-0">
-                <div className="text-[13.5px] font-medium">{m.title}</div>
-                {m.description && <p className="mt-1 text-[13px] leading-[1.5] text-muted">{m.description}</p>}
-              </div>
-              <StatusBadge status={m.status} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="mt-4.5 flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full bg-border">
+            {milestones.map((m) => (
+              <span key={m.id} className={`flex-1 ${BAR_STYLE[m.status]}`} />
+            ))}
+          </div>
+
+          <ol className="mt-5 flex flex-col">
+            {milestones.map((m, i) => (
+              <li key={m.id} className="relative pb-5 pl-11 last:pb-0">
+                {i < milestones.length - 1 && (
+                  <span
+                    className={`absolute left-[15px] top-8 bottom-0 w-px ${
+                      m.status === "done" ? "bg-accent-dim" : "bg-border-strong"
+                    }`}
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  className={`absolute left-0 top-0 grid h-8 w-8 place-items-center rounded-full border-2 font-mono text-[11px] ${NODE_STYLE[m.status]} ${
+                    m.status === "in_progress" ? "shadow-[0_0_0_3px_rgba(138,90,18,0.15)]" : ""
+                  }`}
+                >
+                  {m.status === "done" ? "✓" : m.position}
+                </span>
+
+                {m.description ? (
+                  <details className="group">
+                    <summary className="m-0 flex cursor-pointer list-none items-center justify-between gap-2 pt-0.5">
+                      <span className="text-[13.5px] font-medium">{m.title}</span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <StatusBadge status={m.status} />
+                        <span className="font-mono text-accent-dim transition-transform group-open:rotate-45">+</span>
+                      </span>
+                    </summary>
+                    <div className="mt-1.5 text-[13px] leading-[1.5] text-muted">
+                      <Markdown>{m.description}</Markdown>
+                    </div>
+                  </details>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    <span className="text-[13.5px] font-medium">{m.title}</span>
+                    <StatusBadge status={m.status} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </>
       )}
     </div>
   );
@@ -90,8 +152,20 @@ export default function RoadmapsPage() {
       <h1 className="mt-3.5 text-[clamp(30px,5vw,54px)] leading-none tracking-[-0.04em]">ROADMAPS</h1>
       <p className="mt-3.5 max-w-140 text-[15.5px] text-muted">
         What each arm is working toward this semester — the goal, and the milestones along the way. Filled in by the
-        team running that arm, updated as the semester moves.
+        team running that arm, updated as the semester moves. Tap a milestone for the details.
       </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-faint">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full border-2 border-border-strong bg-surface" /> Planned
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full border-2 border-warn bg-warn/15" /> In progress
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full border-2 border-accent-dim bg-accent" /> Done
+        </span>
+      </div>
 
       {arms && arms.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">

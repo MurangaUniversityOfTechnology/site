@@ -196,7 +196,7 @@ export default function EditRoadmapPage() {
             />
           </label>
           <label className="block">
-            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">Goal for this semester</div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-faint">Goal for this semester (Markdown supported)</div>
             <textarea
               value={goalSummary}
               onChange={(e) => setGoalSummary(e.target.value)}
@@ -253,7 +253,7 @@ export default function EditRoadmapPage() {
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={2}
-                    placeholder="Description (optional)"
+                    placeholder="Description (optional, Markdown supported)"
                     className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
                   />
                   <div className="flex gap-2">
@@ -325,7 +325,7 @@ export default function EditRoadmapPage() {
             value={newDescription}
             onChange={(e) => setNewDescription(e.target.value)}
             rows={2}
-            placeholder="Description (optional)"
+            placeholder="Description (optional, Markdown supported)"
             className="w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
           />
           <button
