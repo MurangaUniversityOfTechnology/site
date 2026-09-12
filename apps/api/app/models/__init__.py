@@ -19,6 +19,7 @@ from app.models.course_quiz_attempt import CourseQuizAttempt
 from app.models.course_quiz_question import CourseQuizQuestion
 from app.models.donation import Donation, DonationReason
 from app.models.event import Event, EventAudience
+from app.models.event_manager import EventManager, EventManagerStatus
 from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.form import Form
@@ -63,6 +64,8 @@ __all__ = [
     "DonationReason",
     "Event",
     "EventAudience",
+    "EventManager",
+    "EventManagerStatus",
     "EventPayment",
     "EventRegistration",
     "ExperienceLevel",

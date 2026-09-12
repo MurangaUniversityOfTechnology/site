@@ -8,10 +8,12 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.event import Event, EventAudience
+from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.payment import PaymentStatus
 from app.models.user import User
 from app.services import audit, event_payment, notification
+from app.services import auth as auth_service
 from app.services import email as email_service
 from app.services.email_templates import render_email
 from app.services.membership_access import is_active_member
@@ -211,6 +213,114 @@ def list_for_event(db: Session, slug: str) -> list[EventRegistration]:
         .order_by(EventRegistration.created_at.asc())
         .all()
     )
+
+
+def registration_admin_row(db: Session, r: EventRegistration) -> dict:
+    """Shared row-shaping for AdminRegistrationRow — used by both the
+    staff-only admin router and the event-manager-scoped router."""
+    if r.user:
+        profile = r.user.profile
+        name = " ".join(part for part in [profile.first_name, profile.last_name] if part) if profile else r.user.email
+        detail = f"registered {r.created_at:%d %b %H:%M}"
+        member = True
+    else:
+        name = r.guest_name or "Guest"
+        detail = r.guest_email or ""
+        member = False
+    payment = db.query(EventPayment).filter(EventPayment.registration_id == r.id).first()
+    return {
+        "id": r.id,
+        "name": name or (r.user.email if r.user else "Guest"),
+        "detail": detail,
+        "member": member,
+        "status": r.status.value,
+        "payment_status": payment.status.value if payment else None,
+    }
+
+
+def admin_register(
+    db: Session,
+    admin: User,
+    event: Event,
+    *,
+    name: str,
+    email: str,
+    payment: str = "free",
+    phone: str | None = None,
+    mpesa_receipt: str | None = None,
+    amount_kes: float | None = None,
+) -> EventRegistration:
+    """Walk-in registration created by an admin/staff/event-manager at the
+    door — skips register()'s self-serve flow entirely. `payment` picks how
+    a fee (if any) was handled: "free" (comped — manager saw them and let
+    them straight in), "manual_receipt" (already paid cash/till — records a
+    completed EventPayment with the given receipt), or "stk_push" (send a
+    real M-Pesa request to `phone`; registration stays pending until paid),
+    mirroring services/membership.py's admin_add_member activation modes."""
+    email = email.strip().lower()
+    existing_user = auth_service.get_user_by_email(db, email)
+
+    if existing_user:
+        dup = (
+            db.query(EventRegistration)
+            .filter(EventRegistration.event_id == event.id, EventRegistration.user_id == existing_user.id)
+            .first()
+        )
+        if dup:
+            raise EventError(f"{email} is already registered for this event")
+
+    if event.fee_kes > 0 and payment == "stk_push" and not phone:
+        raise EventError("A phone number is required to send an M-Pesa request")
+    if event.fee_kes > 0 and payment == "manual_receipt":
+        if not phone:
+            raise EventError("A phone number is required to record a payment")
+        if not mpesa_receipt or not mpesa_receipt.strip():
+            raise EventError("An M-Pesa receipt code is required")
+
+    registration = EventRegistration(
+        event_id=event.id,
+        user_id=existing_user.id if existing_user else None,
+        guest_name=None if existing_user else name,
+        guest_email=None if existing_user else email,
+        status=RegistrationStatus.pending,
+    )
+    db.add(registration)
+    db.flush()
+
+    if event.fee_kes == 0 or payment == "free":
+        registration.status = RegistrationStatus.approved
+        audit.log(db, admin, "event", f"Added walk-in {email} to '{event.title}' (comped)")
+        db.commit()
+        db.refresh(registration)
+        _send_ticket_email(registration)
+    elif payment == "manual_receipt":
+        assert mpesa_receipt is not None  # validated above
+        db.add(
+            EventPayment(
+                registration_id=registration.id,
+                amount=amount_kes or event.fee_kes,
+                phone=phone or "",
+                mpesa_receipt=mpesa_receipt.strip(),
+                status=PaymentStatus.completed,
+            )
+        )
+        registration.status = RegistrationStatus.approved
+        audit.log(db, admin, "event", f"Added walk-in {email} to '{event.title}' · receipt {mpesa_receipt.strip()}")
+        db.commit()
+        db.refresh(registration)
+        _send_ticket_email(registration)
+    else:  # stk_push
+        assert phone is not None  # validated above
+        try:
+            event_payment.start_event_payment(db, registration, phone, event.fee_kes)
+        except event_payment.EventPaymentError as exc:
+            db.rollback()
+            raise EventError(str(exc)) from exc
+        audit.log(db, admin, "event", f"Added walk-in {email} to '{event.title}' · sent M-Pesa request")
+        db.commit()
+        db.refresh(registration)
+
+    return registration
 
 
 NOTIFY_TITLE = {

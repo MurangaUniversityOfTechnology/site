@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.deps import require_staff
 from app.models.event import Event
-from app.models.event_payment import EventPayment
+from app.models.event_manager import EventManager
 from app.models.event_registration import EventRegistration
 from app.models.user import User
 from app.schemas.event import (
@@ -13,7 +13,9 @@ from app.schemas.event import (
     EventUpdateRequest,
     EventWriteRequest,
 )
+from app.schemas.event_manager import EventManagerRow, InviteManagerRequest
 from app.services import event as event_service
+from app.services import event_manager as event_manager_service
 
 router = APIRouter(prefix="/admin", tags=["admin-events"], dependencies=[Depends(require_staff)])
 
@@ -113,30 +115,7 @@ def list_registrations(slug: str, db: Session = Depends(get_db)):
         registrations = event_service.list_for_event(db, slug)
     except event_service.EventError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-
-    rows = []
-    for r in registrations:
-        if r.user:
-            profile = r.user.profile
-            name = " ".join(part for part in [profile.first_name, profile.last_name] if part) if profile else r.user.email
-            detail = f"registered {r.created_at:%d %b %H:%M}"
-            member = True
-        else:
-            name = r.guest_name or "Guest"
-            detail = r.guest_email or ""
-            member = False
-        payment = db.query(EventPayment).filter(EventPayment.registration_id == r.id).first()
-        rows.append(
-            AdminRegistrationRow(
-                id=r.id,
-                name=name or r.user.email,
-                detail=detail,
-                member=member,
-                status=r.status.value,
-                payment_status=payment.status.value if payment else None,
-            )
-        )
-    return rows
+    return [AdminRegistrationRow(**event_service.registration_admin_row(db, r)) for r in registrations]
 
 
 def _get_registration(db: Session, registration_id: str) -> EventRegistration:
@@ -180,3 +159,48 @@ def attend_registration(registration_id: str, admin: User = Depends(require_staf
         event_service.mark_attended(db, admin, reg)
     except event_service.EventError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+
+# ── event managers (scoped, per-event admin access) ─────────────────────
+
+
+def _display_name(user: User) -> str:
+    return user.profile.display_name if user.profile and user.profile.display_name else user.email
+
+
+def _manager_row(m: EventManager) -> EventManagerRow:
+    return EventManagerRow(
+        id=m.id,
+        invited_email=m.invited_email,
+        status=m.status.value,
+        invited_by=_display_name(m.invited_by),
+        created_at=m.created_at,
+        accepted_at=m.accepted_at,
+    )
+
+
+@router.get("/events/{slug}/managers", response_model=list[EventManagerRow])
+def list_event_managers(slug: str, db: Session = Depends(get_db)):
+    event = _get_event_or_404(db, slug)
+    return [_manager_row(m) for m in event_manager_service.list_for_event(db, event)]
+
+
+@router.post("/events/{slug}/managers/invite", response_model=EventManagerRow, status_code=status.HTTP_201_CREATED)
+def invite_event_manager(
+    slug: str, payload: InviteManagerRequest, admin: User = Depends(require_staff), db: Session = Depends(get_db)
+):
+    event = _get_event_or_404(db, slug)
+    try:
+        manager = event_manager_service.invite_manager(db, admin, event, payload.email)
+    except event_manager_service.EventManagerError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _manager_row(manager)
+
+
+@router.post("/events/managers/{manager_id}/revoke", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_event_manager(manager_id: str, admin: User = Depends(require_staff), db: Session = Depends(get_db)):
+    try:
+        manager = event_manager_service.get_by_id(db, manager_id)
+    except event_manager_service.EventManagerError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    event_manager_service.revoke_manager(db, admin, manager)

@@ -8,6 +8,7 @@ import {
   authApi,
   courseApi,
   eventApi,
+  eventManagerApi,
   githubApi,
   projectApi,
   type CourseEnrollmentSummary,
@@ -47,6 +48,7 @@ export default function DashboardPage() {
   const [githubStatus, setGithubStatus] = useState<GithubStatus | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
   const [sendingVerification, setSendingVerification] = useState(false);
+  const [managedEvents, setManagedEvents] = useState<{ slug: string; title: string }[] | null>(null);
 
   useEffect(() => {
     if (!loading && !me) router.push("/sign-in");
@@ -73,6 +75,14 @@ export default function DashboardPage() {
     });
     courseApi.myEnrollments().then((result) => {
       if (active) setEnrollments(result);
+    });
+    eventManagerApi.myManaged().then(async (slugs) => {
+      if (!active || slugs.length === 0) {
+        if (active) setManagedEvents([]);
+        return;
+      }
+      const details = await Promise.all(slugs.map((slug) => eventApi.get(slug).catch(() => null)));
+      if (active) setManagedEvents(slugs.map((slug, i) => ({ slug, title: details[i]?.title ?? slug })));
     });
     return () => {
       active = false;
@@ -113,6 +123,23 @@ export default function DashboardPage() {
         {isPending && "Waiting for your M-Pesa payment to confirm."}
         {isActive && "You have full access to club projects, events and challenges."}
       </p>
+
+      {managedEvents && managedEvents.length > 0 && (
+        <div className="mt-5 flex flex-wrap items-center gap-3.5 rounded-lg border border-accent-dim bg-accent/[0.04] px-4.5 py-3.5">
+          <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-navy">events you manage</span>
+          <div className="flex flex-wrap gap-2">
+            {managedEvents.map((e) => (
+              <Link
+                key={e.slug}
+                href={`/events/${e.slug}/manage`}
+                className="rounded-md border border-accent-dim px-3 py-1.5 text-[13.5px] text-navy hover:bg-accent/[0.08]"
+              >
+                {e.title} →
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {!me.email_verified && (
         <div className="mt-5 flex flex-wrap items-center gap-3.5 rounded-lg border border-[#f0dfb8] bg-warn/[0.04] px-4.5 py-3.5">

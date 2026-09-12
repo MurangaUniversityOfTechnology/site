@@ -20,6 +20,7 @@ from app.routers import (
     content,
     courses,
     donations,
+    event_manager,
     events,
     forms,
     members,
@@ -62,6 +63,12 @@ app.include_router(admin_forms.router)
 app.include_router(admin_roadmaps.router)
 app.include_router(admin_roles.router)
 app.include_router(admin_uploads.router)
+# event_manager's "/events/my-managed" and "/events/{slug}/manage/..." must be
+# registered before events.router — otherwise events.router's "/events/{slug}"
+# catch-all would match "/events/my-managed" first and 404 it as an unknown
+# slug, same reasoning as courses.router's "/arms declared ahead of /{slug}".
+app.include_router(event_manager.router)
+app.include_router(event_manager.invites_router)
 app.include_router(events.router)
 app.include_router(challenges.router)
 app.include_router(members.router)

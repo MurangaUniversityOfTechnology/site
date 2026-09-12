@@ -686,6 +686,64 @@ export const eventApi = {
   registrationStatus: (id: string) => apiFetch<Registration>(`/events/registrations/${id}`),
 };
 
+// ── event managers (per-event scoped access) ──────────────────────────────
+
+export type EventManagerStatus = "invited" | "active" | "revoked";
+
+export type EventManagerRow = {
+  id: string;
+  invited_email: string;
+  status: EventManagerStatus;
+  invited_by: string;
+  created_at: string;
+  accepted_at: string | null;
+};
+
+export type InvitePreview = {
+  event_title: string;
+  event_slug: string;
+  invited_email: string;
+  invited_by: string;
+  status: EventManagerStatus;
+};
+
+export type WalkInPayload = {
+  name: string;
+  email: string;
+  payment?: "free" | "stk_push" | "manual_receipt";
+  phone?: string | null;
+  mpesa_receipt?: string | null;
+  amount_kes?: number | null;
+};
+
+export const eventManagerApi = {
+  registrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/events/${slug}/manage/registrations`),
+  addWalkIn: (slug: string, payload: WalkInPayload) =>
+    apiFetch<AdminRegistrationRow>(`/events/${slug}/manage/registrations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  approve: (slug: string, id: string) =>
+    apiFetch<void>(`/events/${slug}/manage/registrations/${id}/approve`, { method: "POST" }),
+  reject: (slug: string, id: string) =>
+    apiFetch<void>(`/events/${slug}/manage/registrations/${id}/reject`, { method: "POST" }),
+  waitlist: (slug: string, id: string) =>
+    apiFetch<void>(`/events/${slug}/manage/registrations/${id}/waitlist`, { method: "POST" }),
+  attend: (slug: string, id: string) =>
+    apiFetch<void>(`/events/${slug}/manage/registrations/${id}/attend`, { method: "POST" }),
+  managers: (slug: string) => apiFetch<EventManagerRow[]>(`/events/${slug}/manage/managers`),
+  inviteManager: (slug: string, email: string) =>
+    apiFetch<EventManagerRow>(`/events/${slug}/manage/managers/invite`, { method: "POST", body: JSON.stringify({ email }) }),
+  revokeManager: (slug: string, managerId: string) =>
+    apiFetch<void>(`/events/${slug}/manage/managers/${managerId}/revoke`, { method: "POST" }),
+  myManaged: () => apiFetch<string[]>("/events/my-managed"),
+};
+
+export const eventInviteApi = {
+  preview: (token: string) => apiFetch<InvitePreview>(`/event-invites/${token}`),
+  accept: (token: string) => apiFetch<{ event_slug: string }>(`/event-invites/${token}/accept`, { method: "POST" }),
+};
+
 export const adminApi = {
   overview: () => apiFetch<AdminOverview>("/admin/overview"),
   memberships: (statusFilter: string) =>
@@ -761,6 +819,10 @@ export const adminApi = {
   deleteEvent: (slug: string) => apiFetch<void>(`/admin/events/${slug}`, { method: "DELETE" }),
   archiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/archive`, { method: "POST" }),
   unarchiveEvent: (slug: string) => apiFetch<AdminEventRow>(`/admin/events/${slug}/unarchive`, { method: "POST" }),
+  listEventManagers: (slug: string) => apiFetch<EventManagerRow[]>(`/admin/events/${slug}/managers`),
+  inviteEventManager: (slug: string, email: string) =>
+    apiFetch<EventManagerRow>(`/admin/events/${slug}/managers/invite`, { method: "POST", body: JSON.stringify({ email }) }),
+  revokeEventManager: (managerId: string) => apiFetch<void>(`/admin/events/managers/${managerId}/revoke`, { method: "POST" }),
   uploadFile: (file: File) => apiUpload<{ url: string }>("/admin/uploads", file),
   // Courses
   listCourses: (archived = false) => apiFetch<AdminCourseRow[]>(`/admin/courses?archived=${archived}`),
