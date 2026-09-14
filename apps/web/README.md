@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# apps/web
 
-## Getting Started
+The MUT Tech Community frontend — Next.js 16 (App Router), TypeScript, Tailwind CSS v4.
 
-First, run the development server:
+For local dev setup (Docker vs. native), production domains, and required credentials, see
+the [root README](../../README.md). This file covers the app itself.
+
+## Running locally
 
 ```bash
+cp .env.local.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`NEXT_PUBLIC_API_URL` is normally left unset — `src/lib/api.ts` auto-detects the API host from
+whatever hostname served the page (`localhost`, or a LAN IP when testing from a phone on the
+same network), on port 8000. Set it explicitly only when the API lives on a different domain,
+as it does in production (see root README's "Production domains & TLS").
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Structure
 
-## Learn More
+```
+src/
+  app/          route tree (App Router) — see below
+  components/   shared React components, one file per component
+  lib/          API client, hooks, and other non-UI helpers
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Routes (`src/app`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Routes are flat, not grouped under route groups like `(public)`/`(admin)` — the split between
+public/browsable pages and admin-only pages is enforced by each page checking `useMe()`/
+`require_admin` server-side via the API, not by folder structure. Broadly:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Public/member pages: `courses`, `events`, `projects`, `community`, `roadmaps`, `learn`,
+  `members` (directory + per-member profile at `members/[id]`), `challenges`, `forms`, plus
+  auth (`sign-in`, `sign-up`, `forgot-password`, `reset-password`, `verify-email`),
+  membership (`membership/*`), and account (`dashboard`, `settings`, `notifications`).
+- `admin/*` — staff/admin console: content moderation, courses, events, forms, roadmaps,
+  members, roles, payments, donations, GitHub sync, audit log. Gated by `require_staff` /
+  `require_admin` on the API side per-resource, not uniformly.
+- `donate/*`, `membership/*` — M-Pesa STK push payment flows (pending/success/failed states
+  as separate routes, since Daraja callbacks land asynchronously).
 
-## Deploy on Vercel
+Nav is a deliberate split (see root project notes): a top bar carries public/browsable pages,
+and a sidebar is used only inside `admin/*` — not an oversight, don't try to unify them.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Key files in `src/lib`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `api.ts` — the fetch wrapper (`apiFetch`/`apiUpload`) all client components use to talk to
+  the API. Always sends `credentials: "include"` (session cookie). `ApiError` carries the
+  HTTP status so callers can branch on 401/403/404 etc.
+- `serverFetch.ts` — `fetchPublic()`, a plain unauthenticated GET for `generateMetadata` /
+  `opengraph-image` files, which run server-side with no session cookie. Only use it on
+  routes that are already public. Returns `null` on any non-2xx instead of throwing, so
+  crawler preview fetches degrade to generic metadata rather than erroring.
+- `useMe.tsx` — the current-user hook; wraps the `/profile/me` fetch and exposes
+  `is_admin`/`is_staff`/tags for client-side gating (the API is still the source of truth —
+  this only controls what renders, not what's authorized).
+- `data.ts`, `eventFormat.ts`, `aiCoursePrompt.ts`, `nextParam.ts`, `og.tsx` — page-specific
+  data shaping/formatting helpers.
+
+## Testing & linting
+
+```bash
+npm run lint    # eslint
+npm run test    # vitest run (jsdom + Testing Library)
+npm run test:watch
+```
+
+Component tests live next to the component they test (e.g. `MobileNav.test.tsx`,
+`JoinProjectPanel.test.tsx`), not in a separate `__tests__` tree.
+
+## Build
+
+```bash
+npm run build
+npm run start
+```
+
+`Dockerfile` builds the same way for the Docker Compose path — see the root README.
