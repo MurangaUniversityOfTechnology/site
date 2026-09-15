@@ -1,7 +1,7 @@
 // The JSON shape this prompt asks for maps 1:1 onto the admin course-authoring
 // API (createModule/createLesson/createModuleQuiz/createQuestion/createFinalExam
-// in lib/api.ts) — see CourseAiImportPanel.tsx, which walks this structure and
-// fires those calls in sequence. Keep the two in sync if either changes.
+// in lib/api/admin/courses.ts) — see CourseAiImportPanel.tsx, which walks this
+// structure and fires those calls in sequence. Keep the two in sync if either changes.
 export function buildCourseAiPrompt(title: string, description: string): string {
   return `You are designing a self-paced online course for a university tech club. Produce the FULL course structure as a single JSON object — no other output.
 
