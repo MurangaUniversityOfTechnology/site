@@ -13,6 +13,7 @@ from app.models.donation import Donation
 from app.models.event_payment import EventPayment
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
+from app.models.profile import Profile
 from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
 from app.models.tag import Tag
@@ -32,6 +33,7 @@ from app.schemas.admin import (
     PaymentRow,
     PaymentsOverview,
     PaymentTotal,
+    SetMembershipStatusRequest,
 )
 from app.schemas.content import AdminContentRow
 from app.schemas.github import RosterRow
@@ -49,6 +51,7 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 STATUS_FILTERS = {
     "active": [MembershipStatus.active],
     "expired": [MembershipStatus.expired],
+    "inactive": [MembershipStatus.none, MembershipStatus.payment_pending, MembershipStatus.payment_received],
     "all": None,
 }
 
@@ -68,11 +71,24 @@ def overview(db: Session = Depends(get_db)):
 
 
 @router.get("/memberships", response_model=list[MembershipApplication])
-def list_memberships(status_filter: str = "active", db: Session = Depends(get_db)):
+def list_memberships(status_filter: str = "active", q: str = "", db: Session = Depends(get_db)):
     statuses = STATUS_FILTERS.get(status_filter, STATUS_FILTERS["active"])
-    query = db.query(Membership)
+    query = db.query(Membership).join(User, Membership.user_id == User.id).outerjoin(Profile, Profile.user_id == User.id)
     if statuses is not None:
         query = query.filter(Membership.status.in_(statuses))
+    term = q.strip()
+    if term:
+        like = f"%{term}%"
+        query = query.filter(
+            or_(
+                User.email.ilike(like),
+                Profile.first_name.ilike(like),
+                Profile.last_name.ilike(like),
+                Profile.display_name.ilike(like),
+                (Profile.first_name + " " + Profile.last_name).ilike(like),
+                Profile.registration_number.ilike(like),
+            )
+        )
 
     out = []
     for m in query.all():
@@ -98,6 +114,22 @@ def list_memberships(status_filter: str = "active", db: Session = Depends(get_db
             )
         )
     return out
+
+
+@router.post("/users/{user_id}/membership-status", status_code=status.HTTP_204_NO_CONTENT)
+def set_membership_status(
+    user_id: str,
+    payload: SetMembershipStatusRequest,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    try:
+        membership_service.admin_set_status(db, admin, target, payload.status, payload.reason.strip())
+    except membership_service.MembershipError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("/payments", response_model=PaymentsOverview)

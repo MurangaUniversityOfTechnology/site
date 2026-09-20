@@ -17,6 +17,11 @@ export const adminUsersApi = {
   searchUsers: (query: string) => apiFetch<AdminRow[]>(`/admin/users/search?query=${encodeURIComponent(query)}`),
   makeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-admin`, { method: "POST" }),
   removeAdmin: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-admin`, { method: "POST" }),
+  setMembershipStatus: (userId: string, status: "active" | "expired" | "inactive", reason: string) =>
+    apiFetch<void>(`/admin/users/${userId}/membership-status`, {
+      method: "POST",
+      body: JSON.stringify({ status, reason }),
+    }),
   makeStaff: (userId: string) => apiFetch<void>(`/admin/users/${userId}/make-staff`, { method: "POST" }),
   removeStaff: (userId: string) => apiFetch<void>(`/admin/users/${userId}/remove-staff`, { method: "POST" }),
   listTags: () => apiFetch<Tag[]>("/admin/tags"),

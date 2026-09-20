@@ -30,6 +30,11 @@ class MembershipApplication(BaseModel):
     experience_level: ExperienceLevel | None
 
 
+class SetMembershipStatusRequest(BaseModel):
+    status: Literal["active", "expired", "inactive"]
+    reason: str = Field(min_length=1, max_length=500)
+
+
 class PaymentTotal(BaseModel):
     label: str
     amount_kes: float

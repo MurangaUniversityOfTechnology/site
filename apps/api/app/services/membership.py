@@ -330,3 +330,39 @@ def admin_add_member(
     db.refresh(user)
     _send_membership_email(user, temp_password)
     return user, temp_password
+
+
+ADMIN_SETTABLE_STATUSES = {
+    "active": MembershipStatus.active,
+    "expired": MembershipStatus.expired,
+    "inactive": MembershipStatus.none,
+}
+
+
+def admin_set_status(db: Session, admin: User, user: User, new_status: str, reason: str) -> None:
+    """Manual override for cases the payment flow can't see — cash paid to an
+    officer, or a returning member who signed up with a second account.
+    `active` behaves like a completed payment (fresh 365-day period, welcome
+    notification, GitHub invite); `expired` backdates the period so it stays
+    consistent with sync_expiry(); `inactive` resets to the never-paid state."""
+    target = ADMIN_SETTABLE_STATUSES.get(new_status)
+    if target is None:
+        raise MembershipError(f"Unknown status '{new_status}'")
+    membership = user.membership
+    if membership.status == target:
+        raise MembershipError(f"Membership is already {new_status}")
+
+    previous = membership.status.value
+    audit.log(db, admin, "membership", f"Set {user.email} from {previous} to {new_status} · reason: {reason}")
+
+    if target == MembershipStatus.active:
+        _activate_membership(db, membership, user)  # commits
+        return
+    if target == MembershipStatus.expired:
+        membership.status = MembershipStatus.expired
+        membership.period_end = date.today() - timedelta(days=1)  # noqa: DTZ011
+    else:
+        membership.status = MembershipStatus.none
+        membership.period_start = None
+        membership.period_end = None
+    db.commit()

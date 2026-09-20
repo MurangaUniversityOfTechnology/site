@@ -8,31 +8,50 @@ import { experienceLevels, goalOptions } from "@/lib/data";
 const FILTERS = [
   { value: "active", label: "Active" },
   { value: "expired", label: "Expired" },
+  { value: "inactive", label: "Inactive" },
   { value: "all", label: "All" },
 ];
+
+// "inactive" is what the API calls status "none" — never paid, or payment abandoned.
+const STATUS_OPTIONS = [
+  { value: "active", label: "Paid / active" },
+  { value: "expired", label: "Expired" },
+  { value: "inactive", label: "Inactive" },
+];
+
+const STATUS_LABEL: Record<string, string> = { active: "active", expired: "expired", inactive: "inactive" };
+
+function statusValue(membershipStatus: string) {
+  if (membershipStatus === "active" || membershipStatus === "expired") return membershipStatus;
+  return membershipStatus === "suspended" ? "suspended" : "inactive";
+}
 
 const EXPERIENCE_LABEL: Record<string, string> = Object.fromEntries(experienceLevels.map((l) => [l.value, l.label]));
 
 export default function MembershipsPage() {
   const [filter, setFilter] = useState("active");
+  const [query, setQuery] = useState("");
   const [apps, setApps] = useState<MembershipApplication[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
   const load = useCallback(() => {
-    adminApi.memberships(filter).then(setApps);
-  }, [filter]);
+    adminApi.memberships(filter, query).then(setApps);
+  }, [filter, query]);
 
   useEffect(() => {
     let active = true;
-    adminApi.memberships(filter).then((result) => {
-      if (active) setApps(result);
-    });
+    const timeout = setTimeout(() => {
+      adminApi.memberships(filter, query).then((result) => {
+        if (active) setApps(result);
+      });
+    }, 250);
     return () => {
       active = false;
+      clearTimeout(timeout);
     };
-  }, [filter]);
+  }, [filter, query]);
 
   const stats = useMemo(() => {
     if (!apps || apps.length === 0) return null;
@@ -60,6 +79,33 @@ export default function MembershipsPage() {
       topGoals,
     };
   }, [apps]);
+
+  async function changeStatus(a: MembershipApplication, next: string) {
+    if (next === statusValue(a.membership_status)) return;
+    const nextLabel = STATUS_OPTIONS.find((o) => o.value === next)?.label ?? next;
+    const ok = await confirm({
+      title: `Mark ${a.name} as ${nextLabel.toLowerCase()}?`,
+      message:
+        next === "active"
+          ? "Use this when they've paid in cash or already have an older account. They'll get a fresh 12-month membership and a notification."
+          : next === "expired"
+            ? "They'll lose member access until they renew."
+            : "This resets them to a non-member who hasn't paid.",
+      confirmLabel: "Change status",
+      danger: next !== "active",
+    });
+    if (!ok) return;
+    setError(null);
+    setBusyId(a.user_id);
+    try {
+      await adminApi.setMembershipStatus(a.user_id, next as "active" | "expired" | "inactive", "Changed manually from the members page");
+      load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't update status.");
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function toggleAdmin(a: MembershipApplication) {
     const ok = await confirm(
@@ -106,6 +152,15 @@ export default function MembershipsPage() {
           </button>
         ))}
       </div>
+
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search by name, email or reg number"
+        aria-label="Search members"
+        className="mt-4 w-full max-w-md rounded-md border border-border-strong bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-accent-dim"
+      />
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
@@ -154,7 +209,7 @@ export default function MembershipsPage() {
           <span>role</span>
         </div>
 
-        {apps?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">No members here.</div>}
+        {apps?.length === 0 && <div className="px-4.5 py-8 text-center text-sm text-muted">{query.trim() ? "No members match that search." : "No members here."}</div>}
 
         {apps?.map((a) => (
           <div key={a.user_id} className="border-b border-[#e8e1d2] px-4.5 py-4 last:border-0">
@@ -189,8 +244,12 @@ export default function MembershipsPage() {
                 {a.payment_receipt ? ` · ${a.payment_receipt}` : ""}
               </div>
               <div>
-                <span
-                  className={`justify-self-start rounded-md border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] ${
+                <select
+                  value={statusValue(a.membership_status)}
+                  onChange={(e) => changeStatus(a, e.target.value)}
+                  disabled={busyId === a.user_id}
+                  aria-label={`Membership status for ${a.name}`}
+                  className={`max-w-full rounded-md border bg-surface px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] disabled:opacity-50 ${
                     a.membership_status === "active"
                       ? "border-accent-dim text-navy"
                       : a.membership_status === "expired" || a.membership_status === "suspended"
@@ -198,8 +257,13 @@ export default function MembershipsPage() {
                         : "border-border-strong text-muted"
                   }`}
                 >
-                  {a.membership_status}
-                </span>
+                  {a.membership_status === "suspended" && <option value="suspended" disabled>suspended</option>}
+                  {STATUS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {STATUS_LABEL[o.value]}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <button

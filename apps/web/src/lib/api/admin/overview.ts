@@ -47,8 +47,10 @@ export type AuditEntry = { at: string; who: string; what: string; kind: string }
 
 export const adminOverviewApi = {
   overview: () => apiFetch<AdminOverview>("/admin/overview"),
-  memberships: (statusFilter: string) =>
-    apiFetch<MembershipApplication[]>(`/admin/memberships?status_filter=${statusFilter}`),
+  memberships: (statusFilter: string, q = "") =>
+    apiFetch<MembershipApplication[]>(
+      `/admin/memberships?status_filter=${statusFilter}${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`,
+    ),
   payments: () => apiFetch<PaymentsOverview>("/admin/payments"),
   donations: () => apiFetch<DonationsOverview>("/admin/donations"),
   audit: (filters?: { kind?: string; q?: string; since?: string; until?: string }) => {
