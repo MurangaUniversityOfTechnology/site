@@ -1,11 +1,13 @@
 import logging
 from datetime import UTC, date, datetime, timedelta
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
+from app.models.profile import Profile
 from app.models.user import User
 from app.services import audit, github, mpesa, notification
 from app.services import email as email_service
@@ -366,3 +368,35 @@ def admin_set_status(db: Session, admin: User, user: User, new_status: str, reas
         membership.period_start = None
         membership.period_end = None
     db.commit()
+
+
+MEMBER_STATUS_FILTERS = {
+    "active": [MembershipStatus.active],
+    "expired": [MembershipStatus.expired],
+    "inactive": [MembershipStatus.none, MembershipStatus.payment_pending, MembershipStatus.payment_received],
+    "all": None,
+}
+
+
+def list_members(db: Session, status_filter: str = "active", q: str = "") -> list[Membership]:
+    """Memberships matching a status bucket (active / expired / inactive /
+    all — unknown values fall back to active) and, when `q` is given, a
+    case-insensitive search over email, name and registration number."""
+    statuses = MEMBER_STATUS_FILTERS.get(status_filter, MEMBER_STATUS_FILTERS["active"])
+    query = db.query(Membership).join(User, Membership.user_id == User.id).outerjoin(Profile, Profile.user_id == User.id)
+    if statuses is not None:
+        query = query.filter(Membership.status.in_(statuses))
+    term = q.strip()
+    if term:
+        like = f"%{term}%"
+        query = query.filter(
+            or_(
+                User.email.ilike(like),
+                Profile.first_name.ilike(like),
+                Profile.last_name.ilike(like),
+                Profile.display_name.ilike(like),
+                (Profile.first_name + " " + Profile.last_name).ilike(like),
+                Profile.registration_number.ilike(like),
+            )
+        )
+    return query.all()

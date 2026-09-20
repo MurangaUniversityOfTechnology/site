@@ -13,7 +13,6 @@ from app.models.donation import Donation
 from app.models.event_payment import EventPayment
 from app.models.membership import Membership, MembershipStatus
 from app.models.payment import Payment, PaymentStatus
-from app.models.profile import Profile
 from app.models.project import Project
 from app.models.project_join_request import ProjectJoinRequest
 from app.models.tag import Tag
@@ -48,13 +47,6 @@ from app.services import tags as tag_service
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
-STATUS_FILTERS = {
-    "active": [MembershipStatus.active],
-    "expired": [MembershipStatus.expired],
-    "inactive": [MembershipStatus.none, MembershipStatus.payment_pending, MembershipStatus.payment_received],
-    "all": None,
-}
-
 
 @router.get("/overview", response_model=AdminOverview)
 def overview(db: Session = Depends(get_db)):
@@ -72,26 +64,10 @@ def overview(db: Session = Depends(get_db)):
 
 @router.get("/memberships", response_model=list[MembershipApplication])
 def list_memberships(status_filter: str = "active", q: str = "", db: Session = Depends(get_db)):
-    statuses = STATUS_FILTERS.get(status_filter, STATUS_FILTERS["active"])
-    query = db.query(Membership).join(User, Membership.user_id == User.id).outerjoin(Profile, Profile.user_id == User.id)
-    if statuses is not None:
-        query = query.filter(Membership.status.in_(statuses))
-    term = q.strip()
-    if term:
-        like = f"%{term}%"
-        query = query.filter(
-            or_(
-                User.email.ilike(like),
-                Profile.first_name.ilike(like),
-                Profile.last_name.ilike(like),
-                Profile.display_name.ilike(like),
-                (Profile.first_name + " " + Profile.last_name).ilike(like),
-                Profile.registration_number.ilike(like),
-            )
-        )
+    memberships = membership_service.list_members(db, status_filter, q)
 
     out = []
-    for m in query.all():
+    for m in memberships:
         user = m.user
         profile = user.profile
         payment = membership_service.latest_payment(db, user)
