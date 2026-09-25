@@ -1,9 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from app.core import scheduler
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.routers import (
@@ -34,7 +37,16 @@ from app.routers import (
 
 settings = get_settings()
 
-app = FastAPI(title="MUT Tech Community API")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if settings.scheduler_enabled:
+        scheduler.start()
+    yield
+    scheduler.stop()
+
+
+app = FastAPI(title="MUT Tech Community API", lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

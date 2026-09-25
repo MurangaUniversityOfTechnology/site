@@ -32,6 +32,9 @@ def pytest_configure(config):
     # real local dev, not a TLS-terminated deploy), so a Secure cookie
     # correctly never gets sent back and every authenticated request 401s.
     os.environ.setdefault("ENVIRONMENT", "development")
+    # Tests drive send_due_reminders() directly with a fixed "now" — a real
+    # background thread ticking against the shared DB would race them.
+    os.environ.setdefault("SCHEDULER_ENABLED", "false")
     # maybe_invite_to_org no-ops unless both of these are non-empty — the
     # idempotency/wiring tests need the guard to pass through to the (mocked)
     # HTTP call, not short-circuit before it.

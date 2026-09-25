@@ -38,6 +38,11 @@ class EventRegistration(Base):
     guest_email: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[RegistrationStatus] = mapped_column(Enum(RegistrationStatus), default=RegistrationStatus.pending)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Stamped by app/services/event_reminders.py once each reminder email has
+    # gone out (or been deliberately skipped) — the scheduler re-scans every
+    # few minutes, so these are what stop a second send.
+    reminder_day_before_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminder_hour_before_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     event: Mapped["Event"] = relationship()
     user: Mapped["User"] = relationship()

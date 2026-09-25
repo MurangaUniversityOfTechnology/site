@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # GOOGLE_REDIRECT_URI/GITHUB_REDIRECT_URI below being explicit rather
     # than derived from the incoming request.
     api_base_url: str = "http://localhost:8000"
+    # In-process background jobs (event reminder emails) — see
+    # app/core/scheduler.py. Off in tests, which call the jobs directly.
+    scheduler_enabled: bool = True
 
     # Google OAuth
     google_client_id: str = ""
