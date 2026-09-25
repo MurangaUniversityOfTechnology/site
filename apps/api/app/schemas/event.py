@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime, time
+from typing import Literal
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.event import EventAudience
 
@@ -129,3 +130,14 @@ class ReminderSettingsUpdate(BaseModel):
     hour_before_enabled: bool | None = None
     hour_before_minutes: int | None = None
     include_pending: bool | None = None
+
+
+class EventEmailRequest(BaseModel):
+    audience: Literal["confirmed", "pending", "waitlisted", "everyone"]
+    kind: Literal["reminder", "custom"]
+    subject: str | None = Field(default=None, max_length=150)
+    message: str | None = Field(default=None, max_length=5000)
+
+
+class EventEmailResponse(BaseModel):
+    queued: int

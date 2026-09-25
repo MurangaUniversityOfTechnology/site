@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { adminApi, ApiError, type AdminEventRow, type AdminRegistrationRow, type EventManagerRow } from "@/lib/api";
 import { formatEventMeta } from "@/lib/eventFormat";
+import { EventEmailPanel } from "@/components/EventEmailPanel";
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "text-warn border-[#f0dfb8]",
@@ -101,6 +102,8 @@ export default function AdminEventRegistrationsPage() {
 
   const approved = rows?.filter((r) => r.status === "approved" || r.status === "attended").length ?? 0;
   const pending = rows?.filter((r) => r.status === "pending").length ?? 0;
+  const [loadedAt] = useState(() => Date.now());
+  const eventStarted = !!event && new Date(event.starts_at).getTime() <= loadedAt;
 
   return (
     <div>
@@ -196,6 +199,8 @@ export default function AdminEventRegistrationsPage() {
           </div>
         ))}
       </div>
+
+      {rows && event && <EventEmailPanel slug={slug} rows={rows} eventStarted={eventStarted} />}
 
       <div className="mt-6 rounded-[11px] border border-border bg-surface p-5">
         <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">event managers</div>

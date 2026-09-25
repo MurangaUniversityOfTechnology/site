@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
@@ -10,6 +10,8 @@ from app.models.user import User
 from app.schemas.event import (
     AdminEventRow,
     AdminRegistrationRow,
+    EventEmailRequest,
+    EventEmailResponse,
     EventUpdateRequest,
     EventWriteRequest,
     ReminderSettingsRow,
@@ -238,3 +240,22 @@ def update_reminder_settings(
     except reminder_service.ReminderError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     return _reminder_settings_row(row)
+
+
+@router.post("/events/{slug}/email", response_model=EventEmailResponse, status_code=status.HTTP_202_ACCEPTED)
+def email_registrants(
+    slug: str,
+    payload: EventEmailRequest,
+    background: BackgroundTasks,
+    admin: User = Depends(require_staff),
+    db: Session = Depends(get_db),
+):
+    event = _get_event_or_404(db, slug)
+    try:
+        messages = reminder_service.prepare_manual_email(db, admin, event, **payload.model_dump())
+    except reminder_service.ReminderError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    # SMTP is ~1s a message — respond now and send after, rather than hold
+    # the admin's request open for a big list.
+    background.add_task(reminder_service.deliver, messages)
+    return EventEmailResponse(queued=len(messages))

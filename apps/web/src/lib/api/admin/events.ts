@@ -17,6 +17,12 @@ export type ReminderSettings = {
   updated_at: string;
 };
 
+export type EventEmailAudience = "confirmed" | "pending" | "waitlisted" | "everyone";
+
+export type EventEmailPayload =
+  | { audience: EventEmailAudience; kind: "reminder" }
+  | { audience: EventEmailAudience; kind: "custom"; subject: string; message: string };
+
 export const adminEventsApi = {
   eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),
   approveRegistration: (id: string) => apiFetch<void>(`/admin/registrations/${id}/approve`, { method: "POST" }),
@@ -35,6 +41,8 @@ export const adminEventsApi = {
   inviteEventManager: (slug: string, email: string) =>
     apiFetch<EventManagerRow>(`/admin/events/${slug}/managers/invite`, { method: "POST", body: JSON.stringify({ email }) }),
   revokeEventManager: (managerId: string) => apiFetch<void>(`/admin/events/managers/${managerId}/revoke`, { method: "POST" }),
+  emailRegistrants: (slug: string, payload: EventEmailPayload) =>
+    apiFetch<{ queued: number }>(`/admin/events/${slug}/email`, { method: "POST", body: JSON.stringify(payload) }),
   reminderSettings: () => apiFetch<ReminderSettings>("/admin/event-reminders/settings"),
   updateReminderSettings: (payload: Partial<Omit<ReminderSettings, "summary" | "updated_at">>) =>
     apiFetch<ReminderSettings>("/admin/event-reminders/settings", { method: "PUT", body: JSON.stringify(payload) }),

@@ -5,6 +5,9 @@ by the EventReminderSettings row admins edit at /admin/event-reminders.
 Driven by app/core/scheduler.py, which calls send_due_reminders() every few
 minutes; everything there is idempotent per registration (the *_sent_at
 stamps), so a missed or doubled tick never double-sends.
+
+Manual: staff can email an event's registrants on demand from its admin
+page — the standard reminder, or a message of their own.
 """
 
 import html
@@ -266,3 +269,108 @@ def send_due_reminders(db: Session, now: datetime | None = None) -> int:
     # missed reminder is far better than the same one landing every tick.
     db.commit()
     return deliver([m for m in due if m])
+
+
+# ── manual emails ────────────────────────────────────────────────────────
+
+AUDIENCES: dict[str, list[RegistrationStatus]] = {
+    "confirmed": [RegistrationStatus.approved, RegistrationStatus.attended],
+    "pending": [RegistrationStatus.pending],
+    "waitlisted": [RegistrationStatus.waitlisted],
+    "everyone": [
+        RegistrationStatus.approved,
+        RegistrationStatus.attended,
+        RegistrationStatus.pending,
+        RegistrationStatus.waitlisted,
+    ],
+}
+
+
+def _message_html(message: str) -> str:
+    """Plain text from the admin form → escaped HTML paragraphs."""
+    paragraphs = [p.strip() for p in message.replace("\r\n", "\n").split("\n\n") if p.strip()]
+    return "".join(
+        f'<p style="margin:14px 0 0;">{html.escape(p).replace(chr(10), "<br />")}</p>' for p in paragraphs
+    )
+
+
+def _custom_email(registration: EventRegistration, subject: str, message: str) -> OutgoingEmail | None:
+    to, first_name = _recipient(registration)
+    if not to:
+        return None
+    event = registration.event
+    cta_label, cta_url = _cta(registration)
+    body = render_email(
+        eyebrow="event update",
+        heading=html.escape(event.title),
+        body_html=f"Hi {html.escape(first_name)},{_message_html(message)}{_event_box(event)}",
+        cta_label=cta_label,
+        cta_url=cta_url,
+    )
+    return OutgoingEmail(to=to, subject=subject, html=body)
+
+
+def _manual_reminder_email(registration: EventRegistration, now: datetime) -> OutgoingEmail | None:
+    event = registration.event
+    title = html.escape(event.title)
+    days = (event.starts_at.astimezone(NAIROBI).date() - now.astimezone(NAIROBI).date()).days
+    when = "today" if days == 0 else "tomorrow" if days == 1 else f"in {days} days"
+    return _reminder_email(
+        registration,
+        eyebrow="reminder",
+        heading="Don't forget.",
+        lead=f"a reminder that <strong>{title}</strong> is {when}.",
+        subject=f"Reminder — {event.title}",
+    )
+
+
+def prepare_manual_email(
+    db: Session,
+    admin: User,
+    event: Event,
+    *,
+    audience: str,
+    kind: str,
+    subject: str | None = None,
+    message: str | None = None,
+    now: datetime | None = None,
+) -> list[OutgoingEmail]:
+    """Builds (but doesn't send) one email per registrant in `audience`, so
+    the caller can hand the slow SMTP part to a background task. Each
+    address gets at most one copy."""
+    now = now or datetime.now(UTC)
+    if audience not in AUDIENCES:
+        raise ReminderError("Pick who to email")
+    if kind == "reminder":
+        if event.starts_at <= now:
+            raise ReminderError("This event has already started — send a custom message instead")
+    elif kind == "custom":
+        subject, message = (subject or "").strip(), (message or "").strip()
+        if not subject or not message:
+            raise ReminderError("A custom email needs a subject and a message")
+    else:
+        raise ReminderError("Unknown email type")
+
+    registrations = (
+        db.query(EventRegistration)
+        .options(joinedload(EventRegistration.event), joinedload(EventRegistration.user))
+        .filter(EventRegistration.event_id == event.id, EventRegistration.status.in_(AUDIENCES[audience]))
+        .order_by(EventRegistration.created_at)
+        .all()
+    )
+    messages: dict[str, OutgoingEmail] = {}
+    for registration in registrations:
+        m = (
+            _manual_reminder_email(registration, now)
+            if kind == "reminder"
+            else _custom_email(registration, subject, message)  # type: ignore[arg-type]
+        )
+        if m and m.to.lower() not in messages:
+            messages[m.to.lower()] = m
+    if not messages:
+        raise ReminderError("Nobody in that group to email")
+
+    what = "a reminder" if kind == "reminder" else f"'{subject}'"
+    audit.log(db, admin, "event", f"Emailed {what} to {len(messages)} {audience} registrant(s) of '{event.title}'")
+    db.commit()
+    return list(messages.values())

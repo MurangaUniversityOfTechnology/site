@@ -58,7 +58,9 @@ export default function ReminderSettingsPage() {
       </Link>
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Reminder emails</h1>
       <p className="mt-2.5 max-w-140 text-[14px] leading-[1.55] text-muted">
-        Sent automatically to people registered for an upcoming event. These settings apply to every event.
+        Sent automatically to people registered for an upcoming event. These settings apply to every event. To email one
+        event&apos;s registrants right now, use <strong className="font-medium text-foreground">Email registrants</strong>{" "}
+        on that event&apos;s page.
       </p>
 
       {!form ? (

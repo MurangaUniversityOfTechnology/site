@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, time, timedelta
 
 import pytest
@@ -209,3 +210,72 @@ def test_settings_api_is_staff_only(client, make_user, login_as):
     login_as(make_user())
     assert client.get("/admin/event-reminders/settings").status_code == 403
     assert client.put("/admin/event-reminders/settings", json={"include_pending": True}).status_code == 403
+
+
+def _upcoming_event(db_session, make_user, statuses):
+    event = Event(
+        slug=f"email-me-{uuid.uuid4().hex[:8]}",
+        title="Git <Night>",
+        starts_at=datetime.now(NAIROBI) + timedelta(days=3),
+        venue="Lab 2",
+    )
+    db_session.add(event)
+    db_session.flush()
+    for status in statuses:
+        db_session.add(EventRegistration(event_id=event.id, user_id=make_user().id, status=status))
+    db_session.commit()
+    return event
+
+
+def test_manual_reminder_goes_to_the_chosen_audience(client, staff, db_session, make_user, mock_email):
+    event = _upcoming_event(
+        db_session, make_user, [RegistrationStatus.approved, RegistrationStatus.approved, RegistrationStatus.pending, RegistrationStatus.rejected]
+    )
+    res = client.post(f"/admin/events/{event.slug}/email", json={"audience": "confirmed", "kind": "reminder"})
+    assert res.status_code == 202, res.text
+    assert res.json() == {"queued": 2}
+    assert len(mock_email) == 2
+    assert mock_email[0]["subject"] == "Reminder — Git <Night>"
+    assert "in 3 days" in mock_email[0]["html"] and "Git &lt;Night&gt;" in mock_email[0]["html"]
+
+    mock_email.clear()
+    client.post(f"/admin/events/{event.slug}/email", json={"audience": "everyone", "kind": "reminder"})
+    assert len(mock_email) == 3  # never the rejected one
+
+
+def test_manual_custom_message_is_escaped(client, staff, db_session, make_user, mock_email):
+    event = _upcoming_event(db_session, make_user, [RegistrationStatus.approved])
+    res = client.post(
+        f"/admin/events/{event.slug}/email",
+        json={"audience": "everyone", "kind": "custom", "subject": "Venue change", "message": "Now in Lab 3.\n\n<b>Bring</b> laptops."},
+    )
+    assert res.status_code == 202
+    assert mock_email[0]["subject"] == "Venue change"
+    assert "&lt;b&gt;Bring&lt;/b&gt;" in mock_email[0]["html"]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"audience": "everyone", "kind": "custom", "subject": "", "message": "hi"},
+        {"audience": "everyone", "kind": "custom", "subject": "hi", "message": "  "},
+        {"audience": "waitlisted", "kind": "reminder"},  # nobody waitlisted
+    ],
+)
+def test_manual_email_rejects_bad_requests(client, staff, db_session, make_user, mock_email, payload):
+    event = _upcoming_event(db_session, make_user, [RegistrationStatus.approved])
+    assert client.post(f"/admin/events/{event.slug}/email", json=payload).status_code == 400
+    assert mock_email == []
+
+
+def test_manual_reminder_refused_for_past_events(client, staff, db_session, make_user, mock_email):
+    event = _upcoming_event(db_session, make_user, [RegistrationStatus.approved])
+    event.starts_at = datetime.now(NAIROBI) - timedelta(hours=2)
+    db_session.commit()
+    assert client.post(f"/admin/events/{event.slug}/email", json={"audience": "everyone", "kind": "reminder"}).status_code == 400
+    # a custom follow-up (e.g. slides, thank-you) is still fine
+    res = client.post(
+        f"/admin/events/{event.slug}/email",
+        json={"audience": "everyone", "kind": "custom", "subject": "Slides", "message": "Here they are."},
+    )
+    assert res.status_code == 202
