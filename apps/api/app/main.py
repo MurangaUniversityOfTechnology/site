@@ -14,6 +14,7 @@ from app.routers import (
     admin_courses,
     admin_events,
     admin_forms,
+    admin_games,
     admin_roadmaps,
     admin_roles,
     admin_uploads,
@@ -26,6 +27,7 @@ from app.routers import (
     event_manager,
     events,
     forms,
+    games,
     members,
     membership,
     notifications,
@@ -72,6 +74,7 @@ app.include_router(admin.router)
 app.include_router(admin_courses.router)
 app.include_router(admin_events.router)
 app.include_router(admin_forms.router)
+app.include_router(admin_games.router)
 app.include_router(admin_roadmaps.router)
 app.include_router(admin_roles.router)
 app.include_router(admin_uploads.router)
@@ -90,6 +93,7 @@ app.include_router(projects.router)
 app.include_router(donations.router)
 app.include_router(courses.router)
 app.include_router(forms.router)
+app.include_router(games.router)
 app.include_router(community.router)
 app.include_router(roadmaps.router)
 

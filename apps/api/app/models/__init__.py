@@ -25,6 +25,15 @@ from app.models.event_registration import EventRegistration, RegistrationStatus
 from app.models.form import Form
 from app.models.form_field import FormField
 from app.models.form_response import FormResponse
+from app.models.game import (
+    BingoDeck,
+    GameAnswer,
+    GameKind,
+    GamePlayer,
+    GameQuiz,
+    GameSession,
+    GameSessionStatus,
+)
 from app.models.membership import Membership, MembershipStatus
 from app.models.notification import Notification
 from app.models.org_signature import OrgSignature
@@ -43,6 +52,7 @@ from app.models.user_tag import UserTag
 __all__ = [
     "Arm",
     "AuditLog",
+    "BingoDeck",
     "CapstoneReviewStatus",
     "ChallengeSubmission",
     "Content",
@@ -72,6 +82,12 @@ __all__ = [
     "Form",
     "FormField",
     "FormResponse",
+    "GameAnswer",
+    "GameKind",
+    "GamePlayer",
+    "GameQuiz",
+    "GameSession",
+    "GameSessionStatus",
     "GithubOrgInviteStatus",
     "JoinRequestStatus",
     "Membership",
