@@ -1,17 +1,25 @@
-"""Reminder emails for upcoming events — one the evening before, one an hour
-before. Driven by app/core/scheduler.py, which calls send_due_reminders()
-every few minutes; everything here is idempotent per registration (the
-*_sent_at stamps), so a missed or doubled tick never double-sends."""
+"""Reminder emails for upcoming events.
+
+Automatic: one the evening before and one shortly before the event, timed
+by the EventReminderSettings row admins edit at /admin/event-reminders.
+Driven by app/core/scheduler.py, which calls send_due_reminders() every few
+minutes; everything there is idempotent per registration (the *_sent_at
+stamps), so a missed or doubled tick never double-sends.
+"""
 
 import html
 import logging
 from datetime import UTC, datetime, time, timedelta
+from typing import NamedTuple
 
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import get_settings
 from app.models.event import Event
 from app.models.event_registration import EventRegistration, RegistrationStatus
+from app.models.event_reminder_settings import EventReminderSettings
+from app.models.user import User
+from app.services import audit
 from app.services import email as email_service
 from app.services.email_templates import render_email
 from app.services.event import NAIROBI, _format_event_datetime
@@ -19,19 +27,90 @@ from app.services.event import NAIROBI, _format_event_datetime
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
-# "The evening before" — 6 PM Nairobi time on the day before the event.
-DAY_BEFORE_AT = time(18, 0)
-HOUR_BEFORE = timedelta(hours=1)
-# Past this point the hour-before email is close enough that a separate
+# Past this point the shortly-before email is close enough that a separate
 # evening-before one would just be noise (e.g. an 8 AM event, where 6 PM
 # the day before is still fine, vs. a registration approved at 11 PM for
 # a 1 AM event, where it isn't).
 DAY_BEFORE_CUTOFF = timedelta(hours=3)
+MIN_LEAD_MINUTES = 10
+MAX_LEAD_MINUTES = 12 * 60
 
 
-def day_before_send_time(starts_at: datetime) -> datetime:
+class ReminderError(Exception):
+    pass
+
+
+class OutgoingEmail(NamedTuple):
+    to: str
+    subject: str
+    html: str
+
+
+# ── settings ─────────────────────────────────────────────────────────────
+
+
+def get_reminder_settings(db: Session) -> EventReminderSettings:
+    row = db.query(EventReminderSettings).first()
+    if row is None:
+        row = EventReminderSettings(
+            day_before_enabled=True,
+            day_before_time=time(18, 0),
+            hour_before_enabled=True,
+            hour_before_minutes=60,
+            include_pending=False,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+    return row
+
+
+def update_reminder_settings(db: Session, admin: User, fields: dict) -> EventReminderSettings:
+    minutes = fields.get("hour_before_minutes")
+    if minutes is not None and not MIN_LEAD_MINUTES <= minutes <= MAX_LEAD_MINUTES:
+        raise ReminderError(f"The before-event reminder must be {MIN_LEAD_MINUTES} minutes to 12 hours ahead")
+    row = get_reminder_settings(db)
+    for key, value in fields.items():
+        setattr(row, key, value)
+    row.updated_by_id = admin.id
+    audit.log(db, admin, "event", f"Updated event reminder settings ({describe(row)})")
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def describe(s: EventReminderSettings) -> str:
+    parts = []
+    if s.day_before_enabled:
+        parts.append(f"evening before at {s.day_before_time.strftime('%-I:%M %p')}")
+    if s.hour_before_enabled:
+        parts.append(f"{_lead_phrase(s.hour_before_minutes)} before")
+    if not parts:
+        return "automatic reminders off"
+    return ", ".join(parts) + ("; pending included" if s.include_pending else "")
+
+
+def _reminded_statuses(s: EventReminderSettings) -> list[RegistrationStatus]:
+    statuses = [RegistrationStatus.approved]
+    if s.include_pending:
+        statuses.append(RegistrationStatus.pending)
+    return statuses
+
+
+# ── rendering ────────────────────────────────────────────────────────────
+
+
+def _lead_phrase(minutes: int) -> str:
+    """60 → "1 hour", 90 → "1.5 hours", 30 → "30 minutes"."""
+    if minutes < 60:
+        return f"{minutes} minutes"
+    hours = minutes / 60
+    return "1 hour" if hours == 1 else f"{hours:g} hours"
+
+
+def day_before_send_time(starts_at: datetime, at: time = time(18, 0)) -> datetime:
     local_day = starts_at.astimezone(NAIROBI).date() - timedelta(days=1)
-    return datetime.combine(local_day, DAY_BEFORE_AT, tzinfo=NAIROBI)
+    return datetime.combine(local_day, at, tzinfo=NAIROBI)
 
 
 def _recipient(registration: EventRegistration) -> tuple[str | None, str]:
@@ -43,52 +122,108 @@ def _recipient(registration: EventRegistration) -> tuple[str | None, str]:
     return registration.guest_email, ((registration.guest_name or "").split() or ["there"])[0]
 
 
-def _send(registration: EventRegistration, *, hour_before: bool) -> None:
+def _event_box(event: Event) -> str:
+    return (
+        '<div style="margin-top:14px;padding:14px 16px;background:#faf8f3;border:1px solid #ddd6c4;'
+        'border-radius:8px;font-size:14px;line-height:1.7;">'
+        f"<strong>{_format_event_datetime(event.starts_at)}</strong><br />{html.escape(event.venue)}"
+        "</div>"
+    )
+
+
+def _cta(registration: EventRegistration) -> tuple[str, str]:
+    """Confirmed spots get their ticket; everyone else the event page."""
+    event = registration.event
+    if registration.status in (RegistrationStatus.approved, RegistrationStatus.attended):
+        return "View your ticket", f"{settings.web_origin}/events/{event.slug}/pass"
+    return "View the event", f"{settings.web_origin}/events/{event.slug}"
+
+
+def _pending_note(registration: EventRegistration) -> str:
+    if registration.status != RegistrationStatus.pending:
+        return ""
+    return (
+        '<p style="margin-top:14px;">Heads-up: your registration is <strong>still pending</strong> '
+        "approval — you&rsquo;ll get your ticket once it&rsquo;s confirmed.</p>"
+    )
+
+
+def _reminder_email(registration: EventRegistration, *, eyebrow: str, heading: str, lead: str, subject: str) -> OutgoingEmail | None:
     to, first_name = _recipient(registration)
     if not to:
-        return
-    first_name = html.escape(first_name)
+        return None
     event = registration.event
-    when = _format_event_datetime(event.starts_at)
-    if hour_before:
-        eyebrow, heading = "starting soon", "See you in an hour."
-        lead = f"Hi {first_name}, <strong>{event.title}</strong> starts in about an hour."
-        subject = f"Starting in 1 hour — {event.title}"
-    else:
-        eyebrow, heading = "tomorrow", "See you tomorrow."
-        lead = f"Hi {first_name}, just a heads-up that <strong>{event.title}</strong> is tomorrow."
-        subject = f"Tomorrow — {event.title}"
+    ticket_note = (
+        '<p style="margin-top:14px;">Have your ticket ready at the door — it&rsquo;s the QR code in your '
+        "confirmation email, or on the ticket page below.</p>"
+        if registration.status == RegistrationStatus.approved
+        else _pending_note(registration)
+    )
+    cta_label, cta_url = _cta(registration)
     body = render_email(
         eyebrow=eyebrow,
         heading=heading,
-        body_html=(
-            lead
-            + '<div style="margin-top:14px;padding:14px 16px;background:#faf8f3;border:1px solid #ddd6c4;'
-            'border-radius:8px;font-size:14px;line-height:1.7;">'
-            f"<strong>{when}</strong><br />{event.venue}"
-            "</div>"
-            '<p style="margin-top:14px;">Have your ticket ready at the door — it&rsquo;s the QR code in your '
-            "confirmation email, or on the ticket page below.</p>"
-        ),
-        cta_label="View your ticket",
-        cta_url=f"{settings.web_origin}/events/{event.slug}/pass",
+        body_html=f"Hi {html.escape(first_name)}, {lead}" + _event_box(event) + ticket_note,
+        cta_label=cta_label,
+        cta_url=cta_url,
     )
-    try:
-        email_service.send_email(to=to, subject=subject, html=body)
-    except Exception:
-        logger.warning("Failed to send event reminder for registration %s", registration.id, exc_info=True)
+    return OutgoingEmail(to=to, subject=subject, html=body)
+
+
+def _day_before_email(registration: EventRegistration) -> OutgoingEmail | None:
+    title = html.escape(registration.event.title)
+    return _reminder_email(
+        registration,
+        eyebrow="tomorrow",
+        heading="See you tomorrow.",
+        lead=f"just a heads-up that <strong>{title}</strong> is tomorrow.",
+        subject=f"Tomorrow — {registration.event.title}",
+    )
+
+
+def _shortly_before_email(registration: EventRegistration, minutes: int) -> OutgoingEmail | None:
+    title = html.escape(registration.event.title)
+    phrase = _lead_phrase(minutes)
+    return _reminder_email(
+        registration,
+        eyebrow="starting soon",
+        heading=f"See you in {'an hour' if minutes == 60 else phrase}.",
+        lead=f"<strong>{title}</strong> starts in about {'an hour' if minutes == 60 else phrase}.",
+        subject=f"Starting in {phrase} — {registration.event.title}",
+    )
+
+
+def deliver(messages: list[OutgoingEmail]) -> int:
+    """Sends each message, logging (not raising) individual failures so one
+    bad address doesn't stop the rest. Returns how many went out."""
+    sent = 0
+    for m in messages:
+        try:
+            email_service.send_email(to=m.to, subject=m.subject, html=m.html)
+            sent += 1
+        except Exception:
+            logger.warning("Failed to send event email to %s (%r)", m.to, m.subject, exc_info=True)
+    return sent
+
+
+# ── automatic reminders ──────────────────────────────────────────────────
 
 
 def send_due_reminders(db: Session, now: datetime | None = None) -> int:
-    """Sends every reminder that's due as of `now` and returns how many went
-    out. Only approved registrations (a confirmed spot) get reminders."""
+    """Sends every automatic reminder that's due as of `now` and returns how
+    many went out."""
     now = now or datetime.now(UTC)
+    config = get_reminder_settings(db)
+    if not (config.day_before_enabled or config.hour_before_enabled):
+        return 0
+    lead = timedelta(minutes=config.hour_before_minutes)
+
     candidates = (
         db.query(EventRegistration)
         .join(Event, EventRegistration.event_id == Event.id)
         .options(joinedload(EventRegistration.event), joinedload(EventRegistration.user))
         .filter(
-            EventRegistration.status == RegistrationStatus.approved,
+            EventRegistration.status.in_(_reminded_statuses(config)),
             Event.archived_at.is_(None),
             Event.starts_at > now,
             # Nothing is ever due earlier than the evening before, which is
@@ -103,31 +238,31 @@ def send_due_reminders(db: Session, now: datetime | None = None) -> int:
         .all()
     )
 
-    due: list[tuple[EventRegistration, bool]] = []
+    due: list[OutgoingEmail | None] = []
     for registration in candidates:
         starts_at = registration.event.starts_at
         created_at = registration.created_at or now
 
-        if registration.reminder_hour_before_sent_at is None and now >= starts_at - HOUR_BEFORE:
+        # Checked against the configured lead even when that reminder is
+        # switched off, so the evening-before one still closes on time.
+        if registration.reminder_hour_before_sent_at is None and now >= starts_at - lead:
             registration.reminder_hour_before_sent_at = now
             # Whatever happened with the evening-before one, its window is
             # gone now — close it so it can never go out after this.
             registration.reminder_day_before_sent_at = registration.reminder_day_before_sent_at or now
-            # Registered inside the last hour: they've just seen the event
+            # Registered inside the window: they've just seen the event
             # page / confirmation, a reminder would only be noise.
-            if created_at < starts_at - HOUR_BEFORE:
-                due.append((registration, True))
+            if config.hour_before_enabled and created_at < starts_at - lead:
+                due.append(_shortly_before_email(registration, config.hour_before_minutes))
             continue
 
-        day_before_at = day_before_send_time(starts_at)
+        day_before_at = day_before_send_time(starts_at, config.day_before_time)
         if registration.reminder_day_before_sent_at is None and now >= day_before_at:
             registration.reminder_day_before_sent_at = now
-            if created_at < day_before_at and starts_at - now > DAY_BEFORE_CUTOFF:
-                due.append((registration, False))
+            if config.day_before_enabled and created_at < day_before_at and starts_at - now > DAY_BEFORE_CUTOFF:
+                due.append(_day_before_email(registration))
 
     # Stamp first, send after: SMTP is slow and can fail halfway, and a
     # missed reminder is far better than the same one landing every tick.
     db.commit()
-    for registration, hour_before in due:
-        _send(registration, hour_before=hour_before)
-    return len(due)
+    return deliver([m for m in due if m])

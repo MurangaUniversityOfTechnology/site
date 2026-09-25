@@ -74,12 +74,20 @@ export default function AdminEventsPage() {
           <div className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-faint">events</div>
           <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Manage events</h1>
         </div>
-        <Link
-          href="/admin/events/new"
-          className="rounded-md bg-accent px-4.5 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#1a2744] hover:opacity-90"
-        >
-          New event
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/event-reminders"
+            className="rounded-md border border-border-strong px-4.5 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted hover:text-foreground"
+          >
+            Reminder settings
+          </Link>
+          <Link
+            href="/admin/events/new"
+            className="rounded-md bg-accent px-4.5 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-[#1a2744] hover:opacity-90"
+          >
+            New event
+          </Link>
+        </div>
       </div>
 
       <div className="mt-5 flex gap-2 font-mono text-[10.5px] uppercase tracking-[0.1em]">

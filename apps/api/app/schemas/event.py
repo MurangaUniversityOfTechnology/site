@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
 from pydantic import BaseModel, EmailStr
 
@@ -108,3 +108,24 @@ class EventUpdateRequest(BaseModel):
     speaker_meta: str | None = None
     requirements: list[str] | None = None
     who_should_attend: str | None = None
+
+
+# ── reminder emails ──────────────────────────────────────────────────
+
+
+class ReminderSettingsRow(BaseModel):
+    day_before_enabled: bool
+    day_before_time: time
+    hour_before_enabled: bool
+    hour_before_minutes: int
+    include_pending: bool
+    summary: str
+    updated_at: datetime
+
+
+class ReminderSettingsUpdate(BaseModel):
+    day_before_enabled: bool | None = None
+    day_before_time: time | None = None
+    hour_before_enabled: bool | None = None
+    hour_before_minutes: int | None = None
+    include_pending: bool | None = None

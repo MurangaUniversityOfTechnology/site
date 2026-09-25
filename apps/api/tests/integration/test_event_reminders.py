@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 
 import pytest
 
 from app.models.event import Event
 from app.models.event_registration import EventRegistration, RegistrationStatus
+from app.models.membership import MembershipStatus
 from app.services import event_reminders
 from app.services.event import NAIROBI
 
@@ -120,3 +121,91 @@ def test_day_before_send_time_uses_nairobi_calendar_day():
     # follow the club's local calendar, not UTC's.
     starts_at = datetime(2031, 4, 2, 1, 0, tzinfo=NAIROBI)
     assert event_reminders.day_before_send_time(starts_at) == datetime(2031, 4, 1, 18, 0, tzinfo=NAIROBI)
+
+
+# ── configurable settings ────────────────────────────────────────────────
+
+
+def _configure(db_session, **fields):
+    row = event_reminders.get_reminder_settings(db_session)
+    for key, value in fields.items():
+        setattr(row, key, value)
+    db_session.commit()
+
+
+def test_evening_send_time_is_configurable(db_session, mock_email, make_registration):
+    _configure(db_session, day_before_time=time(20, 30))
+    registration = make_registration()
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(minutes=5))  # 6:05 PM
+    assert _for(mock_email, registration) == []
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(hours=2, minutes=35))  # 8:35 PM
+    assert len(_for(mock_email, registration)) == 1
+
+
+def test_shortly_before_lead_is_configurable(db_session, mock_email, make_registration):
+    _configure(db_session, day_before_enabled=False, hour_before_minutes=30)
+    registration = make_registration()
+    event_reminders.send_due_reminders(db_session, now=EVENT_START - timedelta(minutes=50))
+    assert _for(mock_email, registration) == []
+    event_reminders.send_due_reminders(db_session, now=EVENT_START - timedelta(minutes=28))
+    sent = _for(mock_email, registration)
+    assert len(sent) == 1
+    assert sent[0]["subject"].startswith("Starting in 30 minutes")
+
+
+def test_disabled_reminders_never_send(db_session, mock_email, make_registration):
+    _configure(db_session, day_before_enabled=False, hour_before_enabled=False)
+    registration = make_registration()
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(minutes=5))
+    event_reminders.send_due_reminders(db_session, now=EVENT_START - timedelta(minutes=58))
+    assert _for(mock_email, registration) == []
+
+
+def test_disabled_evening_reminder_doesnt_go_out_late_when_reenabled(db_session, mock_email, make_registration):
+    _configure(db_session, day_before_enabled=False)
+    registration = make_registration()
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(minutes=5))
+    _configure(db_session, day_before_enabled=True)
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(minutes=10))
+    assert _for(mock_email, registration) == []
+
+
+def test_include_pending_reminds_pending_with_a_note(db_session, mock_email, make_registration):
+    _configure(db_session, include_pending=True)
+    registration = make_registration(status=RegistrationStatus.pending)
+    event_reminders.send_due_reminders(db_session, now=EVENING_BEFORE + timedelta(minutes=5))
+    sent = _for(mock_email, registration)
+    assert len(sent) == 1
+    assert "still pending" in sent[0]["html"]
+    assert "/pass" not in sent[0]["html"]  # no ticket yet — links the event page instead
+
+
+# ── admin API ────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def staff(make_user, login_as):
+    user = make_user(is_staff=True, membership_status=MembershipStatus.active)
+    login_as(user)
+    return user
+
+
+def test_settings_api_round_trip(client, staff):
+    res = client.get("/admin/event-reminders/settings")
+    assert res.status_code == 200
+    assert res.json()["day_before_time"] == "18:00:00"
+    res = client.put("/admin/event-reminders/settings", json={"day_before_time": "19:15", "hour_before_minutes": 90})
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["day_before_time"] == "19:15:00" and body["hour_before_minutes"] == 90
+    assert "7:15 PM" in body["summary"] and "1.5 hours" in body["summary"]
+
+
+def test_settings_api_rejects_silly_lead_times(client, staff):
+    assert client.put("/admin/event-reminders/settings", json={"hour_before_minutes": 2}).status_code == 400
+
+
+def test_settings_api_is_staff_only(client, make_user, login_as):
+    login_as(make_user())
+    assert client.get("/admin/event-reminders/settings").status_code == 403
+    assert client.put("/admin/event-reminders/settings", json={"include_pending": True}).status_code == 403

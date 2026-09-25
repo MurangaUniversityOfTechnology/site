@@ -22,6 +22,7 @@ from app.models.event import Event, EventAudience
 from app.models.event_manager import EventManager, EventManagerStatus
 from app.models.event_payment import EventPayment
 from app.models.event_registration import EventRegistration, RegistrationStatus
+from app.models.event_reminder_settings import EventReminderSettings
 from app.models.form import Form
 from app.models.form_field import FormField
 from app.models.form_response import FormResponse
@@ -78,6 +79,7 @@ __all__ = [
     "EventManagerStatus",
     "EventPayment",
     "EventRegistration",
+    "EventReminderSettings",
     "ExperienceLevel",
     "Form",
     "FormField",

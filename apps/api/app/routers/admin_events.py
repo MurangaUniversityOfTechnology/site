@@ -12,10 +12,13 @@ from app.schemas.event import (
     AdminRegistrationRow,
     EventUpdateRequest,
     EventWriteRequest,
+    ReminderSettingsRow,
+    ReminderSettingsUpdate,
 )
 from app.schemas.event_manager import EventManagerRow, InviteManagerRequest
 from app.services import event as event_service
 from app.services import event_manager as event_manager_service
+from app.services import event_reminders as reminder_service
 
 router = APIRouter(prefix="/admin", tags=["admin-events"], dependencies=[Depends(require_staff)])
 
@@ -204,3 +207,34 @@ def revoke_event_manager(manager_id: str, admin: User = Depends(require_staff), 
     except event_manager_service.EventManagerError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     event_manager_service.revoke_manager(db, admin, manager)
+
+
+# ── reminder emails ──────────────────────────────────────────────────
+
+
+def _reminder_settings_row(row) -> ReminderSettingsRow:
+    return ReminderSettingsRow(
+        day_before_enabled=row.day_before_enabled,
+        day_before_time=row.day_before_time,
+        hour_before_enabled=row.hour_before_enabled,
+        hour_before_minutes=row.hour_before_minutes,
+        include_pending=row.include_pending,
+        summary=reminder_service.describe(row),
+        updated_at=row.updated_at,
+    )
+
+
+@router.get("/event-reminders/settings", response_model=ReminderSettingsRow)
+def get_reminder_settings(db: Session = Depends(get_db)):
+    return _reminder_settings_row(reminder_service.get_reminder_settings(db))
+
+
+@router.put("/event-reminders/settings", response_model=ReminderSettingsRow)
+def update_reminder_settings(
+    payload: ReminderSettingsUpdate, admin: User = Depends(require_staff), db: Session = Depends(get_db)
+):
+    try:
+        row = reminder_service.update_reminder_settings(db, admin, payload.model_dump(exclude_unset=True, exclude_none=True))
+    except reminder_service.ReminderError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+    return _reminder_settings_row(row)
