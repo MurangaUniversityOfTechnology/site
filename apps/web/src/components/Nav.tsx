@@ -8,6 +8,7 @@ import { useUnreadCount } from "@/lib/useUnreadCount";
 import { BellIcon } from "@/components/icons";
 import { AccountMenu } from "@/components/AccountMenu";
 import { signInHref } from "@/lib/nextParam";
+import { isFullScreenGame } from "@/lib/gameRoutes";
 
 // Paths that are themselves part of the auth/onboarding flow — don't send
 // someone back into onboarding or the sign-in page itself as a "next".
@@ -17,6 +18,7 @@ const links = [
   { href: "/projects", label: "Projects" },
   { href: "/events", label: "Events" },
   { href: "/challenges", label: "Challenges" },
+  { href: "/games", label: "Games" },
   { href: "/courses", label: "Courses" },
   { href: "/roadmaps", label: "Roadmaps" },
   { href: "/learn", label: "Learn" },
@@ -31,7 +33,7 @@ export function Nav() {
   const pathname = usePathname();
   const unread = useUnreadCount(me, pathname);
 
-  if (pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/admin") || isFullScreenGame(pathname)) return null;
 
   const signInTarget =
     !pathname || AUTH_FLOW_PREFIXES.some((p) => pathname.startsWith(p)) ? "/sign-in" : signInHref(pathname);

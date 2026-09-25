@@ -7,6 +7,7 @@ import { useMe } from "@/lib/useMe";
 import { useUnreadCount } from "@/lib/useUnreadCount";
 import { useSignOut } from "@/lib/useSignOut";
 import { signInHref } from "@/lib/nextParam";
+import { isFullScreenGame } from "@/lib/gameRoutes";
 
 // Paths that are themselves part of the auth/onboarding flow — don't send
 // someone back into onboarding or the sign-in page itself as a "next".
@@ -15,6 +16,7 @@ const AUTH_FLOW_PREFIXES = ["/sign-in", "/sign-up", "/forgot-password", "/reset-
 const MORE_LINKS = [
   { href: "/projects", label: "Projects" },
   { href: "/challenges", label: "Challenges" },
+  { href: "/games", label: "Games" },
   { href: "/courses", label: "Courses" },
   { href: "/roadmaps", label: "Roadmaps" },
   { href: "/learn", label: "Learn" },
@@ -22,7 +24,7 @@ const MORE_LINKS = [
   { href: "/donate", label: "Donate" },
 ];
 
-const MORE_PREFIXES = ["/projects", "/challenges", "/courses", "/roadmaps", "/learn", "/members", "/donate"];
+const MORE_PREFIXES = ["/projects", "/challenges", "/games", "/courses", "/roadmaps", "/learn", "/members", "/donate"];
 
 const PROFILE_PREFIXES = [
   "/dashboard",
@@ -52,7 +54,7 @@ export function MobileNav() {
     setSheet(null);
   }
 
-  if (pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/admin") || isFullScreenGame(pathname)) return null;
 
   const onHome = pathname === "/";
   const onEvents = pathname?.startsWith("/events") ?? false;

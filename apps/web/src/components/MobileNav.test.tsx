@@ -34,6 +34,10 @@ describe("MobileNav", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  test("renders nothing on full-screen game routes", () => {
+    expect(setup("/games/play/123456").container).toBeEmptyDOMElement();
+  });
+
   test("Home tab is active on /", () => {
     setup("/");
     expect(screen.getByRole("link", { name: /home/i }).className).toContain("text-navy");

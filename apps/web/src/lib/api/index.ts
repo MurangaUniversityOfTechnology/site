@@ -2,8 +2,8 @@
 // keep working unchanged. See ./core, ./shared, and the per-domain files
 // (auth, profile, membership, donations, events, courses, roadmaps,
 // challenges, notifications, members, content, projects, forms, community,
-// admin/*) for the actual implementations — this file adds no logic of its
-// own.
+// games, admin/*) for the actual implementations — this file adds no logic
+// of its own.
 export { API_URL, ApiError } from "./core";
 export * from "./shared";
 export * from "./auth";
@@ -20,4 +20,5 @@ export * from "./content";
 export * from "./projects";
 export * from "./forms";
 export * from "./community";
+export * from "./games";
 export * from "./admin";

@@ -13,6 +13,7 @@ import { adminArmsApi } from "./arms";
 import { adminRoadmapsApi } from "./roadmaps";
 import { adminFormsApi } from "./forms";
 import { adminUploadsApi } from "./uploads";
+import { adminGamesApi } from "./games";
 
 export * from "./overview";
 export * from "./users";
@@ -25,6 +26,7 @@ export * from "./arms";
 export * from "./roadmaps";
 export * from "./forms";
 export * from "./uploads";
+export * from "./games";
 
 export const adminApi = {
   ...adminOverviewApi,
@@ -38,4 +40,5 @@ export const adminApi = {
   ...adminRoadmapsApi,
   ...adminFormsApi,
   ...adminUploadsApi,
+  ...adminGamesApi,
 };
