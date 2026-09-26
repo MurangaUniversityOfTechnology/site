@@ -17,11 +17,18 @@ export type ReminderSettings = {
   updated_at: string;
 };
 
-export type EventEmailAudience = "confirmed" | "pending" | "waitlisted" | "everyone";
+export type EventEmailAudience = "confirmed" | "attended" | "pending" | "waitlisted" | "everyone";
 
 export type EventEmailPayload =
   | { audience: EventEmailAudience; kind: "reminder" }
-  | { audience: EventEmailAudience; kind: "custom"; subject: string; message: string };
+  | {
+      audience: EventEmailAudience;
+      kind: "custom";
+      subject: string;
+      message: string;
+      link_url?: string;
+      link_label?: string;
+    };
 
 export const adminEventsApi = {
   eventRegistrations: (slug: string) => apiFetch<AdminRegistrationRow[]>(`/admin/events/${slug}/registrations`),

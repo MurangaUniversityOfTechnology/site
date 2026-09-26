@@ -279,3 +279,33 @@ def test_manual_reminder_refused_for_past_events(client, staff, db_session, make
         json={"audience": "everyone", "kind": "custom", "subject": "Slides", "message": "Here they are."},
     )
     assert res.status_code == 202
+
+
+def test_custom_message_can_link_somewhere_else_and_target_attendees(client, staff, db_session, make_user, mock_email):
+    event = _upcoming_event(db_session, make_user, [RegistrationStatus.attended, RegistrationStatus.approved])
+    event.starts_at = datetime.now(NAIROBI) - timedelta(hours=5)
+    db_session.commit()
+    res = client.post(
+        f"/admin/events/{event.slug}/email",
+        json={
+            "audience": "attended",
+            "kind": "custom",
+            "subject": "How was it?",
+            "message": "Two minutes of feedback, please.",
+            "link_url": "https://mutlabs.tech/forms/feedback?a=1&b=2",
+            "link_label": "Give <feedback>",
+        },
+    )
+    assert res.status_code == 202, res.text
+    assert res.json() == {"queued": 1}  # only the checked-in registrant
+    body = mock_email[0]["html"]
+    assert 'href="https://mutlabs.tech/forms/feedback?a=1&amp;b=2"' in body
+    assert "Give &lt;feedback&gt;" in body
+    assert "View your ticket" not in body
+
+
+def test_custom_message_link_must_be_a_url(client, staff, db_session, make_user, mock_email):
+    event = _upcoming_event(db_session, make_user, [RegistrationStatus.approved])
+    payload = {"audience": "everyone", "kind": "custom", "subject": "Hi", "message": "Hi", "link_url": "javascript:alert(1)"}
+    assert client.post(f"/admin/events/{event.slug}/email", json=payload).status_code == 422
+    assert mock_email == []

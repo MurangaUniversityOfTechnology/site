@@ -275,6 +275,7 @@ def send_due_reminders(db: Session, now: datetime | None = None) -> int:
 
 AUDIENCES: dict[str, list[RegistrationStatus]] = {
     "confirmed": [RegistrationStatus.approved, RegistrationStatus.attended],
+    "attended": [RegistrationStatus.attended],
     "pending": [RegistrationStatus.pending],
     "waitlisted": [RegistrationStatus.waitlisted],
     "everyone": [
@@ -294,12 +295,14 @@ def _message_html(message: str) -> str:
     )
 
 
-def _custom_email(registration: EventRegistration, subject: str, message: str) -> OutgoingEmail | None:
+def _custom_email(
+    registration: EventRegistration, subject: str, message: str, link: tuple[str, str] | None = None
+) -> OutgoingEmail | None:
     to, first_name = _recipient(registration)
     if not to:
         return None
     event = registration.event
-    cta_label, cta_url = _cta(registration)
+    cta_label, cta_url = link or _cta(registration)
     body = render_email(
         eyebrow="event update",
         heading=html.escape(event.title),
@@ -333,6 +336,8 @@ def prepare_manual_email(
     kind: str,
     subject: str | None = None,
     message: str | None = None,
+    link_url: str | None = None,
+    link_label: str | None = None,
     now: datetime | None = None,
 ) -> list[OutgoingEmail]:
     """Builds (but doesn't send) one email per registrant in `audience`, so
@@ -351,6 +356,13 @@ def prepare_manual_email(
     else:
         raise ReminderError("Unknown email type")
 
+    # Escaped here: render_email drops cta_label/cta_url in as-is.
+    link = (
+        (html.escape((link_label or "").strip() or "Open link"), html.escape(str(link_url)))
+        if link_url and kind == "custom"
+        else None
+    )
+
     registrations = (
         db.query(EventRegistration)
         .options(joinedload(EventRegistration.event), joinedload(EventRegistration.user))
@@ -363,7 +375,7 @@ def prepare_manual_email(
         m = (
             _manual_reminder_email(registration, now)
             if kind == "reminder"
-            else _custom_email(registration, subject, message)  # type: ignore[arg-type]
+            else _custom_email(registration, subject, message, link)  # type: ignore[arg-type]
         )
         if m and m.to.lower() not in messages:
             messages[m.to.lower()] = m

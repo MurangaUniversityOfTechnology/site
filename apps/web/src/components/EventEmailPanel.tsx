@@ -7,6 +7,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 
 const AUDIENCES: { value: EventEmailAudience; label: string; statuses: string[] }[] = [
   { value: "confirmed", label: "Confirmed", statuses: ["approved", "attended"] },
+  { value: "attended", label: "Attended", statuses: ["attended"] },
   { value: "pending", label: "Pending", statuses: ["pending"] },
   { value: "waitlisted", label: "Waitlisted", statuses: ["waitlisted"] },
   { value: "everyone", label: "Everyone", statuses: ["approved", "attended", "pending", "waitlisted"] },
@@ -21,6 +22,8 @@ export function EventEmailPanel({ slug, rows, eventStarted }: { slug: string; ro
   const [kind, setKind] = useState<"reminder" | "custom">(eventStarted ? "custom" : "reminder");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -49,11 +52,19 @@ export function EventEmailPanel({ slug, rows, eventStarted }: { slug: string; ro
       const res =
         kind === "reminder"
           ? await adminApi.emailRegistrants(slug, { audience, kind })
-          : await adminApi.emailRegistrants(slug, { audience, kind, subject: subject.trim(), message: message.trim() });
+          : await adminApi.emailRegistrants(slug, {
+              audience,
+              kind,
+              subject: subject.trim(),
+              message: message.trim(),
+              ...(linkUrl.trim() && { link_url: linkUrl.trim(), link_label: linkLabel.trim() || undefined }),
+            });
       setResult({ ok: true, text: `Sending to ${res.queued} ${res.queued === 1 ? "person" : "people"} ✓` });
       if (kind === "custom") {
         setSubject("");
         setMessage("");
+        setLinkUrl("");
+        setLinkLabel("");
       }
     } catch (err) {
       setResult({ ok: false, text: err instanceof ApiError ? err.message : "Couldn't send — try again." });
@@ -122,6 +133,28 @@ export function EventEmailPanel({ slug, rows, eventStarted }: { slug: string; ro
             aria-label="Message"
             className="resize-y rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm leading-[1.55] outline-none focus:border-accent"
           />
+          <div className="grid gap-2.5 sm:grid-cols-[1fr_200px]">
+            <input
+              type="url"
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="Button link (optional), e.g. a feedback form"
+              aria-label="Button link"
+              className="min-w-0 rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+            />
+            <input
+              value={linkLabel}
+              onChange={(e) => setLinkLabel(e.target.value)}
+              maxLength={40}
+              disabled={!linkUrl.trim()}
+              placeholder="Button text"
+              aria-label="Button text"
+              className="min-w-0 rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent disabled:opacity-50"
+            />
+          </div>
+          <p className="text-[12px] leading-[1.45] text-muted">
+            {linkUrl.trim() ? "The button opens this link instead of their ticket." : "Without a link, the button opens their ticket or the event page."}
+          </p>
         </div>
       )}
 

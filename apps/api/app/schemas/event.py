@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, HttpUrl
 
 from app.models.event import EventAudience
 
@@ -133,10 +133,14 @@ class ReminderSettingsUpdate(BaseModel):
 
 
 class EventEmailRequest(BaseModel):
-    audience: Literal["confirmed", "pending", "waitlisted", "everyone"]
+    audience: Literal["confirmed", "attended", "pending", "waitlisted", "everyone"]
     kind: Literal["reminder", "custom"]
     subject: str | None = Field(default=None, max_length=150)
     message: str | None = Field(default=None, max_length=5000)
+    # Custom emails only: swaps the usual ticket/event button for this one,
+    # e.g. a feedback form or slides after the event.
+    link_url: HttpUrl | None = None
+    link_label: str | None = Field(default=None, max_length=40)
 
 
 class EventEmailResponse(BaseModel):
