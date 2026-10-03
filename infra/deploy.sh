@@ -33,7 +33,8 @@ fi
 # routes through. Kept identical to that repo's scripts/ensure-network.sh so
 # whichever deploys first on a fresh server creates it.
 docker network inspect edge >/dev/null 2>&1 ||
-  docker network create --driver bridge --subnet 172.30.0.0/24 --gateway 172.30.0.1 edge
+  docker network create --driver bridge --subnet 172.30.0.0/24 --gateway 172.30.0.1 \
+    --ip-range 172.30.0.128/25 edge
 
 COMPOSE="docker compose -p mut-tech -f infra/docker-compose.yml -f infra/docker-compose.prod.yml"
 
