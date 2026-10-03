@@ -1,21 +1,31 @@
-# Production-only override: puts Caddy in front of web/api as the sole
-# public entry point (auto-provisions and renews Let's Encrypt certs).
+# Production-only override: attaches web/api to the VPS's shared `edge`
+# network so the shared Caddy (github.com/Byte-Barn/vps-infra) can reach
+# them. That repo owns :80/:443, TLS and the domain routing for this app
+# (caddy/sites/mut-tech.caddy) — nothing here publishes a port.
 # Used by infra/deploy.sh; not used for local dev.
 services:
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - api
-      - web
+  api:
+    networks:
+      default: {}
+      edge:
+        # Aliases rather than service names: `edge` is shared with other
+        # apps, where a bare `web`/`api` would collide.
+        aliases: [mut-api]
+    environment:
+      # Only the shared Caddy (pinned at this address in vps-infra) may set
+      # X-Forwarded-For. Other apps' containers on `edge` can reach this one
+      # directly, so trusting `*` would let them spoof the client IP that
+      # app/core/deps.py's require_mpesa_ip checks.
+      FORWARDED_ALLOW_IPS: 172.30.0.2
 
-volumes:
-  caddy_data:
-  caddy_config:
+  web:
+    networks:
+      default: {}
+      edge:
+        aliases: [mut-web]
+
+networks:
+  edge:
+    # Created by deploy.sh (same subnet as vps-infra's
+    # scripts/ensure-network.sh), not by Compose.
+    external: true

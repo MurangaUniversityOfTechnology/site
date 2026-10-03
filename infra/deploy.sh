@@ -22,6 +22,12 @@ if [ -z "$NEXT_PUBLIC_API_URL" ]; then
   exit 1
 fi
 
+# The shared `edge` network the VPS's Caddy (github.com/Byte-Barn/vps-infra)
+# routes through. Kept identical to that repo's scripts/ensure-network.sh so
+# whichever deploys first on a fresh server creates it.
+docker network inspect edge >/dev/null 2>&1 ||
+  docker network create --driver bridge --subnet 172.30.0.0/24 --gateway 172.30.0.1 edge
+
 COMPOSE="docker compose -p mut-tech -f infra/docker-compose.yml -f infra/docker-compose.prod.yml"
 
 # --no-cache: Compose's build cache doesn't reliably invalidate on a changed

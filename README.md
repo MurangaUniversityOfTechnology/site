@@ -7,7 +7,8 @@ The MUT Tech Community website — see `design/flow.md` and the interactive canv
 
 - `apps/web` — Next.js 16 (App Router, TypeScript, Tailwind)
 - `apps/api` — FastAPI + PostgreSQL (SQLAlchemy, Alembic)
-- `infra/` — Docker Compose for local dev and VPS deploy
+- `infra/` — Docker Compose for local dev and VPS deploy (the VPS's reverse proxy lives in
+  [Byte-Barn/vps-infra](https://github.com/Byte-Barn/vps-infra))
 
 `infra/docker-compose.yml` (the file used in production) runs only `web` and `api` — it does
 not run Postgres. `infra/docker-compose.local.yml` is a local-dev-only override that adds a
@@ -93,22 +94,27 @@ as defense in depth rather than loosening them to `*`/`0.0.0.0/0`.
 
 ## Production domains & TLS
 
-`infra/docker-compose.prod.yml` (applied on top of the base file in `infra/deploy.sh`) adds
-a `caddy` service as the sole public entry point — `web` and `api` no longer publish ports
-directly. Caddy reverse-proxies by domain and auto-provisions/renews Let's Encrypt certs,
-per `infra/Caddyfile`:
+The VPS is shared with other apps, so this repo doesn't run its own reverse proxy. The
+server's single Caddy lives in [Byte-Barn/vps-infra](https://github.com/Byte-Barn/vps-infra).
+It owns ports 80/443, provisions and renews Let's Encrypt certs, and routes this app's
+domains per its `caddy/sites/mut-tech.caddy`:
 
-- `mutlabs.tech` → `web:3000`
+- `mutlabs.tech` → `mut-web:3000`
 - `www.mutlabs.tech` → redirects to `mutlabs.tech`
-- `api.mutlabs.tech` → `api:8000`
+- `api.mutlabs.tech` → `mut-api:8000`
+
+`infra/docker-compose.prod.yml` (applied on top of the base file in `infra/deploy.sh`)
+attaches `web` and `api` to the shared `edge` Docker network under those aliases. Neither
+publishes a host port. It also sets `FORWARDED_ALLOW_IPS` so the API only trusts
+`X-Forwarded-For` from that Caddy (see `apps/api/Dockerfile`). Changing a domain means a PR
+to vps-infra, not this repo. Its docs also cover the shared Postgres conventions (this app's
+pinned `172.28.0.0/24` network is registered there).
 
 Requires, before the first deploy:
+- vps-infra set up on the server (see its README).
 - DNS `A` records for `mutlabs.tech`, `www.mutlabs.tech`, and `api.mutlabs.tech` all pointing
   at the server's public IP (Caddy's ACME challenge needs these resolving publicly to issue
   certs — it'll retry/log errors otherwise, not crash the deploy).
-- `ufw allow 80/tcp` and `ufw allow 443/tcp`; the earlier `3000`/`8000` rules can be removed
-  (`sudo ufw delete allow 3000/tcp`, `sudo ufw delete allow 8000/tcp`) since nothing publishes
-  those ports to the host in production anymore.
 - `apps/api/.env`: `WEB_ORIGIN=https://mutlabs.tech`, `API_BASE_URL=https://api.mutlabs.tech`
   (CORS only allows one canonical web origin, hence the `www` redirect above rather than
   allowing both).

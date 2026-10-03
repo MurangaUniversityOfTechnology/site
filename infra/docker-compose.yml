@@ -14,7 +14,8 @@ services:
       - "host.docker.internal:172.28.0.1"
     # No published host port here — reached over the internal Docker network
     # by name (api:8000). docker-compose.local.yml publishes it for direct
-    # local access; docker-compose.prod.yml puts Caddy in front instead.
+    # local access; docker-compose.prod.yml attaches it to the VPS's shared
+    # Caddy instead (github.com/Byte-Barn/vps-infra).
 
   web:
     build:

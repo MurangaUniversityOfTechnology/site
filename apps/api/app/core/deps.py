@@ -60,11 +60,13 @@ def require_mpesa_ip(request: Request) -> None:
     checkout_request_id could POST a fabricated ResultCode: 0 and grant
     themselves a membership/enrollment/registration for free.
 
-    `request.client.host` is trustworthy here because uvicorn is started
-    with --proxy-headers --forwarded-allow-ips='*' (see the Dockerfile) and
-    the API is never reachable except through Caddy in production — Caddy
-    always appends the real observed peer to X-Forwarded-For regardless of
-    what a client sends, so this can't be spoofed via that header.
+    `request.client.host` is trustworthy here because uvicorn only honours
+    X-Forwarded-For from the shared Caddy's pinned address
+    (FORWARDED_ALLOW_IPS in infra/docker-compose.prod.yml, see the
+    Dockerfile), and Caddy always appends the real observed peer regardless
+    of what a client sends. Anything else reaching the API directly over the
+    VPS's shared network is judged by its own address, so it can't spoof one
+    via that header.
 
     Skipped in development, matching mpesakit's own documented caveat that
     local/ngrok testing never originates from a real Safaricom IP:

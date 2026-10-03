@@ -1,7 +1,7 @@
 # Local-dev-only override: adds a containerized Postgres, points the api
 # service at it, and publishes web/api ports for direct localhost access.
-# Not used in production — the VPS has its own Postgres and puts Caddy in
-# front instead (docker-compose.prod.yml). See README for usage.
+# Not used in production — the VPS has its own Postgres and a shared Caddy
+# in front instead (docker-compose.prod.yml). See README for usage.
 services:
   db:
     image: postgres:16-alpine
