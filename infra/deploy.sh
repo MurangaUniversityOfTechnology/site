@@ -6,10 +6,17 @@
 # (see README's "Production database" section). infra/.env is only used
 # by the local-dev override (docker-compose.local.yml), not here.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+SELF=$(realpath "$0")
+cd "$(dirname "$SELF")/.."
 
-git fetch origin main
-git reset --hard origin/main
+# Bash reads a script as it runs, so after the reset below it would carry on
+# executing this file's *old* contents — a change to the deploy steps would
+# only take effect one deploy late. Re-exec the freshly checked-out copy.
+if [ "${DEPLOY_UPDATED:-}" != 1 ]; then
+  git fetch origin main
+  git reset --hard origin/main
+  DEPLOY_UPDATED=1 exec bash "$SELF" "$@"
+fi
 
 # Next.js bakes NEXT_PUBLIC_* vars in at build time, and the web Dockerfile
 # can't read apps/web/.env.local directly (excluded from the build context
