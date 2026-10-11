@@ -80,6 +80,16 @@ def apply_stk_callback(db: Session, payload: dict) -> None:
             registration.status = RegistrationStatus.cancelled
 
     db.commit()
+    if payment.status == PaymentStatus.completed:
+        _confirm_registration(db, registration)
+
+
+def _confirm_registration(db: Session, registration: EventRegistration) -> None:
+    from app.services import (
+        event as event_service,  # local import avoids a circular import
+    )
+
+    event_service.confirm_paid(db, registration)
 
 
 # Mirrors membership.PENDING_RECONCILE_AFTER_SECONDS — see that module for
@@ -108,3 +118,5 @@ def sync_pending_event_payment(db: Session, payment: EventPayment) -> None:
             registration.status = RegistrationStatus.cancelled
 
     db.commit()
+    if payment.status == PaymentStatus.completed:
+        _confirm_registration(db, registration)

@@ -147,7 +147,7 @@ def _pending_note(registration: EventRegistration) -> str:
         return ""
     return (
         '<p style="margin-top:14px;">Heads-up: your registration is <strong>still pending</strong> '
-        "approval — you&rsquo;ll get your ticket once it&rsquo;s confirmed.</p>"
+        "— you&rsquo;ll get your ticket as soon as your event fee payment clears.</p>"
     )
 
 

@@ -7,7 +7,7 @@ import { useMe } from "@/lib/useMe";
 import { signInHref } from "@/lib/nextParam";
 
 const STATUS_COPY: Record<string, { label: string; color: string }> = {
-  pending: { label: "Registered · pending approval", color: "text-warn" },
+  pending: { label: "Registered · awaiting payment", color: "text-warn" },
   approved: { label: "You're registered ✓", color: "text-navy" },
   waitlisted: { label: "You're on the waitlist", color: "text-warn" },
   attended: { label: "Attended ✓", color: "text-navy" },

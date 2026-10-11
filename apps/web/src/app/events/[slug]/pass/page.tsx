@@ -50,7 +50,7 @@ export default function EventPassPage() {
       <main className="grid min-h-[calc(100vh-64px)] place-items-center px-5 py-14 text-center">
         <div>
           <h1 className="text-2xl tracking-[-0.02em]">No pass yet</h1>
-          <p className="mt-3 text-muted">Your registration needs to be approved before your pass is ready.</p>
+          <p className="mt-3 text-muted">Your registration isn&apos;t confirmed yet — your pass appears once it is.</p>
         </div>
       </main>
     );

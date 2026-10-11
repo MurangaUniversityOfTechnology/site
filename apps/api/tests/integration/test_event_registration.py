@@ -39,6 +39,14 @@ def make_event(db_session):
     return _make
 
 
+def _hold_pending(db_session, reg):
+    """Free-event registrations confirm instantly now; staff transitions
+    that start from `pending` (a paid seat awaiting its fee) set it up here."""
+    reg.status = RegistrationStatus.pending
+    db_session.commit()
+    return reg
+
+
 # ── registration gating ─────────────────────────────────────────────────
 
 
@@ -46,7 +54,7 @@ def test_register_open_event_as_member(db_session, make_user, make_event):
     event = make_event()
     user = make_user()
     reg = event_service.register(db_session, event.slug, user)
-    assert reg.status == RegistrationStatus.pending
+    assert reg.status == RegistrationStatus.approved  # no manual approval step
 
 
 def test_register_members_only_event_requires_active_membership(db_session, make_user, make_event):
@@ -60,14 +68,14 @@ def test_register_members_only_event_succeeds_when_active(db_session, make_user,
     event = make_event(audience=EventAudience.members_only)
     user = make_user(membership_status=MembershipStatus.active)
     reg = event_service.register(db_session, event.slug, user)
-    assert reg.status == RegistrationStatus.pending
+    assert reg.status == RegistrationStatus.approved
 
 
 def test_register_members_only_event_succeeds_for_admin_without_active_membership(db_session, make_user, make_event):
     event = make_event(audience=EventAudience.members_only)
     admin = make_user(is_admin=True, membership_status=MembershipStatus.none)
     reg = event_service.register(db_session, event.slug, admin)
-    assert reg.status == RegistrationStatus.pending
+    assert reg.status == RegistrationStatus.approved
 
 
 def test_register_members_only_event_requires_verified_email(db_session, make_user, make_event):
@@ -86,7 +94,7 @@ def test_guest_registration_requires_name_and_email(db_session, make_event):
 def test_guest_registration_succeeds_with_name_and_email(db_session, make_event):
     event = make_event()
     reg = event_service.register(db_session, event.slug, None, guest_name="Guest Person", guest_email="guest@example.com")
-    assert reg.status == RegistrationStatus.pending
+    assert reg.status == RegistrationStatus.approved
     assert reg.user_id is None
     assert reg.guest_name == "Guest Person"
 
@@ -116,7 +124,7 @@ def test_capacity_auto_waitlists_once_full(db_session, make_user, make_event):
     reg1 = event_service.register(db_session, event.slug, first)
     reg2 = event_service.register(db_session, event.slug, second)
 
-    assert reg1.status == RegistrationStatus.pending
+    assert reg1.status == RegistrationStatus.approved
     assert reg2.status == RegistrationStatus.waitlisted
 
 
@@ -130,7 +138,7 @@ def test_rejected_registration_does_not_count_against_capacity(db_session, make_
     event_service.reject(db_session, admin, reg1)
 
     reg2 = event_service.register(db_session, event.slug, second)
-    assert reg2.status == RegistrationStatus.pending  # slot freed up, not waitlisted
+    assert reg2.status == RegistrationStatus.approved  # slot freed up, not waitlisted
 
 
 # ── admin transitions ───────────────────────────────────────────────────
@@ -140,7 +148,7 @@ def test_approve_from_pending(db_session, make_user, make_event):
     event = make_event()
     admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
-    reg = event_service.register(db_session, event.slug, user)
+    reg = _hold_pending(db_session, event_service.register(db_session, event.slug, user))
 
     event_service.approve(db_session, admin, reg)
     assert reg.status == RegistrationStatus.approved
@@ -177,7 +185,7 @@ def test_waitlist_from_pending_is_allowed(db_session, make_user, make_event):
     event = make_event()
     admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
-    reg = event_service.register(db_session, event.slug, user)
+    reg = _hold_pending(db_session, event_service.register(db_session, event.slug, user))
 
     event_service.waitlist(db_session, admin, reg)
     assert reg.status == RegistrationStatus.waitlisted
@@ -188,10 +196,21 @@ def test_waitlist_from_approved_is_not_allowed(db_session, make_user, make_event
     admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
     reg = event_service.register(db_session, event.slug, user)
-    event_service.approve(db_session, admin, reg)
+    assert reg.status == RegistrationStatus.approved
 
     with pytest.raises(event_service.EventError):
         event_service.waitlist(db_session, admin, reg)
+
+
+def test_reject_from_approved_frees_the_seat(db_session, make_user, make_event):
+    event = make_event(capacity=1)
+    admin = make_user(is_admin=True, email="admin@example.com")
+    reg = event_service.register(db_session, event.slug, make_user(email="first@example.com"))
+    assert reg.status == RegistrationStatus.approved
+
+    event_service.reject(db_session, admin, reg)
+    assert reg.status == RegistrationStatus.rejected
+    assert event_service.seats_left(db_session, event) == 1
 
 
 def test_mark_attended_from_approved(db_session, make_user, make_event):
@@ -199,7 +218,6 @@ def test_mark_attended_from_approved(db_session, make_user, make_event):
     admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
     reg = event_service.register(db_session, event.slug, user)
-    event_service.approve(db_session, admin, reg)
 
     event_service.mark_attended(db_session, admin, reg)
     assert reg.status == RegistrationStatus.attended
@@ -218,13 +236,10 @@ def test_mark_attended_requires_approved_first(db_session, make_user, make_event
         event_service.mark_attended(db_session, admin, reg)
 
 
-def test_approve_emails_a_ticket_to_the_member(db_session, make_user, make_event, mock_email):
+def test_registering_emails_a_ticket_to_the_member(db_session, make_user, make_event, mock_email):
     event = make_event()
-    admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
     reg = event_service.register(db_session, event.slug, user)
-
-    event_service.approve(db_session, admin, reg)
 
     assert len(mock_email) == 1
     assert mock_email[0]["to"] == "attendee@example.com"
@@ -238,12 +253,9 @@ def test_approve_emails_a_ticket_to_the_member(db_session, make_user, make_event
     assert images[0].data[:8] == b"\x89PNG\r\n\x1a\n"  # PNG file signature
 
 
-def test_approve_emails_a_ticket_to_a_guest(db_session, make_user, make_event, mock_email):
+def test_registering_emails_a_ticket_to_a_guest(db_session, make_event, mock_email):
     event = make_event()
-    admin = make_user(is_admin=True, email="admin@example.com")
-    reg = event_service.register(db_session, event.slug, None, guest_name="Guest", guest_email="guest@example.com")
-
-    event_service.approve(db_session, admin, reg)
+    event_service.register(db_session, event.slug, None, guest_name="Guest", guest_email="guest@example.com")
 
     assert len(mock_email) == 1
     assert mock_email[0]["to"] == "guest@example.com"
@@ -254,32 +266,32 @@ def test_other_transitions_do_not_send_a_ticket(db_session, make_user, make_even
     event = make_event()
     admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
-    reg = event_service.register(db_session, event.slug, user)
+    reg = _hold_pending(db_session, event_service.register(db_session, event.slug, user))
+    mock_email.clear()
 
     getattr(event_service, transition)(db_session, admin, reg)
 
     assert mock_email == []
 
 
-def test_ticket_email_failure_does_not_block_approval(db_session, make_user, make_event, monkeypatch):
+def test_ticket_email_failure_does_not_block_registration(db_session, make_user, make_event, monkeypatch):
     def _boom(**kwargs):
         raise RuntimeError("SMTP is down")
 
     monkeypatch.setattr("app.services.email.send_email", _boom)
 
     event = make_event()
-    admin = make_user(is_admin=True, email="admin@example.com")
     user = make_user(email="attendee@example.com")
-    reg = event_service.register(db_session, event.slug, user)
-
-    event_service.approve(db_session, admin, reg)  # must not raise
+    reg = event_service.register(db_session, event.slug, user)  # must not raise
     assert reg.status == RegistrationStatus.approved
 
 
 def test_guest_registration_transitions_use_guest_email_for_audit(db_session, make_user, make_event):
     event = make_event()
     admin = make_user(is_admin=True, email="admin@example.com")
-    reg = event_service.register(db_session, event.slug, None, guest_name="Guest", guest_email="guest@example.com")
+    reg = _hold_pending(
+        db_session, event_service.register(db_session, event.slug, None, guest_name="Guest", guest_email="guest@example.com")
+    )
 
     event_service.approve(db_session, admin, reg)
     assert reg.status == RegistrationStatus.approved
@@ -300,14 +312,14 @@ def test_register_endpoint(client, db_session, make_user, make_event, login_as):
 
     res = client.post(f"/events/{event.slug}/register", json={})
     assert res.status_code == 201
-    assert res.json()["status"] == "pending"
+    assert res.json()["status"] == "approved"
 
 
 def test_admin_approve_registration_endpoint(client, db_session, make_user, make_event, login_as):
     event = make_event()
     admin = make_user(is_admin=True)
     user = make_user(email="attendee@example.com")
-    reg = event_service.register(db_session, event.slug, user)
+    reg = _hold_pending(db_session, event_service.register(db_session, event.slug, user))
     login_as(admin)
 
     res = client.post(f"/admin/registrations/{reg.id}/approve")
@@ -397,8 +409,8 @@ def test_approve_succeeds_once_fee_is_paid(db_session, make_user, make_event, mo
     assert reg.status == RegistrationStatus.approved
 
 
-def test_event_stk_callback_marks_payment_completed_without_auto_approving(
-    client, db_session, make_user, make_event, mock_mpesa_success
+def test_event_stk_callback_marks_payment_completed_and_confirms_the_seat(
+    client, db_session, make_user, make_event, mock_mpesa_success, mock_email
 ):
     event = make_event(fee_kes=200)
     user = make_user()
@@ -412,7 +424,21 @@ def test_event_stk_callback_marks_payment_completed_without_auto_approving(
     payment = db_session.query(EventPayment).filter(EventPayment.registration_id == reg.id).first()
     assert payment.status == PaymentStatus.completed
     assert payment.mpesa_receipt == "ABC123"
-    assert reg.status == RegistrationStatus.pending  # admin still approves manually
+    assert reg.status == RegistrationStatus.approved  # no manual approval once paid
+    assert len(mock_email) == 1 and "cid:ticket-qr" in mock_email[0]["html"]
+
+
+def test_paid_waitlisted_registration_stays_on_the_waitlist(db_session, make_user, make_event, mock_mpesa_success):
+    event = make_event(fee_kes=200, capacity=0)
+    user = make_user()
+    reg = event_service.register(db_session, event.slug, user, phone="0712345678")
+    assert reg.status == RegistrationStatus.waitlisted
+
+    payload = _stk_callback("ws_CO_1", 0, items=[{"Name": "Amount", "Value": 200.0}, {"Name": "MpesaReceiptNumber", "Value": "ABC123"}])
+    event_payment.apply_stk_callback(db_session, payload)
+
+    db_session.refresh(reg)
+    assert reg.status == RegistrationStatus.waitlisted  # paying doesn't jump the capacity
 
 
 def test_event_stk_callback_failure_cancels_registration_and_frees_seat(db_session, make_user, make_event):

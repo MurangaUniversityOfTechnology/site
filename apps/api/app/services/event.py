@@ -166,8 +166,16 @@ def register(
     if event.fee_kes > 0 and not phone:
         raise EventError(f"A phone number is required to pay the KSh {event.fee_kes} event fee")
 
+    # No manual approval: anyone who gets a seat is confirmed on the spot —
+    # or, for a paid event, the moment the fee clears (confirm_paid()). Only
+    # once capacity is reached do registrations fall onto the waitlist.
     slots = _open_slots(db, event)
-    status = RegistrationStatus.waitlisted if slots is not None and slots <= 0 else RegistrationStatus.pending
+    if slots is not None and slots <= 0:
+        status = RegistrationStatus.waitlisted
+    elif event.fee_kes > 0:
+        status = RegistrationStatus.pending
+    else:
+        status = RegistrationStatus.approved
 
     registration = EventRegistration(
         event_id=event.id,
@@ -189,9 +197,26 @@ def register(
             db.rollback()
             raise EventError(str(exc)) from exc
 
+    if registration.status == RegistrationStatus.approved and registration.user:
+        notification.notify(db, registration.user, "event", NOTIFY_TITLE[RegistrationStatus.approved], event.title)
     db.commit()
     db.refresh(registration)
+    if registration.status == RegistrationStatus.approved:
+        _send_ticket_email(registration)
     return registration
+
+
+def confirm_paid(db: Session, registration: EventRegistration) -> None:
+    """Called once a registration's event fee clears — a seat held as
+    `pending` while the M-Pesa prompt was out becomes a confirmed ticket.
+    Waitlisted registrations stay put: paying doesn't jump the capacity."""
+    if registration.status != RegistrationStatus.pending:
+        return
+    registration.status = RegistrationStatus.approved
+    if registration.user:
+        notification.notify(db, registration.user, "event", NOTIFY_TITLE[RegistrationStatus.approved], registration.event.title)
+    db.commit()
+    _send_ticket_email(registration)
 
 
 def my_registration(db: Session, slug: str, user: User) -> EventRegistration | None:
@@ -391,7 +416,15 @@ def approve(db: Session, admin: User, registration: EventRegistration) -> None:
 
 
 def reject(db: Session, admin: User, registration: EventRegistration) -> None:
-    _transition(db, admin, registration, RegistrationStatus.rejected, {RegistrationStatus.pending, RegistrationStatus.waitlisted})
+    # Approved is allowed too: registrations confirm themselves now, so this is
+    # how staff pull a confirmed one (a spam guest, a duplicate) and free the seat.
+    _transition(
+        db,
+        admin,
+        registration,
+        RegistrationStatus.rejected,
+        {RegistrationStatus.pending, RegistrationStatus.waitlisted, RegistrationStatus.approved},
+    )
 
 
 def waitlist(db: Session, admin: User, registration: EventRegistration) -> None:

@@ -215,13 +215,22 @@ export default function ManageEventPage() {
                   </>
                 )}
                 {r.status === "approved" && (
-                  <button
-                    onClick={() => act(r.id, "attend")}
-                    disabled={busy === r.id}
-                    className="rounded-md border border-accent-dim px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-navy disabled:opacity-50"
-                  >
-                    mark attended
-                  </button>
+                  <>
+                    <button
+                      onClick={() => act(r.id, "attend")}
+                      disabled={busy === r.id}
+                      className="rounded-md border border-accent-dim px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-navy disabled:opacity-50"
+                    >
+                      mark attended
+                    </button>
+                    <button
+                      onClick={() => act(r.id, "reject")}
+                      disabled={busy === r.id}
+                      className="rounded-md border border-border-strong px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted disabled:opacity-50"
+                    >
+                      reject
+                    </button>
+                  </>
                 )}
               </div>
             </div>
