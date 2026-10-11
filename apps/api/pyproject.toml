@@ -29,7 +29,7 @@ dev = [
     "pytest-cov>=6.0",
     "testcontainers[postgres]>=4.9",
     "respx>=0.22",
-    "ruff>=0.7",
+    "ruff==0.16.6",
 ]
 
 [build-system]
