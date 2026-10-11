@@ -104,7 +104,7 @@ def test_create_field_rejects_choices_for_non_choice_type(client, login_as, make
     assert res.status_code == 422
 
 
-def test_create_field_requires_2_to_5_choices_for_choice_type(client, login_as, make_form):
+def test_create_field_requires_at_least_2_choices_for_choice_type(client, login_as, make_form):
     form, admin = make_form()
     login_as(admin)
     res = client.post(
@@ -112,6 +112,18 @@ def test_create_field_requires_2_to_5_choices_for_choice_type(client, login_as, 
         json={"type": "single_choice", "prompt": "Pick one", "choices": [{"id": "a", "text": "only one"}]},
     )
     assert res.status_code == 422
+
+
+@pytest.mark.parametrize("count,expected", [(10, 201), (11, 422)])
+def test_create_field_allows_up_to_10_choices(client, login_as, make_form, count, expected):
+    form, admin = make_form()
+    login_as(admin)
+    choices = [{"id": chr(97 + i), "text": f"Option {i + 1}"} for i in range(count)]
+    res = client.post(
+        f"/admin/forms/{form.slug}/fields",
+        json={"type": "multi_choice", "prompt": "Pick any", "choices": choices},
+    )
+    assert res.status_code == expected
 
 
 def test_reorder_field(db_session, make_form):

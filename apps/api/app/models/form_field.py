@@ -37,11 +37,14 @@ FIELD_TYPES = (
     "email",
 )
 CHOICE_FIELD_TYPES = {"single_choice", "multi_choice", "dropdown"}
+# Higher than a quiz question's 5 — a form often lists every option there
+# is (e.g. all 8 club arms), not a handful of distractors.
+MAX_FORM_CHOICES = 10
 
 
 class FormField(Base):
     """
-    choices is a JSON blob ([{"id","text"}, 2-5 entries], only populated for
+    choices is a JSON blob ([{"id","text"}, 2-MAX_FORM_CHOICES entries], only populated for
     CHOICE_FIELD_TYPES) — same precedent as CourseQuizQuestion.choices: small,
     bounded, always read/written as a unit, never queried individually.
     """

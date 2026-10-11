@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from app.models.form_field import CHOICE_FIELD_TYPES
+from app.models.form_field import CHOICE_FIELD_TYPES, MAX_FORM_CHOICES
 
 # Keep this in lockstep with FIELD_TYPES in models/form_field.py.
 FieldType = Literal[
@@ -94,8 +94,8 @@ class FieldWriteRequest(BaseModel):
     @model_validator(mode="after")
     def _choices_match_type(self) -> "FieldWriteRequest":
         if self.type in CHOICE_FIELD_TYPES:
-            if not (2 <= len(self.choices) <= 5):
-                raise ValueError("Choice fields need 2-5 choices")
+            if not (2 <= len(self.choices) <= MAX_FORM_CHOICES):
+                raise ValueError(f"Choice fields need 2-{MAX_FORM_CHOICES} choices")
         elif self.choices:
             raise ValueError(f"'{self.type}' fields don't take choices")
         return self
@@ -110,8 +110,8 @@ class FieldUpdateRequest(BaseModel):
 
     @model_validator(mode="after")
     def _choices_match_type(self) -> "FieldUpdateRequest":
-        if self.type in CHOICE_FIELD_TYPES and self.choices is not None and not (2 <= len(self.choices) <= 5):
-            raise ValueError("Choice fields need 2-5 choices")
+        if self.type in CHOICE_FIELD_TYPES and self.choices is not None and not (2 <= len(self.choices) <= MAX_FORM_CHOICES):
+            raise ValueError(f"Choice fields need 2-{MAX_FORM_CHOICES} choices")
         return self
 
 

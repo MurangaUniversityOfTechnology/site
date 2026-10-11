@@ -5,6 +5,8 @@ import { ApiError, adminApi, type AdminFieldRow, type ChoiceItem, type FieldType
 import { useConfirm } from "@/components/ConfirmDialog";
 
 const CHOICE_TYPES: FieldType[] = ["single_choice", "multi_choice", "dropdown"];
+// Must match MAX_FORM_CHOICES in apps/api/app/models/form_field.py.
+const MAX_CHOICES = 10;
 
 const TYPE_LABELS: Record<FieldType, string> = {
   short_text: "Short text",
@@ -124,7 +126,7 @@ function FieldEditor({
   }
 
   function addChoice() {
-    if (choices.length >= 5) return;
+    if (choices.length >= MAX_CHOICES) return;
     const nextId = String.fromCharCode(97 + choices.length); // a, b, c, …
     setChoices((cs) => [...cs, { id: nextId, text: "" }]);
     setSaved(false);
@@ -237,7 +239,7 @@ function FieldEditor({
               )}
             </div>
           ))}
-          {choices.length < 5 && (
+          {choices.length < MAX_CHOICES && (
             <button
               type="button"
               onClick={addChoice}
