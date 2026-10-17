@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import qrcode
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -238,6 +239,22 @@ def list_for_event(db: Session, slug: str) -> list[EventRegistration]:
         .order_by(EventRegistration.created_at.asc())
         .all()
     )
+
+
+def event_revenue(db: Session, event: Event) -> dict:
+    """Fee money for one event: `collected` is STK pushes Safaricom confirmed,
+    `pending` is pushes still in flight (a number to chase, not to count on)."""
+    rows = (
+        db.query(EventPayment.status, func.coalesce(func.sum(EventPayment.amount), 0), func.count())
+        .join(EventRegistration, EventRegistration.id == EventPayment.registration_id)
+        .filter(EventRegistration.event_id == event.id)
+        .group_by(EventPayment.status)
+        .all()
+    )
+    by_status = {status: (float(total), count) for status, total, count in rows}
+    collected, paid_count = by_status.get(PaymentStatus.completed, (0.0, 0))
+    pending = sum(by_status.get(s, (0.0, 0))[0] for s in (PaymentStatus.initiated, PaymentStatus.pending))
+    return {"collected_kes": collected, "pending_kes": pending, "paid_count": paid_count}
 
 
 def registration_admin_row(db: Session, r: EventRegistration) -> dict:

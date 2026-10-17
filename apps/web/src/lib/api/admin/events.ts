@@ -4,6 +4,9 @@ import type { AdminRegistrationRow, EventDetail, EventManagerRow, EventWritePayl
 export type AdminEventRow = EventDetail & {
   id: string;
   registration_count: number;
+  collected_kes: number;
+  pending_kes: number;
+  paid_count: number;
   archived_at: string | null;
 };
 

@@ -48,6 +48,7 @@ def _admin_event_row(db: Session, event: Event) -> AdminEventRow:
         requirements=event.requirements,
         who_should_attend=event.who_should_attend,
         registration_count=count,
+        **event_service.event_revenue(db, event),
         archived_at=event.archived_at,
     )
 

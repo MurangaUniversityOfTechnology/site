@@ -124,6 +124,14 @@ export default function AdminEventsPage() {
                 </div>
               </div>
               <span className="font-mono text-[10.5px] text-muted">{e.registration_count} registered</span>
+              {e.fee_kes > 0 && (
+                <span
+                  className="font-mono text-[10.5px] text-muted"
+                  title={`${e.paid_count} paid${e.pending_kes > 0 ? ` · KSh ${e.pending_kes.toLocaleString()} still pending` : ""}`}
+                >
+                  KSh {e.collected_kes.toLocaleString()} collected
+                </span>
+              )}
               <div className="flex flex-wrap gap-2">
                 {view === "active" && (
                   <>

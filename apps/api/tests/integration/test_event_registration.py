@@ -510,3 +510,28 @@ def test_registration_status_endpoint_is_public(client, db_session, make_event, 
     res = client.get(f"/events/registrations/{reg.id}")
     assert res.status_code == 200
     assert res.json()["payment"]["status"] == "pending"
+
+
+def test_event_revenue_sums_only_that_events_confirmed_payments(db_session, make_event):
+    from app.models.event_registration import EventRegistration
+
+    event, other = make_event(fee_kes=500), make_event(fee_kes=500)
+
+    def pay(ev, amount, status):
+        reg = EventRegistration(event_id=ev.id, guest_name="G", guest_email="g@x.co", status=RegistrationStatus.approved)
+        db_session.add(reg)
+        db_session.flush()
+        db_session.add(EventPayment(registration_id=reg.id, amount=amount, phone="254700000000", status=status))
+
+    pay(event, 500, PaymentStatus.completed)
+    pay(event, 500, PaymentStatus.completed)
+    pay(event, 500, PaymentStatus.pending)
+    pay(event, 500, PaymentStatus.failed)
+    pay(other, 500, PaymentStatus.completed)
+    db_session.commit()
+
+    assert event_service.event_revenue(db_session, event) == {
+        "collected_kes": 1000.0,
+        "pending_kes": 500.0,
+        "paid_count": 2,
+    }

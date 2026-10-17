@@ -74,6 +74,9 @@ class EventDetail(EventSummary):
 class AdminEventRow(EventDetail):
     id: uuid.UUID
     registration_count: int
+    collected_kes: float
+    pending_kes: float
+    paid_count: int
     archived_at: datetime | None
 
 
