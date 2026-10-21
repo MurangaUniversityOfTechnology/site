@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { announcementApi, type Announcement } from "@/lib/api";
 import { isFullScreenGame } from "@/lib/gameRoutes";
+import { isOnAnnouncementTarget, sitePath } from "@/lib/announcementPage";
 
 // Ids the visitor has minimised to the pill. The key predates the pill, when
 // dismissing hid the card for good.
@@ -62,6 +63,7 @@ export function AnnouncementCard() {
   }, [announcement]);
 
   if (!announcement || !visible) return null;
+  if (isOnAnnouncementTarget(pathname, announcement.cta_url, window.location.origin)) return null;
   if (isFullScreenGame(pathname) || QUIET_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
 
   function dismiss() {
@@ -97,7 +99,8 @@ export function AnnouncementView({
   onDismiss?: () => void;
   className?: string;
 }) {
-  const external = !!announcement.cta_url && !announcement.cta_url.startsWith("/");
+  const internalPath = sitePath(announcement.cta_url, typeof window === "undefined" ? null : window.location.origin);
+  const external = !!announcement.cta_url && internalPath === null;
   const buttonClass =
     "rounded-md bg-accent px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.1em] text-navy hover:opacity-90";
 
@@ -134,7 +137,7 @@ export function AnnouncementView({
                 {announcement.cta_label} ↗
               </a>
             ) : (
-              <Link href={announcement.cta_url} onClick={onDismiss} className={buttonClass}>
+              <Link href={internalPath ?? announcement.cta_url} onClick={onDismiss} className={buttonClass}>
                 {announcement.cta_label} →
               </Link>
             )}
