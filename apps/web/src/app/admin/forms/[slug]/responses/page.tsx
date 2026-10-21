@@ -21,6 +21,24 @@ function formatAnswer(field: AdminFieldRow | undefined, answer: FormAnswerItem |
   return String(answer.value);
 }
 
+const IMAGE_URL = /\.(png|jpe?g|webp|gif)$/i;
+
+function AnswerView({ field, answer }: { field: AdminFieldRow; answer: FormAnswerItem | undefined }) {
+  if (field.type === "file_upload" && typeof answer?.value === "string" && answer.value) {
+    const url = answer.value;
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 text-accent-dim hover:underline">
+        {IMAGE_URL.test(url) && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="h-20 w-20 rounded-md border border-border object-cover" />
+        )}
+        <span>Open file ↗</span>
+      </a>
+    );
+  }
+  return <>{formatAnswer(field, answer)}</>;
+}
+
 export default function FormResponsesPage() {
   const { slug } = useParams<{ slug: string }>();
   const [fields, setFields] = useState<AdminFieldRow[] | null>(null);
@@ -42,7 +60,6 @@ export default function FormResponsesPage() {
 
   if (!fields || !page) return null;
 
-  const fieldById = new Map(fields.map((f) => [f.id, f]));
   const choiceFields = fields.filter((f) => CHOICE_TYPES.has(f.type));
 
   return (
@@ -114,7 +131,7 @@ export default function FormResponsesPage() {
                     <div key={f.id}>
                       <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-faint">{f.prompt}</div>
                       <div className="mt-1 text-[13.5px]">
-                        {formatAnswer(fieldById.get(f.id), r.answers.find((a) => a.field_id === f.id))}
+                        <AnswerView field={f} answer={r.answers.find((a) => a.field_id === f.id)} />
                       </div>
                     </div>
                   ))}

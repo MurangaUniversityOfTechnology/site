@@ -14,6 +14,7 @@ export function FillFormClient({ slug }: { slug: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -40,7 +41,7 @@ export function FillFormClient({ slug }: { slug: string }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form) return;
+    if (!form || uploading) return;
     for (const field of form.fields) {
       const value = answers[field.id];
       const empty = value === undefined || value === "" || value === null || (Array.isArray(value) && value.length === 0);
@@ -99,17 +100,24 @@ export function FillFormClient({ slug }: { slug: string }) {
       ) : (
         <form onSubmit={submit} className="mt-7 flex flex-col gap-6">
           {form.fields.map((field) => (
-            <FieldInput key={field.id} field={field} value={answers[field.id]} onChange={(v) => setAnswer(field.id, v)} />
+            <FieldInput
+              key={field.id}
+              slug={form.slug}
+              field={field}
+              value={answers[field.id]}
+              onChange={(v) => setAnswer(field.id, v)}
+              onUploading={setUploading}
+            />
           ))}
 
           {error && <p className="text-sm text-danger">{error}</p>}
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || uploading}
             className="w-fit rounded-lg bg-accent px-6.5 py-3.5 text-[15px] font-semibold text-[#1a2744] hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Submitting…" : "Submit"}
+            {busy ? "Submitting…" : uploading ? "Uploading…" : "Submit"}
           </button>
         </form>
       )}
@@ -117,14 +125,83 @@ export function FillFormClient({ slug }: { slug: string }) {
   );
 }
 
+const MAX_FILE_MB = 10;
+const FILE_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,application/pdf,application/zip,.zip";
+
+function FileInput({
+  slug,
+  value,
+  onChange,
+  onUploading,
+}: {
+  slug: string;
+  value: AnswerValue;
+  onChange: (v: AnswerValue) => void;
+  onUploading: (busy: boolean) => void;
+}) {
+  const [name, setName] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const url = typeof value === "string" && value ? value : null;
+  const isImage = !!name && /\.(png|jpe?g|webp|gif)$/i.test(name);
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    if (file.size > MAX_FILE_MB * 1_000_000) {
+      setError(`That file is over ${MAX_FILE_MB}MB. Try exporting it smaller.`);
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    onUploading(true);
+    try {
+      const { url: hosted } = await formApi.uploadFile(slug, file);
+      setName(file.name);
+      onChange(hosted);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't upload that file. Try again.");
+    } finally {
+      setBusy(false);
+      onUploading(false);
+    }
+  }
+
+  return (
+    <div>
+      <input
+        type="file"
+        accept={FILE_ACCEPT}
+        disabled={busy}
+        onChange={(e) => pick(e.target.files?.[0])}
+        className="block w-full cursor-pointer rounded-md border border-dashed border-border-strong bg-background px-3.5 py-5 text-sm text-muted file:mr-3.5 file:cursor-pointer file:rounded-md file:border-0 file:bg-accent file:px-3.5 file:py-2 file:font-mono file:text-[11px] file:uppercase file:tracking-[0.08em] file:text-navy"
+      />
+      {busy && <p className="mt-2 text-[13px] text-muted">Uploading…</p>}
+      {url && !busy && (
+        <div className="mt-2.5 flex items-center gap-3 text-[13px] text-accent-dim">
+          {isImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" className="h-14 w-14 rounded-md border border-border object-cover" />
+          )}
+          <span>✓ {name ?? "File"} uploaded</span>
+        </div>
+      )}
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+    </div>
+  );
+}
+
 function FieldInput({
+  slug,
   field,
   value,
   onChange,
+  onUploading,
 }: {
+  slug: string;
   field: FormPublic["fields"][number];
   value: AnswerValue;
   onChange: (v: AnswerValue) => void;
+  onUploading: (busy: boolean) => void;
 }) {
   const inputClass = "w-full rounded-md border border-border-strong bg-background px-3.5 py-2.5 text-sm outline-none focus:border-accent";
 
@@ -152,6 +229,7 @@ function FieldInput({
         {field.type === "date" && (
           <input type="date" value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} className={inputClass} />
         )}
+        {field.type === "file_upload" && <FileInput slug={slug} value={value} onChange={onChange} onUploading={onUploading} />}
         {field.type === "yes_no" && (
           <div className="flex gap-2">
             {[

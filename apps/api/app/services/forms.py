@@ -10,7 +10,7 @@ from app.models.form_field import CHOICE_FIELD_TYPES, FormField
 from app.models.form_response import FormResponse
 from app.models.user import User
 from app.schemas.form import AnswerItem
-from app.services import audit
+from app.services import audit, uploads
 
 
 class FormError(Exception):
@@ -207,6 +207,10 @@ def _validate_answers(fields: list[FormField], answers: list[AnswerItem]) -> Non
         has_value = answer is not None and answer.value not in (None, "", [])
         if field.required and not has_value:
             raise FormError(f"'{field.prompt}' is required")
+        if has_value and field.type == "file_upload":
+            if not isinstance(answer.value, str) or not uploads.is_hosted_upload(answer.value):
+                raise FormError(f"'{field.prompt}' needs an uploaded file")
+            continue
         if not has_value or field.type not in CHOICE_FIELD_TYPES:
             continue
         given = answer.value if isinstance(answer.value, list) else [answer.value]
@@ -217,13 +221,22 @@ def _validate_answers(fields: list[FormField], answers: list[AnswerItem]) -> Non
             raise FormError(f"'{field.prompt}' only accepts one choice")
 
 
-def submit_response(db: Session, form: Form, user: User | None, answers: list[AnswerItem]) -> FormResponse:
+def ensure_accepting_responses(form: Form, user: User | None) -> None:
     if form.published_at is None or form.archived_at is not None:
         raise FormError("This form isn't accepting responses")
     if form.closes_at is not None and datetime.now(UTC) >= form.closes_at:
         raise FormError("This form is closed")
     if form.require_login and user is None:
         raise FormAccessDenied("Sign in to respond to this form")
+
+
+def ensure_has_file_field(db: Session, form: Form) -> None:
+    if not any(f.type == "file_upload" for f in list_fields(db, form)):
+        raise FormError("This form doesn't take file uploads")
+
+
+def submit_response(db: Session, form: Form, user: User | None, answers: list[AnswerItem]) -> FormResponse:
+    ensure_accepting_responses(form, user)
     if user is not None:
         exists = (
             db.query(FormResponse).filter(FormResponse.form_id == form.id, FormResponse.user_id == user.id).first()

@@ -33,6 +33,22 @@ COMMUNITY_ALLOWED_CONTENT_TYPES = {
 }
 
 
+# Form file-upload fields (e.g. a design competition entry). Bigger than a
+# cover image, but still Cloudinary's free-plan per-file ceiling. No PSD/AI:
+# browsers send those as generic octet-stream, so they can't be told apart —
+# people zip them or export to PNG/PDF instead.
+FORM_MAX_UPLOAD_BYTES = 10_000_000
+FORM_ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+    "application/zip",
+    "application/x-zip-compressed",
+}
+
+
 class UploadError(Exception):
     pass
 
@@ -42,11 +58,12 @@ def upload_file(
     content_type: str | None,
     folder: str = "mut-tech",
     allowed_types: set[str] | None = None,
+    max_bytes: int = MAX_UPLOAD_BYTES,
 ) -> str:
     if content_type not in (allowed_types or ALLOWED_CONTENT_TYPES):
         raise UploadError("That file type isn't allowed")
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise UploadError("File is too large (max 5MB)")
+    if len(content) > max_bytes:
+        raise UploadError(f"File is too large (max {max_bytes // 1_000_000}MB)")
 
     settings = get_settings()
     if not (settings.cloudinary_cloud_name and settings.cloudinary_api_key and settings.cloudinary_api_secret):
@@ -62,3 +79,10 @@ def upload_file(
     # raw files (pdf/zip/docx/etc.) through this one generic endpoint.
     result = cloudinary.uploader.upload(content, folder=folder, resource_type="auto")
     return result["secure_url"]
+
+
+def is_hosted_upload(url: str) -> bool:
+    """True if url points at our Cloudinary account — what upload_file returns.
+    Keeps a form answer from smuggling in an arbitrary link."""
+    cloud = get_settings().cloudinary_cloud_name
+    return url.startswith(f"https://res.cloudinary.com/{cloud}/" if cloud else "https://res.cloudinary.com/")

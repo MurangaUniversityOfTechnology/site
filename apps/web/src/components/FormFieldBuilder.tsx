@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<FieldType, string> = {
   date: "Date",
   number: "Number",
   email: "Email",
+  file_upload: "File upload (image, PDF or zip)",
 };
 
 export function FormFieldBuilder({ formSlug }: { formSlug: string }) {

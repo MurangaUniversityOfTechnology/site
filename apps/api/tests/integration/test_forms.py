@@ -1,5 +1,6 @@
 import pytest
 
+from app.core.config import get_settings
 from app.services import forms as forms_service
 
 pytestmark = pytest.mark.integration
@@ -131,3 +132,108 @@ def test_submit_rejects_when_closed(client, db_session, make_form):
     get_res = client.get(f"/forms/{form.slug}")
     assert get_res.status_code == 200
     assert get_res.json()["closed"] is True
+
+
+# ── file_upload fields ───────────────────────────────────────────────────
+
+# is_hosted_upload checks against the configured cloud name, so build the URL
+# from it rather than hard-coding one.
+HOSTED_URL = f"https://res.cloudinary.com/{get_settings().cloudinary_cloud_name or 'demo'}/image/upload/v1/mut-tech/forms/entry.png"
+
+
+def _add_file_field(db_session, admin, form, *, required=True):
+    return forms_service.create_field(
+        db_session,
+        admin,
+        form,
+        {"type": "file_upload", "prompt": "Your design", "help_text": None, "required": required, "choices": []},
+    )
+
+
+@pytest.fixture
+def fake_cloudinary(monkeypatch):
+    from app.services import uploads
+
+    calls = []
+
+    def _fake(content, content_type, folder="mut-tech", allowed_types=None, max_bytes=uploads.MAX_UPLOAD_BYTES):
+        # Reuse the real guards so type/size rules are exercised.
+        if content_type not in (allowed_types or uploads.ALLOWED_CONTENT_TYPES):
+            raise uploads.UploadError("That file type isn't allowed")
+        if len(content) > max_bytes:
+            raise uploads.UploadError("File is too large")
+        calls.append(folder)
+        return HOSTED_URL
+
+    monkeypatch.setattr(uploads, "upload_file", _fake)
+    return calls
+
+
+def _upload(client, slug, *, content=b"x", content_type="image/png"):
+    return client.post(f"/forms/{slug}/upload", files={"file": ("entry.png", content, content_type)})
+
+
+def test_member_uploads_then_submits_file_answer(client, db_session, make_form, make_user, login_as, fake_cloudinary):
+    form, admin = make_form(require_login=True)
+    field = _add_file_field(db_session, admin, form)
+    forms_service.publish_form(db_session, admin, form)
+    login_as(make_user(email="designer@example.com"))
+
+    res = _upload(client, form.slug)
+    assert res.status_code == 200
+    assert res.json()["url"] == HOSTED_URL
+    assert fake_cloudinary == ["mut-tech/forms"]
+
+    sub = client.post(f"/forms/{form.slug}/responses", json={"answers": [{"field_id": str(field.id), "value": HOSTED_URL}]})
+    assert sub.status_code == 204
+
+
+def test_upload_requires_login_when_form_demands_it(client, db_session, make_form, fake_cloudinary):
+    form, admin = make_form(require_login=True)
+    _add_file_field(db_session, admin, form)
+    forms_service.publish_form(db_session, admin, form)
+    assert _upload(client, form.slug).status_code == 401
+
+
+def test_upload_refused_without_a_file_field(client, db_session, make_form, make_user, login_as, fake_cloudinary):
+    form, admin = make_form(require_login=True)
+    _add_short_text_field(db_session, admin, form)
+    forms_service.publish_form(db_session, admin, form)
+    login_as(make_user(email="sneaky@example.com"))
+    assert _upload(client, form.slug).status_code == 400
+
+
+def test_upload_refused_when_form_is_unpublished(client, db_session, make_form, make_user, login_as, fake_cloudinary):
+    form, admin = make_form(require_login=True)
+    _add_file_field(db_session, admin, form)
+    login_as(make_user(email="early@example.com"))
+    assert _upload(client, form.slug).status_code == 404
+
+
+def test_upload_rejects_bad_type_and_oversize(client, db_session, make_form, make_user, login_as, fake_cloudinary):
+    form, admin = make_form(require_login=True)
+    _add_file_field(db_session, admin, form)
+    forms_service.publish_form(db_session, admin, form)
+    login_as(make_user(email="picky@example.com"))
+    assert _upload(client, form.slug, content_type="application/x-msdownload").status_code == 400
+    assert _upload(client, form.slug, content=b"x" * 10_000_001).status_code == 400
+
+
+def test_submit_rejects_file_answer_not_hosted_by_us(client, db_session, make_form, make_user, login_as):
+    form, admin = make_form(require_login=True)
+    field = _add_file_field(db_session, admin, form)
+    forms_service.publish_form(db_session, admin, form)
+    login_as(make_user(email="linker@example.com"))
+    res = client.post(
+        f"/forms/{form.slug}/responses", json={"answers": [{"field_id": str(field.id), "value": "https://evil.example/x.png"}]}
+    )
+    assert res.status_code == 400
+
+
+def test_required_file_field_must_be_answered(client, db_session, make_form, make_user, login_as):
+    form, admin = make_form(require_login=True)
+    field = _add_file_field(db_session, admin, form, required=True)
+    forms_service.publish_form(db_session, admin, form)
+    login_as(make_user(email="empty@example.com"))
+    res = client.post(f"/forms/{form.slug}/responses", json={"answers": [{"field_id": str(field.id), "value": None}]})
+    assert res.status_code == 400

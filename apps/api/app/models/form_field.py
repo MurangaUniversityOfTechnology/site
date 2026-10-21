@@ -22,8 +22,8 @@ if TYPE_CHECKING:
     from app.models.form import Form
 
 # Kept as plain strings (validated in schemas/form.py) rather than a
-# Postgres enum — this list is expected to grow (a file-upload type is an
-# easy later add-on) and a String avoids an ALTER TYPE migration every time.
+# Postgres enum — this list is expected to grow and a String avoids an ALTER
+# TYPE migration every time. file_upload's answer is the hosted file's URL.
 FIELD_TYPES = (
     "short_text",
     "long_text",
@@ -35,6 +35,7 @@ FIELD_TYPES = (
     "date",
     "number",
     "email",
+    "file_upload",
 )
 CHOICE_FIELD_TYPES = {"single_choice", "multi_choice", "dropdown"}
 # Higher than a quiz question's 5 — a form often lists every option there

@@ -1,4 +1,4 @@
-import { apiFetch } from "./core";
+import { apiFetch, apiUpload } from "./core";
 import type { ChoiceItem } from "./shared";
 
 export type FieldType =
@@ -11,7 +11,8 @@ export type FieldType =
   | "rating"
   | "date"
   | "number"
-  | "email";
+  | "email"
+  | "file_upload";
 
 export type FormFieldPublic = {
   id: string;
@@ -37,6 +38,7 @@ export type FormAnswerItem = { field_id: string; value: AnswerValue };
 
 export const formApi = {
   get: (slug: string) => apiFetch<FormPublic>(`/forms/${slug}`),
+  uploadFile: (slug: string, file: File) => apiUpload<{ url: string }>(`/forms/${slug}/upload`, file),
   submit: (slug: string, answers: FormAnswerItem[]) =>
     apiFetch<void>(`/forms/${slug}/responses`, { method: "POST", body: JSON.stringify({ answers }) }),
 };

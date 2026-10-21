@@ -8,7 +8,7 @@ from app.models.form_field import CHOICE_FIELD_TYPES, MAX_FORM_CHOICES
 
 # Keep this in lockstep with FIELD_TYPES in models/form_field.py.
 FieldType = Literal[
-    "short_text", "long_text", "single_choice", "multi_choice", "dropdown", "yes_no", "rating", "date", "number", "email"
+    "short_text", "long_text", "single_choice", "multi_choice", "dropdown", "yes_no", "rating", "date", "number", "email", "file_upload"
 ]
 
 
