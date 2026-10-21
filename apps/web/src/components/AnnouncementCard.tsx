@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { announcementApi, type Announcement } from "@/lib/api";
 import { isFullScreenGame } from "@/lib/gameRoutes";
 
+// Ids the visitor has minimised to the pill. The key predates the pill, when
+// dismissing hid the card for good.
 const DISMISSED_KEY = "dismissed-announcements";
 const SHOW_DELAY_MS = 1200;
 // Pages where a popup would get in the way of a task in progress.
@@ -28,12 +30,14 @@ function rememberDismissed(id: string) {
   }
 }
 
-/** Newest live announcement the visitor hasn't dismissed, as a card that
- * floats bottom-right on desktop and above the tab bar on mobile. */
+/** Newest live announcement, as a card that floats bottom-right on desktop and
+ * above the tab bar on mobile. Dismissing shrinks it to a small pill that
+ * brings the card back, so the link is never lost. */
 export function AnnouncementCard() {
   const pathname = usePathname();
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [visible, setVisible] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,8 +45,9 @@ export function AnnouncementCard() {
       .live()
       .then((live) => {
         if (!active) return;
-        const dismissed = readDismissed();
-        setAnnouncement(live.find((a) => !dismissed.includes(a.id)) ?? null);
+        const newest = live[0] ?? null;
+        setAnnouncement(newest);
+        setCollapsed(!!newest && readDismissed().includes(newest.id));
       })
       .catch(() => {});
     return () => {
@@ -61,7 +66,21 @@ export function AnnouncementCard() {
 
   function dismiss() {
     if (announcement) rememberDismissed(announcement.id);
-    setVisible(false);
+    setCollapsed(true);
+  }
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setCollapsed(false)}
+        aria-label={`Show announcement: ${announcement.title}`}
+        className="fixed bottom-19 right-3 z-30 flex max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-full border border-accent/40 bg-navy py-2 pl-3.5 pr-4 text-left text-[13px] font-medium text-white shadow-[0_8px_24px_rgba(15,26,48,0.3)] hover:border-accent motion-safe:animate-[rise_0.25s_ease_both] md:bottom-6 md:right-6 md:max-w-80"
+      >
+        <span className="h-1.5 w-1.5 flex-none rounded-full bg-accent motion-safe:animate-[pulse_2s_ease_infinite]" aria-hidden />
+        <span className="truncate">{announcement.title}</span>
+      </button>
+    );
   }
 
   return (

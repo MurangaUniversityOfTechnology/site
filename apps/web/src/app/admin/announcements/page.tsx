@@ -152,7 +152,7 @@ export default function AdminAnnouncementsPage() {
       <h1 className="mt-3.5 text-[clamp(24px,3.4vw,36px)] tracking-[-0.035em]">Announcements</h1>
       <p className="mt-2.5 max-w-140 text-[14px] leading-[1.55] text-muted">
         A short notice that pops up for visitors, like a call for a designer or a new cohort opening. Each person sees
-        it until they dismiss it, then never again. If several are live, the newest shows first.
+        it until they dismiss it, which shrinks it to a small pill they can tap to bring it back. If several are live, the newest shows first.
       </p>
 
       <div className="mt-6.5 grid gap-6 lg:grid-cols-[1fr_380px] lg:items-start">
