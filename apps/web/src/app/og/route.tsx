@@ -12,5 +12,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const title = searchParams.get("title") ?? "MUT Tech Community";
   const eyebrow = searchParams.get("eyebrow") ?? undefined;
-  return renderBrandedOgImage({ eyebrow, title });
+  const season = searchParams.get("season") ?? undefined;
+  return renderBrandedOgImage({ eyebrow, title, season });
 }
