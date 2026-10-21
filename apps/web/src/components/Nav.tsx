@@ -9,6 +9,7 @@ import { BellIcon } from "@/components/icons";
 import { AccountMenu } from "@/components/AccountMenu";
 import { signInHref } from "@/lib/nextParam";
 import { isFullScreenGame } from "@/lib/gameRoutes";
+import { useHalloween } from "@/lib/useHalloween";
 
 // Paths that are themselves part of the auth/onboarding flow — don't send
 // someone back into onboarding or the sign-in page itself as a "next".
@@ -32,6 +33,7 @@ export function Nav() {
   const { me, loading } = useMe();
   const pathname = usePathname();
   const unread = useUnreadCount(me, pathname);
+  const halloween = useHalloween();
 
   if (pathname?.startsWith("/admin") || isFullScreenGame(pathname)) return null;
 
@@ -43,6 +45,11 @@ export function Nav() {
       <Link href="/" className="flex flex-none items-center gap-2.5">
         <Image src="/images/logo.png" alt="MUT Tech Community" width={30} height={30} className="h-7.5 w-7.5" priority />
         <span className="whitespace-nowrap text-[14.5px] font-semibold tracking-tight text-white">MUT Tech</span>
+        {halloween && (
+          <span aria-hidden="true" className="-ml-0.5 text-[17px] leading-none">
+            🎃
+          </span>
+        )}
       </Link>
 
       <nav className="hidden min-w-0 flex-1 gap-5 overflow-x-auto text-[13.5px] text-white/60 md:flex">

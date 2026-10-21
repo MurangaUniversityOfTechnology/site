@@ -3,6 +3,8 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { MobileNav } from "@/components/MobileNav";
 import { AnnouncementCard } from "@/components/AnnouncementCard";
+import { HalloweenDecor } from "@/components/HalloweenDecor";
+import { SEASON_SCRIPT } from "@/lib/season";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { MeProvider } from "@/lib/useMe";
 import "./globals.css";
@@ -49,7 +51,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      // The season script sets data-season before React hydrates.
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SEASON_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <MeProvider>
           <ConfirmProvider>
@@ -57,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {children}
             <MobileNav />
             <AnnouncementCard />
+            <HalloweenDecor />
           </ConfirmProvider>
         </MeProvider>
       </body>

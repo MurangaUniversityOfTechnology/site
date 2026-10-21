@@ -97,3 +97,42 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/*
+ * Halloween (21 Oct – 1 Nov, switched on by SEASON_SCRIPT in lib/season.ts).
+ * Same light layout, seasonal palette: navy becomes deep purple, gold becomes
+ * pumpkin, parchment replaces cream. Everything reads these variables, so no
+ * component needs to know about the season.
+ */
+html[data-season="halloween"] {
+  --background: #f7f0e4;
+  --surface: #fffaf2;
+  --surface-raised: #f1e6d6;
+  --border: #e0cfb8;
+  --border-strong: #cdb594;
+  --foreground: #1d1526;
+  --muted: #6f6278;
+  --faint: #86788e;
+  --accent: #ff7a1a;
+  --accent-dim: #c2570a;
+  --warn: #8a4b0a;
+  --navy: #2a1442;
+  --navy-2: #3a1d5c;
+  --navy-3: #190b2a;
+}
+
+html[data-season="halloween"] ::selection {
+  background: rgba(255, 122, 26, 0.35);
+}
+
+@keyframes bat-fly {
+  0% { transform: translate(-10vw, 0); }
+  25% { transform: translate(22vw, -26px); }
+  50% { transform: translate(55vw, 10px); }
+  75% { transform: translate(85vw, -22px); }
+  100% { transform: translate(112vw, 0); }
+}
+.halloween-bat {
+  animation: bat-fly linear infinite;
+  will-change: transform;
+}
