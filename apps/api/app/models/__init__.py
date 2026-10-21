@@ -1,3 +1,4 @@
+from app.models.announcement import Announcement
 from app.models.arm import Arm
 from app.models.audit_log import AuditLog
 from app.models.challenge_submission import ChallengeSubmission
@@ -51,6 +52,7 @@ from app.models.user import GithubOrgInviteStatus, User
 from app.models.user_tag import UserTag
 
 __all__ = [
+    "Announcement",
     "Arm",
     "AuditLog",
     "BingoDeck",

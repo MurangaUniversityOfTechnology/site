@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { Nav } from "@/components/Nav";
 import { MobileNav } from "@/components/MobileNav";
+import { AnnouncementCard } from "@/components/AnnouncementCard";
 import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { MeProvider } from "@/lib/useMe";
 import "./globals.css";
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Nav />
             {children}
             <MobileNav />
+            <AnnouncementCard />
           </ConfirmProvider>
         </MeProvider>
       </body>

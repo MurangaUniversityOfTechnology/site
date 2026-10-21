@@ -21,4 +21,5 @@ export * from "./projects";
 export * from "./forms";
 export * from "./community";
 export * from "./games";
+export * from "./announcements";
 export * from "./admin";

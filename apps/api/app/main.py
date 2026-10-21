@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.rate_limit import limiter
 from app.routers import (
     admin,
+    admin_announcements,
     admin_courses,
     admin_events,
     admin_forms,
@@ -18,6 +19,7 @@ from app.routers import (
     admin_roadmaps,
     admin_roles,
     admin_uploads,
+    announcements,
     auth,
     challenges,
     community,
@@ -71,6 +73,7 @@ app.include_router(membership.router)
 app.include_router(profile.router)
 app.include_router(org_signature.router)
 app.include_router(admin.router)
+app.include_router(admin_announcements.router)
 app.include_router(admin_courses.router)
 app.include_router(admin_events.router)
 app.include_router(admin_forms.router)
@@ -96,6 +99,7 @@ app.include_router(forms.router)
 app.include_router(games.router)
 app.include_router(community.router)
 app.include_router(roadmaps.router)
+app.include_router(announcements.router)
 
 
 @app.get("/health")

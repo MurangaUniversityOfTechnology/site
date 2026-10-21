@@ -14,6 +14,7 @@ import { adminRoadmapsApi } from "./roadmaps";
 import { adminFormsApi } from "./forms";
 import { adminUploadsApi } from "./uploads";
 import { adminGamesApi } from "./games";
+import { adminAnnouncementsApi } from "./announcements";
 
 export * from "./overview";
 export * from "./users";
@@ -27,6 +28,7 @@ export * from "./roadmaps";
 export * from "./forms";
 export * from "./uploads";
 export * from "./games";
+export * from "./announcements";
 
 export const adminApi = {
   ...adminOverviewApi,
@@ -41,4 +43,5 @@ export const adminApi = {
   ...adminFormsApi,
   ...adminUploadsApi,
   ...adminGamesApi,
+  ...adminAnnouncementsApi,
 };
