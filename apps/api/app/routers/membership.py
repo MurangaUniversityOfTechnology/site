@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_mpesa_ip
+from app.core.rate_limit import limiter
 from app.models.payment import Payment
 from app.models.user import User
 from app.schemas.membership import (
@@ -27,7 +28,9 @@ def _payment_response(payment: Payment) -> PaymentStatusResponse:
 
 
 @router.post("/membership/activate", response_model=PaymentStatusResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/hour")
 def activate_membership(
+    request: Request,
     payload: ActivateMembershipRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -60,6 +63,7 @@ def membership_status(user: User = Depends(get_current_user), db: Session = Depe
 
 
 @router.post("/mpesa/callback", status_code=status.HTTP_200_OK, dependencies=[Depends(require_mpesa_ip)])
+@limiter.limit("300/minute")
 async def mpesa_callback(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
     membership_service.apply_stk_callback(db, payload)

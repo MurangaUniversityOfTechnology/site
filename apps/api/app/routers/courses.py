@@ -111,6 +111,7 @@ def my_enrollments(user: User = Depends(get_current_user), db: Session = Depends
 
 
 @router.post("/mpesa/callback", status_code=status.HTTP_200_OK, dependencies=[Depends(require_mpesa_ip)])
+@limiter.limit("300/minute")
 async def mpesa_course_callback(request: Request, db: Session = Depends(get_db)):
     payload = await request.json()
     course_payment.apply_stk_callback(db, payload)
