@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.donation import DonationReason
 
-
 _TAG_RE = re.compile(r"<[^>]*>?")
 _CTRL_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 
